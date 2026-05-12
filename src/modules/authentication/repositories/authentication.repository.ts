@@ -161,10 +161,8 @@ export class AuthenticationRepository {
                 ipAddress: true,
                 deviceName: true,
                 lastActivityAt: true,
-                idleExpiresAt: true,
                 expiresAt: true,
                 createdAt: true,
-                updatedAt: true,
             },
         });
     }

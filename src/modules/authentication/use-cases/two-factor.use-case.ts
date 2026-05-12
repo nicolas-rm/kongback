@@ -20,7 +20,6 @@ export class TwoFactorUseCase {
         return {
             enabled: user.twoFactorEnabled,
             pending: Boolean(user.twoFactorPendingSecret),
-            confirmedAt: user.twoFactorEnabled ? true : false,
         };
     }
 

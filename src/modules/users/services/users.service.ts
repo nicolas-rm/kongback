@@ -54,8 +54,9 @@ export class UsersService {
         });
     }
 
-    remove(id: string) {
-        return this.repository.softDelete(id);
+    async remove(id: string) {
+        await this.repository.softDelete(id);
+        return { id, deleted: true };
     }
 
     assignAccess(userId: string, dto: AssignUserAccessDto) {
@@ -72,7 +73,8 @@ export class UsersService {
         return this.repository.listAccess(userId);
     }
 
-    removeAccess(userId: string, accessId: string) {
-        return this.repository.removeAccess(userId, accessId);
+    async removeAccess(userId: string, accessId: string) {
+        await this.repository.removeAccess(userId, accessId);
+        return { id: accessId, deleted: true };
     }
 }

@@ -16,6 +16,7 @@ export class NotificationsRepository {
                 type: data.type ?? NotificationType.info,
                 link: data.link ?? null,
             },
+            select: this.publicSelect(),
         });
     }
 
@@ -31,6 +32,7 @@ export class NotificationsRepository {
             skip,
             take,
             orderBy: { createdAt: 'desc' },
+            select: this.publicSelect(),
         });
     }
 
@@ -42,6 +44,7 @@ export class NotificationsRepository {
         return this.prisma.notification.update({
             where: { id },
             data: { isRead: true, readAt: new Date() },
+            select: this.publicSelect(),
         });
     }
 
@@ -54,6 +57,22 @@ export class NotificationsRepository {
     }
 
     findOne(where: Prisma.NotificationWhereInput) {
-        return this.prisma.notification.findFirst({ where });
+        return this.prisma.notification.findFirst({ where, select: this.publicSelect() });
+    }
+
+    private publicSelect(): Prisma.NotificationSelect {
+        return {
+            id: true,
+            userId: true,
+            title: true,
+            message: true,
+            detail: true,
+            type: true,
+            link: true,
+            isRead: true,
+            readAt: true,
+            createdAt: true,
+            updatedAt: true,
+        };
     }
 }

@@ -14,7 +14,13 @@ export class ListSessionsUseCase {
         const sessions = await this.repository.listActiveSessions(userId);
 
         return sessions.map((session) => ({
-            ...session,
+            id: session.id,
+            deviceName: session.deviceName,
+            userAgent: session.userAgent,
+            ipAddress: session.ipAddress,
+            lastActivityAt: session.lastActivityAt,
+            expiresAt: session.expiresAt,
+            createdAt: session.createdAt,
             isCurrent: session.id === currentSessionId,
         }));
     }

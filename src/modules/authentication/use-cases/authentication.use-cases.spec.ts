@@ -100,7 +100,7 @@ describe('Authentication use-cases', () => {
 
         repository.revokeUserRefreshTokens.mockResolvedValue({ count: 2 });
 
-        await expect(useCase.execute('user-id', {})).resolves.toEqual({ userId: 'user-id', revokedSessions: 2 });
+        await expect(useCase.execute('user-id', {})).resolves.toEqual({ revokedSessions: 2 });
         expect(repository.revokeUserRefreshTokens).toHaveBeenCalledWith('user-id');
     });
 
@@ -125,7 +125,7 @@ describe('Authentication use-cases', () => {
         cryptoService.verifyPassword.mockResolvedValue(true);
         cryptoService.hashPassword.mockResolvedValue('new-hash');
 
-        await expect(useCase.execute('user-id', { currentPassword: 'old', newPassword: 'new' })).resolves.toEqual({ userId: 'user-id', passwordChanged: true });
+        await expect(useCase.execute('user-id', { currentPassword: 'old', newPassword: 'new' })).resolves.toEqual({ passwordChanged: true });
         expect(repository.updatePassword).toHaveBeenCalledWith('user-id', 'new-hash');
         expect(repository.revokeUserRefreshTokens).toHaveBeenCalledWith('user-id');
     });
