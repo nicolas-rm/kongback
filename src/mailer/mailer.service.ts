@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { EmailDispatchContext, Prisma } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
-import { EmailRateLimiterService, ReserveEmailDispatchResult } from '@/utilities/mailer/email-rate-limiter.service';
+import { EmailRateLimiterService, ReserveEmailDispatchResult } from '@/mailer/email-rate-limiter.service';
 
 type MailContext = {
     recipientUserId?: string | null;

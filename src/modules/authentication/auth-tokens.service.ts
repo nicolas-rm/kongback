@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CryptoService } from '@/utilities/crypto/crypto.service';
+import { CryptoService } from '@/crypto/crypto.service';
 
 type TokenUser = {
     id: string;
