@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthenticationModule } from '@/modules/authentication/authentication.module';
+import { MyNotificationsController, NotificationsController } from '@/modules/notifications/notifications.controller';
 import { NotificationsGateway } from '@/modules/notifications/notifications.gateway';
 import { NotificationsSocketAuthService } from '@/modules/notifications/notifications-socket-auth.service';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
@@ -9,6 +10,7 @@ import { NotificationsService } from '@/modules/notifications/services/notificat
 
 @Module({
     imports: [AuthenticationModule, JwtModule.register({})],
+    controllers: [NotificationsController, MyNotificationsController],
     providers: [NotificationsRepository, NotificationsSocketAuthService, NotificationsSerializerService, NotificationsGateway, NotificationsService],
     exports: [NotificationsService],
 })

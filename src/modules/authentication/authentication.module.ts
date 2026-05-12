@@ -29,6 +29,7 @@ import * as useCases from '@/modules/authentication/use-cases';
         useCases.ChangePasswordUseCase,
         useCases.RequestPasswordResetUseCase,
         useCases.ResetPasswordUseCase,
+        useCases.TwoFactorUseCase,
     ],
     exports: [AuthenticationRepository, AuthCookiesService, AuthTokensService, AuthenticationService],
 })

@@ -25,6 +25,19 @@ export class NotificationsRepository {
         });
     }
 
+    findMany(where: Prisma.NotificationWhereInput, skip: number, take?: number) {
+        return this.prisma.notification.findMany({
+            where,
+            skip,
+            take,
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    count(where: Prisma.NotificationWhereInput): Promise<number> {
+        return this.prisma.notification.count({ where });
+    }
+
     markRead(id: string, userId: string) {
         return this.prisma.notification.update({
             where: { id },

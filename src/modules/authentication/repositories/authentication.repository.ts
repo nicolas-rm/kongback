@@ -210,4 +210,69 @@ export class AuthenticationRepository {
             data: { usedAt },
         });
     }
+
+    findTwoFactorUser(userId: string) {
+        return this.prisma.user.findFirst({
+            where: { id: userId, deletedAt: null, status: 'active' },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                twoFactorEnabled: true,
+                twoFactorSecret: true,
+                twoFactorPendingSecret: true,
+                twoFactorPendingCreatedAt: true,
+            },
+        });
+    }
+
+    setPendingTwoFactorSecret(userId: string, encryptedSecret: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorPendingSecret: encryptedSecret,
+                twoFactorPendingCreatedAt: new Date(),
+            },
+        });
+    }
+
+    enableTwoFactor(userId: string, encryptedSecret: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorEnabled: true,
+                twoFactorSecret: encryptedSecret,
+                twoFactorPendingSecret: null,
+                twoFactorPendingCreatedAt: null,
+                twoFactorConfirmedAt: new Date(),
+            },
+        });
+    }
+
+    disableTwoFactor(userId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+            return tx.user.update({
+                where: { id: userId },
+                data: {
+                    twoFactorEnabled: false,
+                    twoFactorSecret: null,
+                    twoFactorPendingSecret: null,
+                    twoFactorPendingCreatedAt: null,
+                    twoFactorConfirmedAt: null,
+                },
+            });
+        });
+    }
+
+    replaceRecoveryCodes(userId: string, codeHashes: string[]) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+            if (codeHashes.length > 0) {
+                await tx.twoFactorRecoveryCode.createMany({
+                    data: codeHashes.map((codeHash) => ({ userId, codeHash })),
+                });
+            }
+        });
+    }
 }
