@@ -88,4 +88,126 @@ export class AuthenticationRepository {
             select: { id: true },
         });
     }
+
+    findLoginUser(identifier: string) {
+        return this.prisma.user.findFirst({
+            where: {
+                deletedAt: null,
+                OR: [{ username: identifier }, { email: { equals: identifier, mode: 'insensitive' } }],
+            },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                fullName: true,
+                passwordHash: true,
+                status: true,
+                mustChangePassword: true,
+                failedLoginAttempts: true,
+                lockedUntil: true,
+            },
+        });
+    }
+
+    resetLoginState(userId: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+        });
+    }
+
+    updateFailedLoginState(userId: string, failedLoginAttempts: number, lockedUntil: Date | null) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { failedLoginAttempts, lockedUntil },
+        });
+    }
+
+    findStoredRefreshToken(tokenHash: string) {
+        return this.prisma.refreshToken.findFirst({
+            where: { tokenHash, revokedAt: null },
+            select: {
+                id: true,
+                userId: true,
+                sessionId: true,
+                expiresAt: true,
+                idleExpiresAt: true,
+                user: { select: { id: true, username: true, email: true, fullName: true, status: true } },
+            },
+        });
+    }
+
+    revokeRefreshToken(id: string, revokedAt = new Date()) {
+        return this.prisma.refreshToken.update({
+            where: { id },
+            data: { revokedAt },
+        });
+    }
+
+    revokeUserRefreshTokens(userId: string, revokedAt = new Date()) {
+        return this.prisma.refreshToken.updateMany({
+            where: { userId, revokedAt: null },
+            data: { revokedAt },
+        });
+    }
+
+    listActiveSessions(userId: string) {
+        return this.prisma.session.findMany({
+            where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+            orderBy: { lastActivityAt: 'desc' },
+            select: {
+                id: true,
+                userAgent: true,
+                ipAddress: true,
+                deviceName: true,
+                lastActivityAt: true,
+                idleExpiresAt: true,
+                expiresAt: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+    }
+
+    findUserForPasswordChange(userId: string) {
+        return this.prisma.user.findFirst({
+            where: { id: userId, deletedAt: null, status: 'active' },
+            select: { id: true, username: true, passwordHash: true },
+        });
+    }
+
+    updatePassword(userId: string, passwordHash: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash, mustChangePassword: false },
+        });
+    }
+
+    findUserByEmail(email: string) {
+        return this.prisma.user.findFirst({
+            where: { email: { equals: email, mode: 'insensitive' }, deletedAt: null, status: 'active' },
+            select: { id: true, email: true },
+        });
+    }
+
+    createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date) {
+        return this.prisma.passwordResetToken.create({
+            data: { userId, tokenHash, expiresAt },
+            select: { id: true },
+        });
+    }
+
+    findPasswordResetToken(tokenHash: string) {
+        return this.prisma.passwordResetToken.findFirst({
+            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+            select: { id: true, userId: true },
+        });
+    }
+
+    markPasswordResetTokenUsed(id: string, usedAt = new Date()) {
+        return this.prisma.passwordResetToken.update({
+            where: { id },
+            data: { usedAt },
+        });
+    }
 }
