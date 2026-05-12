@@ -1,8 +1,16 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule } from '@/app.module';
+import { AppConfigService } from '@/configurations/app-config.service';
+import { configureApp, registerProcessHandlers } from '@/configurations/main.config';
+import { SpacedConsoleLogger } from '@/configurations/spaced-console.logger';
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
-    await app.listen(process.env.PORT ?? 3000);
+    registerProcessHandlers();
+    const app = await NestFactory.create(AppModule, { logger: new SpacedConsoleLogger() });
+    const config = app.get(AppConfigService);
+
+    configureApp(app);
+
+    await app.listen(config.port);
 }
-bootstrap();
+void bootstrap();
