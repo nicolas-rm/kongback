@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
+import { extractAccessTokenFromRequest } from '@/modules/authentication/utils/token-extractor';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -28,13 +29,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     private getAccessToken(request: Request): string | null {
-        const fromCookie = (request.cookies as Record<string, string> | undefined)?.access_token;
-        if (fromCookie) return fromCookie;
-
-        const authorization = request.get('authorization');
-        if (authorization?.startsWith('Bearer ')) return authorization.slice('Bearer '.length);
-
-        return null;
+        return extractAccessTokenFromRequest(request);
     }
 
     private resolveUnauthorizedReason(message: string, accessToken: string | null) {

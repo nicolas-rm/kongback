@@ -3,5 +3,5 @@ import { OrganizationsRepository } from '@/modules/organizations/repositories/or
 
 @Injectable()
 export class OrganizationsService {
-    constructor(private readonly organizationsRepository: OrganizationsRepository) {}
+    constructor(private readonly repository: OrganizationsRepository) {}
 }

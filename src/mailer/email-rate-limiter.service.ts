@@ -66,6 +66,17 @@ type NormalizedReserveInput = {
     metadata?: Prisma.InputJsonValue;
 };
 
+type DeniedReservation = ReserveEmailDispatchResult & { allowed: false };
+type ScopedWhereBuilder = (input: NormalizedReserveInput) => Prisma.EmailDispatchWhereInput | null;
+
+const SCOPED_WHERE_BUILDERS: Record<LimitDimension, ScopedWhereBuilder> = {
+    global: () => ({}),
+    recipient_email: (input) => (input.recipientEmail ? { recipientEmail: input.recipientEmail } : null),
+    recipient_user: (input) => (input.recipientUserId ? { recipientUserId: input.recipientUserId } : null),
+    trigger_user: (input) => (input.triggeredByUserId ? { triggeredByUserId: input.triggeredByUserId } : null),
+    ip_address: (input) => (input.ipAddress ? { ipAddress: input.ipAddress } : null),
+};
+
 @Injectable()
 export class EmailRateLimiterService {
     private readonly logger = new Logger(EmailRateLimiterService.name);
@@ -77,33 +88,13 @@ export class EmailRateLimiterService {
         const denied = await this.findFirstDeniedRule(normalizedInput);
 
         if (denied) {
-            await this.mailerRepository.createDispatch({
-                context: normalizedInput.context,
-                status: EmailDispatchStatus.suppressed_rate_limit,
-                recipientEmail: normalizedInput.recipientEmail,
-                recipientUserId: normalizedInput.recipientUserId,
-                triggeredByUserId: normalizedInput.triggeredByUserId,
-                ipAddress: normalizedInput.ipAddress,
-                reason: denied.reason,
-                retryAfterSeconds: denied.retryAfterSeconds,
-                metadata: normalizedInput.metadata,
-            });
-
+            await this.createSuppressedDispatch(normalizedInput, denied);
             this.logger.warn(`mail.rate_limit context=${normalizedInput.context} reason=${denied.reason}`);
+
             return denied;
         }
 
-        const created = await this.mailerRepository.createDispatchReservation({
-            context: normalizedInput.context,
-            status: EmailDispatchStatus.accepted,
-            recipientEmail: normalizedInput.recipientEmail,
-            recipientUserId: normalizedInput.recipientUserId,
-            triggeredByUserId: normalizedInput.triggeredByUserId,
-            ipAddress: normalizedInput.ipAddress,
-            metadata: normalizedInput.metadata,
-        });
-
-        return { allowed: true, dispatchId: created.id };
+        return this.createAcceptedReservation(normalizedInput);
     }
 
     async markSent(dispatchId: string): Promise<void> {
@@ -126,20 +117,41 @@ export class EmailRateLimiterService {
         };
     }
 
-    private async findFirstDeniedRule(input: NormalizedReserveInput): Promise<(ReserveEmailDispatchResult & { allowed: false }) | null> {
+    private async createSuppressedDispatch(input: NormalizedReserveInput, denied: DeniedReservation): Promise<void> {
+        await this.mailerRepository.createDispatch({
+            ...this.buildDispatchData(input),
+            status: EmailDispatchStatus.suppressed_rate_limit,
+            reason: denied.reason,
+            retryAfterSeconds: denied.retryAfterSeconds,
+        });
+    }
+
+    private async createAcceptedReservation(input: NormalizedReserveInput): Promise<ReserveEmailDispatchResult> {
+        const created = await this.mailerRepository.createDispatchReservation({
+            ...this.buildDispatchData(input),
+            status: EmailDispatchStatus.accepted,
+        });
+
+        return { allowed: true, dispatchId: created.id };
+    }
+
+    private buildDispatchData(input: NormalizedReserveInput): Omit<Prisma.EmailDispatchUncheckedCreateInput, 'status'> {
+        return {
+            context: input.context,
+            recipientEmail: input.recipientEmail,
+            recipientUserId: input.recipientUserId,
+            triggeredByUserId: input.triggeredByUserId,
+            ipAddress: input.ipAddress,
+            metadata: input.metadata,
+        };
+    }
+
+    private async findFirstDeniedRule(input: NormalizedReserveInput): Promise<DeniedReservation | null> {
         const now = Date.now();
 
         for (const rule of EMAIL_RATE_RULES[input.context] ?? []) {
-            const scopedWhere = this.buildScopedWhere(rule.dimension, input);
-            if (!scopedWhere) continue;
-
-            const since = new Date(now - rule.windowMs);
-            const where: Prisma.EmailDispatchWhereInput = {
-                context: input.context,
-                createdAt: { gte: since },
-                status: { in: [EmailDispatchStatus.accepted, EmailDispatchStatus.sent] },
-                ...scopedWhere,
-            };
+            const where = this.buildRateLimitWhere(rule, input, now);
+            if (!where) continue;
 
             const count = await this.mailerRepository.countDispatches(where);
             if (count < rule.limit) continue;
@@ -157,12 +169,15 @@ export class EmailRateLimiterService {
         return null;
     }
 
-    private buildScopedWhere(dimension: LimitDimension, input: NormalizedReserveInput): Prisma.EmailDispatchWhereInput | null {
-        if (dimension === 'global') return {};
-        if (dimension === 'recipient_email') return input.recipientEmail ? { recipientEmail: input.recipientEmail } : null;
-        if (dimension === 'recipient_user') return input.recipientUserId ? { recipientUserId: input.recipientUserId } : null;
-        if (dimension === 'trigger_user') return input.triggeredByUserId ? { triggeredByUserId: input.triggeredByUserId } : null;
-        if (dimension === 'ip_address') return input.ipAddress ? { ipAddress: input.ipAddress } : null;
-        return null;
+    private buildRateLimitWhere(rule: RateRule, input: NormalizedReserveInput, now: number): Prisma.EmailDispatchWhereInput | null {
+        const scopedWhere = SCOPED_WHERE_BUILDERS[rule.dimension](input);
+        if (!scopedWhere) return null;
+
+        return {
+            context: input.context,
+            createdAt: { gte: new Date(now - rule.windowMs) },
+            status: { in: [EmailDispatchStatus.accepted, EmailDispatchStatus.sent] },
+            ...scopedWhere,
+        };
     }
 }

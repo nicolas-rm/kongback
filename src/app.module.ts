@@ -13,7 +13,7 @@ import { AppMailerModule } from '@/mailer/mailer.module';
 import { JwtAuthGuard } from '@/guards/jwt-auth.guard';
 import { MustChangePasswordGuard } from '@/guards/must-change-password.guard';
 import { PermissionsGuard } from '@/guards/permissions.guard';
-import { AccessControlModule, AuthenticationModule, DocumentsModule, NotificationsModule, OrganizationsModule, SessionsModule, SettingsModule, UsersModule } from '@/modules';
+import { APP_MODULES } from '@/modules';
 
 @Module({
     imports: [
@@ -28,14 +28,7 @@ import { AccessControlModule, AuthenticationModule, DocumentsModule, Notificatio
         PrismaModule,
         CryptoModule,
         AppMailerModule,
-        AuthenticationModule,
-        UsersModule,
-        AccessControlModule,
-        OrganizationsModule,
-        SessionsModule,
-        DocumentsModule,
-        NotificationsModule,
-        SettingsModule,
+        ...APP_MODULES,
     ],
     controllers: [AppController],
     providers: [

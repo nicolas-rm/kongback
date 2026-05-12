@@ -37,7 +37,6 @@ type UserSeed = {
     id: string;
     username: string;
     fullName: string;
-    password: string;
 };
 
 function getRequiredEnv(name: string): string {
@@ -52,43 +51,12 @@ function getRequiredEnv(name: string): string {
 
 async function seedPermissions(): Promise<void> {
     for (const permission of PERMISSION_CATALOG) {
-        const existing = await prisma.permission.findFirst({
-            where: {
-                code: permission.code,
-                deletedAt: null,
-            },
-            select: { id: true },
-        });
-
-        if (existing) {
-            await prisma.permission.update({
-                where: { id: existing.id },
-                data: {
-                    name: permission.name,
-                    description: permission.description,
-                },
-            });
-            continue;
-        }
-
-        await prisma.permission.create({
-            data: {
-                code: permission.code,
-                name: permission.name,
-                description: permission.description,
-            },
-        });
+        await syncPermission(permission);
     }
 }
 
 async function upsertAdminRole(): Promise<RoleSeed> {
-    const existing = await prisma.role.findFirst({
-        where: {
-            code: ADMIN_ROLE_CODE,
-            deletedAt: null,
-        },
-        select: { id: true },
-    });
+    const existing = await findActiveRoleByCode(ADMIN_ROLE_CODE);
 
     if (existing) {
         return prisma.role.update({
@@ -108,6 +76,45 @@ async function upsertAdminRole(): Promise<RoleSeed> {
             description: ADMIN_ROLE_DESCRIPTION,
         },
         select: { id: true, code: true },
+    });
+}
+
+async function syncPermission(permission: (typeof PERMISSION_CATALOG)[number]): Promise<void> {
+    const existing = await prisma.permission.findFirst({
+        where: {
+            code: permission.code,
+            deletedAt: null,
+        },
+        select: { id: true },
+    });
+
+    if (existing) {
+        await prisma.permission.update({
+            where: { id: existing.id },
+            data: {
+                name: permission.name,
+                description: permission.description,
+            },
+        });
+        return;
+    }
+
+    await prisma.permission.create({
+        data: {
+            code: permission.code,
+            name: permission.name,
+            description: permission.description,
+        },
+    });
+}
+
+function findActiveRoleByCode(code: string) {
+    return prisma.role.findFirst({
+        where: {
+            code,
+            deletedAt: null,
+        },
+        select: { id: true },
     });
 }
 
@@ -176,9 +183,19 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
               select: { id: true, username: true, fullName: true },
           });
 
+    await ensureGlobalAdminAccess(user.id, roleId);
+
+    return {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+    };
+}
+
+async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<void> {
     const globalAccess = await prisma.userAccess.findFirst({
         where: {
-            userId: user.id,
+            userId,
             roleId,
             organizationId: null,
             scopeKey: null,
@@ -188,24 +205,17 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
         select: { id: true },
     });
 
-    if (!globalAccess) {
-        await prisma.userAccess.create({
-            data: {
-                userId: user.id,
-                roleId,
-                organizationId: null,
-                scopeKey: null,
-                scopeId: null,
-            },
-        });
-    }
+    if (globalAccess) return;
 
-    return {
-        id: user.id,
-        username: user.username,
-        fullName: user.fullName,
-        password,
-    };
+    await prisma.userAccess.create({
+        data: {
+            userId,
+            roleId,
+            organizationId: null,
+            scopeKey: null,
+            scopeId: null,
+        },
+    });
 }
 
 async function main(): Promise<void> {
@@ -217,7 +227,7 @@ async function main(): Promise<void> {
     const adminUser = await seedAdminUser(adminRole.id);
 
     console.log('Seed completado correctamente.');
-    console.log(`Admin global: ${adminUser.username} / ${adminUser.password}`);
+    console.log(`Admin global: ${adminUser.username}`);
 }
 
 main()

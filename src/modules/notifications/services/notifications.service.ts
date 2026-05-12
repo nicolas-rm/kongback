@@ -3,5 +3,5 @@ import { NotificationsRepository } from '@/modules/notifications/repositories/no
 
 @Injectable()
 export class NotificationsService {
-    constructor(private readonly notificationsRepository: NotificationsRepository) {}
+    constructor(private readonly repository: NotificationsRepository) {}
 }
