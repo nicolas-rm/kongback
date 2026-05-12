@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { NotificationType, Prisma } from '@prisma/client';
+import { paginate } from '@/utilities/pagination/pagination.dto';
+import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
 
 @Injectable()
@@ -12,5 +14,36 @@ export class NotificationsService {
 
     countUnreadForUser(userId: string): Promise<number> {
         return this.repository.countUnreadForUser(userId);
+    }
+
+    create(dto: CreateNotificationDto) {
+        return this.repository.createForUser(dto.userId, dto);
+    }
+
+    async findForUser(userId: string, dto: FindNotificationsDto) {
+        const where: Prisma.NotificationWhereInput = {
+            userId,
+            deletedAt: null,
+            isRead: dto.isRead,
+            type: dto.type,
+            ...(dto.search ? { OR: [{ title: { contains: dto.search, mode: 'insensitive' } }, { message: { contains: dto.search, mode: 'insensitive' } }] } : {}),
+        };
+        const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
+        return paginate(data, total, dto);
+    }
+
+    async findOneForUser(userId: string, notificationId: string) {
+        const notification = await this.repository.findOne({ id: notificationId, userId, deletedAt: null });
+        if (!notification) throw new NotFoundException('Notificacion no encontrada');
+        return notification;
+    }
+
+    async markRead(userId: string, notificationId: string) {
+        await this.findOneForUser(userId, notificationId);
+        return this.repository.markRead(notificationId, userId);
+    }
+
+    markAllRead(userId: string) {
+        return this.repository.markAllRead(userId);
     }
 }

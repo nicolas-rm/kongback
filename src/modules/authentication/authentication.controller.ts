@@ -5,7 +5,7 @@ import { AuthenticationService } from '@/modules/authentication/authentication.s
 import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from '@/modules/authentication/dto';
+import { ChangePasswordDto, LoginDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto } from '@/modules/authentication/dto';
 
 @Controller('auth')
 export class AuthenticationController {
@@ -76,5 +76,35 @@ export class AuthenticationController {
     @RequestConfig({ statusCode: HttpStatus.OK, throttle: true })
     resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authenticationService.resetPassword(dto);
+    }
+
+    @Get('2fa/status')
+    @SkipMustChangePassword()
+    getTwoFactorStatus(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.getTwoFactorStatus(user.id);
+    }
+
+    @Post('2fa/setup')
+    @SkipMustChangePassword()
+    beginTwoFactorSetup(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.beginTwoFactorSetup(user.id);
+    }
+
+    @Post('2fa/enable')
+    @SkipMustChangePassword()
+    enableTwoFactor(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
+        return this.authenticationService.enableTwoFactor(user.id, dto);
+    }
+
+    @Post('2fa/disable')
+    @SkipMustChangePassword()
+    disableTwoFactor(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
+        return this.authenticationService.disableTwoFactor(user.id, dto);
+    }
+
+    @Post('2fa/recovery-codes/regenerate')
+    @SkipMustChangePassword()
+    regenerateRecoveryCodes(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
+        return this.authenticationService.regenerateTwoFactorRecoveryCodes(user.id, dto);
     }
 }

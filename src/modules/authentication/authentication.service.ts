@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto } from '@/modules/authentication/dto';
+import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto } from '@/modules/authentication/dto';
 import {
     ChangePasswordUseCase,
     GetProfileUseCase,
@@ -11,6 +11,7 @@ import {
     RefreshUseCase,
     RequestPasswordResetUseCase,
     ResetPasswordUseCase,
+    TwoFactorUseCase,
 } from '@/modules/authentication/use-cases';
 
 @Injectable()
@@ -23,7 +24,8 @@ export class AuthenticationService {
         private readonly getProfileUseCase: GetProfileUseCase,
         private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
-        private readonly resetPasswordUseCase: ResetPasswordUseCase
+        private readonly resetPasswordUseCase: ResetPasswordUseCase,
+        private readonly twoFactorUseCase: TwoFactorUseCase
     ) {}
 
     login(dto: LoginDto, sessionContext?: SessionContext) {
@@ -56,5 +58,25 @@ export class AuthenticationService {
 
     resetPassword(dto: ResetPasswordDto) {
         return this.resetPasswordUseCase.execute(dto);
+    }
+
+    getTwoFactorStatus(userId: string) {
+        return this.twoFactorUseCase.status(userId);
+    }
+
+    beginTwoFactorSetup(userId: string) {
+        return this.twoFactorUseCase.beginSetup(userId);
+    }
+
+    enableTwoFactor(userId: string, dto: TwoFactorCodeDto) {
+        return this.twoFactorUseCase.enable(userId, dto);
+    }
+
+    disableTwoFactor(userId: string, dto: TwoFactorCodeDto) {
+        return this.twoFactorUseCase.disable(userId, dto);
+    }
+
+    regenerateTwoFactorRecoveryCodes(userId: string, dto: TwoFactorCodeDto) {
+        return this.twoFactorUseCase.regenerateRecoveryCodes(userId, dto);
     }
 }
