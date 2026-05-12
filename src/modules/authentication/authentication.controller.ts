@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpStatus, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser, Public, RefreshToken, RequestConfig, SessionContextData, SkipMustChangePassword } from '@/decorators';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
 import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto } from '@/modules/authentication/dto';
+import { ChangePasswordDto, LoginDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto, UpdateMyProfileDto } from '@/modules/authentication/dto';
 
 @Controller('auth')
 export class AuthenticationController {
@@ -45,16 +45,38 @@ export class AuthenticationController {
         return this.authenticationService.logout(user.id, { refreshToken });
     }
 
+    @Post('logout-all')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    @SkipMustChangePassword()
+    async logoutAll(@CurrentUser() user: RequestUser, @Res({ passthrough: true }) response: Response) {
+        this.authCookiesService.clearAuthCookies(response);
+        return this.authenticationService.logoutAll(user.id);
+    }
+
     @Get('me')
     @SkipMustChangePassword()
     me(@CurrentUser() user: RequestUser, @RefreshToken() refreshToken: string | undefined) {
         return this.authenticationService.getProfile(user, refreshToken);
     }
 
+    @Patch('me')
+    updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMyProfileDto) {
+        return this.authenticationService.updateProfile(user, dto);
+    }
+
     @Get('sessions')
     @SkipMustChangePassword()
     sessions(@CurrentUser() user: RequestUser, @RefreshToken() refreshToken: string | undefined) {
         return this.authenticationService.listSessions(user.id, refreshToken);
+    }
+
+    @Delete('sessions/:sessionId')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    @SkipMustChangePassword()
+    async revokeSession(@CurrentUser() user: RequestUser, @Param('sessionId') sessionId: string, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
+        const result = await this.authenticationService.revokeSession(user.id, sessionId, refreshToken);
+        if (result.revokedCurrent) this.authCookiesService.clearAuthCookies(response);
+        return result;
     }
 
     @Patch('password')
@@ -106,5 +128,12 @@ export class AuthenticationController {
     @SkipMustChangePassword()
     regenerateRecoveryCodes(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
         return this.authenticationService.regenerateTwoFactorRecoveryCodes(user.id, dto);
+    }
+
+    @Delete('2fa/reset')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    @SkipMustChangePassword()
+    resetTwoFactor(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.resetTwoFactor(user.id);
     }
 }

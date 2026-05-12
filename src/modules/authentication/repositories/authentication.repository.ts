@@ -151,6 +151,30 @@ export class AuthenticationRepository {
         });
     }
 
+    revokeSession(userId: string, sessionId: string, revokedAt = new Date()) {
+        return this.prisma.$transaction(async (tx) => {
+            const session = await tx.session.findFirst({
+                where: { id: sessionId, userId, revokedAt: null },
+                select: { id: true },
+            });
+
+            if (!session) return { count: 0 };
+
+            await tx.session.update({
+                where: { id: session.id },
+                data: { revokedAt },
+                select: { id: true },
+            });
+
+            await tx.refreshToken.updateMany({
+                where: { sessionId: session.id, revokedAt: null },
+                data: { revokedAt },
+            });
+
+            return { count: 1 };
+        });
+    }
+
     listActiveSessions(userId: string) {
         return this.prisma.session.findMany({
             where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
@@ -178,6 +202,20 @@ export class AuthenticationRepository {
         return this.prisma.user.update({
             where: { id: userId },
             data: { passwordHash, mustChangePassword: false },
+        });
+    }
+
+    updateProfile(userId: string, data: { email?: string | null; fullName?: string }) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data,
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                fullName: true,
+                updatedAt: true,
+            },
         });
     }
 
@@ -261,6 +299,10 @@ export class AuthenticationRepository {
                 },
             });
         });
+    }
+
+    resetTwoFactor(userId: string) {
+        return this.disableTwoFactor(userId);
     }
 
     replaceRecoveryCodes(userId: string, codeHashes: string[]) {

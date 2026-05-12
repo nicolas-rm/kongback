@@ -86,6 +86,11 @@ export class TwoFactorUseCase {
         return { recoveryCodes };
     }
 
+    async reset(userId: string) {
+        await this.repository.resetTwoFactor(userId);
+        return { twoFactorReset: true };
+    }
+
     private verify(secret: string, code: string): boolean {
         return verifyTotpCode(secret, code, {
             digits: this.config.twoFactor.totpDigits,

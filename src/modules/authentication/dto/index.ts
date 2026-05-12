@@ -5,3 +5,4 @@ export * from './refresh-token.dto';
 export * from './request-password-reset.dto';
 export * from './reset-password.dto';
 export * from './two-factor-code.dto';
+export * from './update-my-profile.dto';

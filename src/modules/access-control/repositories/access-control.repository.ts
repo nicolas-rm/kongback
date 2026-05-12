@@ -78,6 +78,19 @@ export class AccessControlRepository {
         });
     }
 
+    findRolePermissions(roleId: string) {
+        return this.prisma.rolePermission.findMany({
+            where: {
+                roleId,
+                permission: { deletedAt: null },
+            },
+            orderBy: { permission: { code: 'asc' } },
+            select: {
+                permission: { select: this.permissionSelect() },
+            },
+        });
+    }
+
     createPermission(data: Prisma.PermissionUncheckedCreateInput) {
         return this.prisma.permission.create({ data, select: this.permissionSelect() });
     }
