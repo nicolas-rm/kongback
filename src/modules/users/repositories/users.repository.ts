@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { activeRecordWhere } from '@/utilities/prisma/soft-delete';
 
 @Injectable()
 export class UsersRepository {
@@ -29,7 +30,7 @@ export class UsersRepository {
 
     findById(id: string) {
         return this.prisma.user.findFirst({
-            where: { id, deletedAt: null },
+            where: activeRecordWhere({ id }),
             select: this.defaultSelect(),
         });
     }
@@ -140,7 +141,7 @@ export class UsersRepository {
 
     findCredentialRecipient(id: string) {
         return this.prisma.user.findFirst({
-            where: { id, deletedAt: null },
+            where: activeRecordWhere({ id }),
             select: { id: true, username: true, email: true },
         });
     }

@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { STATUS_CODES } from 'node:http';
 import type { Request, Response } from 'express';
+import { buildErrorResponse } from '@/errors/error-response';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -18,12 +19,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
             this.logger.error(`${status} ${message} path=${request.url} method=${request.method}`, exception instanceof Error ? exception.stack : undefined);
         }
 
-        response.status(status).json({
-            statusCode: status,
-            message,
-            path: request.url,
-            timestamp: new Date().toISOString(),
-        });
+        response.status(status).json(buildErrorResponse({ statusCode: status, message, path: request.url }));
     }
 
     private resolveHttpMessage(exception: HttpException, status: number): string {

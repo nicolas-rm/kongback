@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
+import { activeRecordWhere } from '@/utilities/prisma/soft-delete';
 
 @Injectable()
 export class AccessControlRepository {
@@ -44,7 +45,7 @@ export class AccessControlRepository {
     }
 
     findRoleById(id: string) {
-        return this.prisma.role.findFirst({ where: { id, deletedAt: null }, select: this.roleSelect() });
+        return this.prisma.role.findFirst({ where: activeRecordWhere({ id }), select: this.roleSelect() });
     }
 
     updateRole(id: string, data: Prisma.RoleUncheckedUpdateInput) {
@@ -104,7 +105,7 @@ export class AccessControlRepository {
     }
 
     findPermissionById(id: string) {
-        return this.prisma.permission.findFirst({ where: { id, deletedAt: null }, select: this.permissionSelect() });
+        return this.prisma.permission.findFirst({ where: activeRecordWhere({ id }), select: this.permissionSelect() });
     }
 
     updatePermission(id: string, data: Prisma.PermissionUncheckedUpdateInput) {
