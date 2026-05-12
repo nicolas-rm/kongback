@@ -1,18 +1,17 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { PrismaService } from '@/prisma/prisma.service';
 import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
-import { buildActiveUserAccessWhere } from '@/utilities/auth/active-user-access-filter';
+import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
     constructor(
         private readonly reflector: Reflector,
-        private readonly prisma: PrismaService
+        private readonly accessControl: AccessControlService
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,31 +28,15 @@ export class PermissionsGuard implements CanActivate {
         if (!user?.id) throw new ForbiddenException('Usuario no autorizado');
 
         if (requiredRoles.length > 0) {
-            const userAccesses = await this.prisma.userAccess.findMany({
-                where: buildActiveUserAccessWhere({ userId: user.id }),
-                select: { role: { select: { code: true, name: true } } },
-            });
-
-            const roles = new Set(userAccesses.flatMap((entry) => [entry.role.code, entry.role.name]));
-            if (!requiredRoles.some((role) => roles.has(role))) {
+            const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles);
+            if (!hasRole) {
                 throw new ForbiddenException('Permisos insuficientes');
             }
         }
 
         if (requiredPermissions.length > 0) {
-            const rolePermissions = await this.prisma.rolePermission.findMany({
-                where: {
-                    permission: { deletedAt: null },
-                    role: {
-                        deletedAt: null,
-                        accesses: { some: buildActiveUserAccessWhere({ userId: user.id }) },
-                    },
-                },
-                select: { permission: { select: { code: true } } },
-            });
-
-            const permissionCodes = new Set(rolePermissions.map((entry) => entry.permission.code));
-            if (!requiredPermissions.every((permission) => permissionCodes.has(permission))) {
+            const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions);
+            if (!hasPermissions) {
                 throw new ForbiddenException('Permisos insuficientes');
             }
         }
