@@ -4,6 +4,7 @@ import { AppConfigService } from '@/configurations/app-config.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
 import { DocumentsRepository } from '@/modules/documents/repositories/documents.repository';
+import { DocumentResponse } from '@/modules/documents/responses';
 import { DocumentsStorageService } from '@/modules/documents/services/documents-storage.service';
 import type { UploadedFile } from '@/modules/documents/types/uploaded-file.type';
 
@@ -19,7 +20,7 @@ export class DocumentsService {
         this.assertAllowedFile(file);
         const storedFile = await this.storage.saveFile(file);
 
-        return this.repository.create({
+        const document = await this.repository.create({
             title: dto.title,
             description: dto.description ?? null,
             category: dto.category ?? null,
@@ -34,6 +35,7 @@ export class DocumentsService {
             createdByUserId: userId ?? null,
             ...storedFile,
         });
+        return DocumentResponse.from(document);
     }
 
     async findAll(dto: FindDocumentsDto) {
@@ -54,17 +56,22 @@ export class DocumentsService {
                 : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((document) => DocumentResponse.from(document)),
+            total,
+            dto
+        );
     }
 
     async findOne(id: string) {
         const document = await this.repository.findById(id);
         if (!document) throw new NotFoundException('Documento no encontrado');
-        return document;
+        return DocumentResponse.from(document);
     }
 
-    update(id: string, dto: UpdateDocumentDto, userId?: string | null) {
-        return this.repository.update(id, { ...dto, updatedByUserId: userId ?? null });
+    async update(id: string, dto: UpdateDocumentDto, userId?: string | null) {
+        const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null });
+        return DocumentResponse.from(document);
     }
 
     async download(id: string) {
@@ -76,7 +83,9 @@ export class DocumentsService {
     }
 
     async remove(id: string, userId?: string | null) {
-        const document = await this.findOne(id);
+        const document = await this.repository.findDownloadById(id);
+        if (!document) throw new NotFoundException('Documento no encontrado');
+
         await this.repository.softDelete(id, userId);
         await this.storage.removeFile(document.storageKey);
         return { id, deleted: true };

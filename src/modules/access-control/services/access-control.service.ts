@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { AssignRolePermissionsDto, CreatePermissionDto, CreateRoleDto, FindAccessControlDto, UpdatePermissionDto, UpdateRoleDto } from '@/modules/access-control/dto';
 import { AccessControlRepository } from '@/modules/access-control/repositories/access-control.repository';
+import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@/modules/access-control/responses';
 
 @Injectable()
 export class AccessControlService {
@@ -22,8 +23,9 @@ export class AccessControlService {
         return requiredPermissions.every((permission) => permissions.has(permission));
     }
 
-    createRole(dto: CreateRoleDto) {
-        return this.repository.createRole(dto);
+    async createRole(dto: CreateRoleDto) {
+        const role = await this.repository.createRole(dto);
+        return RoleResponse.from(role);
     }
 
     async findRoles(dto: FindAccessControlDto) {
@@ -32,15 +34,21 @@ export class AccessControlService {
             ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findRoles(where, dto.skip, dto.actualLimit), this.repository.countRoles(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((role) => RoleResponse.from(role)),
+            total,
+            dto
+        );
     }
 
-    findRole(id: string) {
-        return this.repository.findRoleById(id);
+    async findRole(id: string) {
+        const role = await this.repository.findRoleById(id);
+        return role ? RoleResponse.from(role) : null;
     }
 
-    updateRole(id: string, dto: UpdateRoleDto) {
-        return this.repository.updateRole(id, dto);
+    async updateRole(id: string, dto: UpdateRoleDto) {
+        const role = await this.repository.updateRole(id, dto);
+        return RoleResponse.from(role);
     }
 
     async deleteRole(id: string) {
@@ -52,24 +60,17 @@ export class AccessControlService {
         const role = await this.repository.syncRolePermissions(roleId, dto.permissionIds);
         if (!role) return null;
 
-        return {
-            id: role.id,
-            code: role.code,
-            name: role.name,
-            description: role.description,
-            permissions: role.permissions.map((entry) => entry.permission),
-            createdAt: role.createdAt,
-            updatedAt: role.updatedAt,
-        };
+        return RoleWithPermissionsResponse.from(role);
     }
 
     async findRolePermissions(roleId: string) {
         const permissions = await this.repository.findRolePermissions(roleId);
-        return permissions.map((entry) => entry.permission);
+        return permissions.map((entry) => PermissionResponse.from(entry.permission));
     }
 
-    createPermission(dto: CreatePermissionDto) {
-        return this.repository.createPermission(dto);
+    async createPermission(dto: CreatePermissionDto) {
+        const permission = await this.repository.createPermission(dto);
+        return PermissionResponse.from(permission);
     }
 
     async findPermissions(dto: FindAccessControlDto) {
@@ -78,15 +79,21 @@ export class AccessControlService {
             ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findPermissions(where, dto.skip, dto.actualLimit), this.repository.countPermissions(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((permission) => PermissionResponse.from(permission)),
+            total,
+            dto
+        );
     }
 
-    findPermission(id: string) {
-        return this.repository.findPermissionById(id);
+    async findPermission(id: string) {
+        const permission = await this.repository.findPermissionById(id);
+        return permission ? PermissionResponse.from(permission) : null;
     }
 
-    updatePermission(id: string, dto: UpdatePermissionDto) {
-        return this.repository.updatePermission(id, dto);
+    async updatePermission(id: string, dto: UpdatePermissionDto) {
+        const permission = await this.repository.updatePermission(id, dto);
+        return PermissionResponse.from(permission);
     }
 
     async deletePermission(id: string) {

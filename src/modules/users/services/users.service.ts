@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { CryptoService } from '@/crypto/crypto.service';
 import { AppMailerService } from '@/mailer/mailer.service';
+import { PermissionResponse } from '@/modules/access-control/responses';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { generateSecurePassword } from '@/utilities/password/generate-password';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersRepository } from '@/modules/users/repositories/users.repository';
+import { UserAccessResponse, UserResponse } from '@/modules/users/responses';
 
 @Injectable()
 export class UsersService {
@@ -16,13 +18,14 @@ export class UsersService {
     ) {}
 
     async create(dto: CreateUserDto) {
-        return this.repository.create({
+        const user = await this.repository.create({
             username: dto.username,
             email: dto.email ?? null,
             fullName: dto.fullName,
             passwordHash: await this.cryptoService.hashPassword(dto.password),
             status: dto.status ?? 'active',
         });
+        return UserResponse.from(user);
     }
 
     async findAll(dto: FindUsersDto) {
@@ -40,21 +43,27 @@ export class UsersService {
                 : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((user) => UserResponse.from(user)),
+            total,
+            dto
+        );
     }
 
-    findOne(id: string) {
-        return this.repository.findById(id);
+    async findOne(id: string) {
+        const user = await this.repository.findById(id);
+        return user ? UserResponse.from(user) : null;
     }
 
-    update(id: string, dto: UpdateUserDto) {
-        return this.repository.update(id, {
+    async update(id: string, dto: UpdateUserDto) {
+        const user = await this.repository.update(id, {
             username: dto.username,
             email: dto.email,
             fullName: dto.fullName,
             status: dto.status,
             mustChangePassword: dto.mustChangePassword,
         });
+        return UserResponse.from(user);
     }
 
     async remove(id: string) {
@@ -62,18 +71,19 @@ export class UsersService {
         return { id, deleted: true };
     }
 
-    assignAccess(userId: string, dto: AssignUserAccessDto) {
-        return this.repository.assignAccess({
+    async assignAccess(userId: string, dto: AssignUserAccessDto) {
+        await this.repository.assignAccess({
             userId,
             roleId: dto.roleId,
             organizationId: dto.organizationId ?? null,
             scopeKey: dto.scopeKey ?? null,
             scopeId: dto.scopeId ?? null,
         });
+        return this.listAccess(userId);
     }
 
-    replaceAccess(userId: string, dto: ReplaceUserAccessDto) {
-        return this.repository.replaceAccess(
+    async replaceAccess(userId: string, dto: ReplaceUserAccessDto) {
+        const accesses = await this.repository.replaceAccess(
             userId,
             dto.accesses.map((access) => ({
                 userId,
@@ -83,10 +93,12 @@ export class UsersService {
                 scopeId: access.scopeId ?? null,
             }))
         );
+        return accesses.map((access) => UserAccessResponse.from(access));
     }
 
-    listAccess(userId: string) {
-        return this.repository.listAccess(userId);
+    async listAccess(userId: string) {
+        const accesses = await this.repository.listAccess(userId);
+        return accesses.map((access) => UserAccessResponse.from(access));
     }
 
     async removeAccess(userId: string, accessId: string) {
@@ -96,7 +108,7 @@ export class UsersService {
 
     async listPermissions(userId: string) {
         const permissions = await this.repository.findPermissionCodes(userId);
-        return permissions.map((entry) => entry.permission);
+        return permissions.map((entry) => PermissionResponse.from(entry.permission));
     }
 
     async changePassword(userId: string, dto: ChangeUserPasswordDto) {

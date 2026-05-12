@@ -15,9 +15,9 @@ export class NotificationsController {
     @Post()
     @Permissions('notifications.create')
     async create(@Body() dto: CreateNotificationDto) {
-        const notification = await this.notificationsService.create(dto);
+        const { notification, response } = await this.notificationsService.create(dto);
         await this.notificationsGateway.emitNotificationCreated(notification);
-        return notification;
+        return response;
     }
 }
 

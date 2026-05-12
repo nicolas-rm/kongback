@@ -3,19 +3,7 @@ import { NotificationType, Prisma } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
-
-type UserNotificationResponse = {
-    id: string;
-    title: string;
-    message: string;
-    detail: string | null;
-    type: NotificationType;
-    link: string | null;
-    isRead: boolean;
-    readAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-};
+import { NotificationResponse } from '@/modules/notifications/responses';
 
 @Injectable()
 export class NotificationsService {
@@ -29,8 +17,12 @@ export class NotificationsService {
         return this.repository.countUnreadForUser(userId);
     }
 
-    create(dto: CreateNotificationDto) {
-        return this.repository.createForUser(dto.userId, dto);
+    async create(dto: CreateNotificationDto) {
+        const notification = await this.repository.createForUser(dto.userId, dto);
+        return {
+            notification,
+            response: NotificationResponse.from(notification, { includeUserId: true }),
+        };
     }
 
     async findForUser(userId: string, dto: FindNotificationsDto) {
@@ -43,7 +35,7 @@ export class NotificationsService {
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(
-            data.map((notification) => this.toUserResponse(notification)),
+            data.map((notification) => NotificationResponse.from(notification)),
             total,
             dto
         );
@@ -61,37 +53,11 @@ export class NotificationsService {
 
         return {
             notification,
-            response: this.toUserResponse(notification),
+            response: NotificationResponse.from(notification),
         };
     }
 
     markAllRead(userId: string) {
         return this.repository.markAllRead(userId);
-    }
-
-    private toUserResponse(notification: {
-        id: string;
-        title: string;
-        message: string;
-        detail: string | null;
-        type: NotificationType;
-        link: string | null;
-        isRead: boolean;
-        readAt: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
-    }): UserNotificationResponse {
-        return {
-            id: notification.id,
-            title: notification.title,
-            message: notification.message,
-            detail: notification.detail,
-            type: notification.type,
-            link: notification.link,
-            isRead: notification.isRead,
-            readAt: notification.readAt,
-            createdAt: notification.createdAt,
-            updatedAt: notification.updatedAt,
-        };
     }
 }

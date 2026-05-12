@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CryptoService } from '@/crypto/crypto.service';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
+import { RevokeSessionResponse } from '@/modules/authentication/responses';
 
 @Injectable()
 export class RevokeSessionUseCase {
@@ -13,10 +14,10 @@ export class RevokeSessionUseCase {
         const currentSessionId = currentRefreshToken ? (await this.repository.findStoredRefreshToken(this.cryptoService.hashToken(currentRefreshToken)))?.sessionId : null;
         const result = await this.repository.revokeSession(userId, sessionId);
 
-        return {
+        return RevokeSessionResponse.from({
             id: sessionId,
             revoked: result.count > 0,
             revokedCurrent: sessionId === currentSessionId,
-        };
+        });
     }
 }

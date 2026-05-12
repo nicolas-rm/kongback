@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ProfileResponse } from '@/modules/authentication/responses';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { ListSessionsUseCase } from '@/modules/authentication/use-cases/list-sessions.use-case';
 
@@ -10,7 +11,7 @@ export class GetProfileUseCase {
         const sessions = await this.listSessionsUseCase.execute(user.id, currentRefreshToken);
         const currentSession = sessions.find((session) => session.isCurrent) ?? null;
 
-        return {
+        return ProfileResponse.from({
             id: user.id,
             username: user.username,
             email: user.email,
@@ -20,6 +21,6 @@ export class GetProfileUseCase {
             organizationIds: user.organizationIds ?? [],
             permissions: user.permissions ?? [],
             session: currentSession,
-        };
+        });
     }
 }
