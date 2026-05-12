@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { Permissions } from '@/decorators';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { AssignRolePermissionsDto, CreateRoleDto, FindAccessControlDto, UpdateRoleDto } from '@/modules/access-control/dto';
@@ -19,12 +19,6 @@ export class RolesController {
         return this.accessControlService.findRoles(dto);
     }
 
-    @Get(':id')
-    @Permissions('roles.read-one')
-    findOne(@Param('id') id: string) {
-        return this.accessControlService.findRole(id);
-    }
-
     @Patch(':id')
     @Permissions('roles.update')
     update(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
@@ -37,9 +31,21 @@ export class RolesController {
         return this.accessControlService.deleteRole(id);
     }
 
-    @Post(':id/permissions')
+    @Put(':id/permissions')
     @Permissions('roles.permissions.assign')
-    assignPermissions(@Param('id') id: string, @Body() dto: AssignRolePermissionsDto) {
+    replacePermissions(@Param('id') id: string, @Body() dto: AssignRolePermissionsDto) {
         return this.accessControlService.assignRolePermissions(id, dto);
+    }
+
+    @Get(':id/permissions')
+    @Permissions('roles.permissions.read')
+    listPermissions(@Param('id') id: string) {
+        return this.accessControlService.findRolePermissions(id);
+    }
+
+    @Get(':id')
+    @Permissions('roles.read-one')
+    findOne(@Param('id') id: string) {
+        return this.accessControlService.findRole(id);
     }
 }

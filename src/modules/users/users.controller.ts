@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { Permissions } from '@/decorators';
-import { AssignUserAccessDto, CreateUserDto, FindUsersDto, UpdateUserDto } from '@/modules/users/dto';
+import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersService } from '@/modules/users/services/users.service';
 
 @Controller('users')
@@ -17,12 +17,6 @@ export class UsersController {
     @Permissions('users.read-list')
     findAll(@Query() dto: FindUsersDto) {
         return this.usersService.findAll(dto);
-    }
-
-    @Get(':id')
-    @Permissions('users.read-one')
-    findOne(@Param('id') id: string) {
-        return this.usersService.findOne(id);
     }
 
     @Patch(':id')
@@ -43,15 +37,51 @@ export class UsersController {
         return this.usersService.listAccess(id);
     }
 
+    @Get(':id/permissions')
+    @Permissions('users.permissions.read')
+    listPermissions(@Param('id') id: string) {
+        return this.usersService.listPermissions(id);
+    }
+
     @Post(':id/access')
     @Permissions('users.access.assign')
     assignAccess(@Param('id') id: string, @Body() dto: AssignUserAccessDto) {
         return this.usersService.assignAccess(id, dto);
     }
 
+    @Put(':id/access')
+    @Permissions('users.access.assign')
+    replaceAccess(@Param('id') id: string, @Body() dto: ReplaceUserAccessDto) {
+        return this.usersService.replaceAccess(id, dto);
+    }
+
     @Delete(':id/access/:accessId')
     @Permissions('users.access.assign')
     removeAccess(@Param('id') id: string, @Param('accessId') accessId: string) {
         return this.usersService.removeAccess(id, accessId);
+    }
+
+    @Patch(':id/password')
+    @Permissions('users.password.update')
+    changePassword(@Param('id') id: string, @Body() dto: ChangeUserPasswordDto) {
+        return this.usersService.changePassword(id, dto);
+    }
+
+    @Patch(':id/2fa/unlink')
+    @Permissions('users.2fa.unlink')
+    unlinkTwoFactor(@Param('id') id: string) {
+        return this.usersService.unlinkTwoFactor(id);
+    }
+
+    @Post(':id/resend-credentials')
+    @Permissions('users.credentials.resend')
+    resendCredentials(@Param('id') id: string) {
+        return this.usersService.resendCredentials(id);
+    }
+
+    @Get(':id')
+    @Permissions('users.read-one')
+    findOne(@Param('id') id: string) {
+        return this.usersService.findOne(id);
     }
 }

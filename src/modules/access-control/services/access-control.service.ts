@@ -63,6 +63,11 @@ export class AccessControlService {
         };
     }
 
+    async findRolePermissions(roleId: string) {
+        const permissions = await this.repository.findRolePermissions(roleId);
+        return permissions.map((entry) => entry.permission);
+    }
+
     createPermission(dto: CreatePermissionDto) {
         return this.repository.createPermission(dto);
     }

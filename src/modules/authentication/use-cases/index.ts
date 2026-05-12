@@ -6,4 +6,6 @@ export * from './logout.use-case';
 export * from './refresh.use-case';
 export * from './request-password-reset.use-case';
 export * from './reset-password.use-case';
+export * from './revoke-session.use-case';
 export * from './two-factor.use-case';
+export * from './update-my-profile.use-case';

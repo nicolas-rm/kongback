@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto } from '@/modules/authentication/dto';
+import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto, UpdateMyProfileDto } from '@/modules/authentication/dto';
 import {
     ChangePasswordUseCase,
     GetProfileUseCase,
@@ -11,7 +11,9 @@ import {
     RefreshUseCase,
     RequestPasswordResetUseCase,
     ResetPasswordUseCase,
+    RevokeSessionUseCase,
     TwoFactorUseCase,
+    UpdateMyProfileUseCase,
 } from '@/modules/authentication/use-cases';
 
 @Injectable()
@@ -21,7 +23,9 @@ export class AuthenticationService {
         private readonly refreshUseCase: RefreshUseCase,
         private readonly logoutUseCase: LogoutUseCase,
         private readonly listSessionsUseCase: ListSessionsUseCase,
+        private readonly revokeSessionUseCase: RevokeSessionUseCase,
         private readonly getProfileUseCase: GetProfileUseCase,
+        private readonly updateMyProfileUseCase: UpdateMyProfileUseCase,
         private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
         private readonly resetPasswordUseCase: ResetPasswordUseCase,
@@ -40,12 +44,24 @@ export class AuthenticationService {
         return this.logoutUseCase.execute(userId, dto);
     }
 
+    logoutAll(userId: string) {
+        return this.logoutUseCase.execute(userId, {});
+    }
+
     getProfile(user: RequestUser, refreshToken?: string) {
         return this.getProfileUseCase.execute(user, refreshToken);
     }
 
+    updateProfile(user: RequestUser, dto: UpdateMyProfileDto) {
+        return this.updateMyProfileUseCase.execute(user, dto);
+    }
+
     listSessions(userId: string, refreshToken?: string) {
         return this.listSessionsUseCase.execute(userId, refreshToken);
+    }
+
+    revokeSession(userId: string, sessionId: string, refreshToken?: string) {
+        return this.revokeSessionUseCase.execute(userId, sessionId, refreshToken);
     }
 
     changePassword(userId: string, dto: ChangePasswordDto) {
@@ -78,5 +94,9 @@ export class AuthenticationService {
 
     regenerateTwoFactorRecoveryCodes(userId: string, dto: TwoFactorCodeDto) {
         return this.twoFactorUseCase.regenerateRecoveryCodes(userId, dto);
+    }
+
+    resetTwoFactor(userId: string) {
+        return this.twoFactorUseCase.reset(userId);
     }
 }
