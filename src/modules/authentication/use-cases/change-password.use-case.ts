@@ -20,6 +20,6 @@ export class ChangePasswordUseCase {
         await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(dto.newPassword));
         await this.repository.revokeUserRefreshTokens(user.id);
 
-        return { userId: user.id, passwordChanged: true };
+        return { passwordChanged: true };
     }
 }

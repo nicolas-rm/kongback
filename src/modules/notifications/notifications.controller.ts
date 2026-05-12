@@ -36,8 +36,9 @@ export class MyNotificationsController {
 
     @Get('unread-count')
     @Permissions('notifications.unread-count.read')
-    unreadCount(@CurrentUser() user: RequestUser) {
-        return this.notificationsService.countUnreadForUser(user.id);
+    async unreadCount(@CurrentUser() user: RequestUser) {
+        const count = await this.notificationsService.countUnreadForUser(user.id);
+        return { count };
     }
 
     @Patch('read-all')
@@ -52,8 +53,8 @@ export class MyNotificationsController {
     @Patch(':id/read')
     @Permissions('notifications.mark-read')
     async markRead(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-        const notification = await this.notificationsService.markRead(user.id, id);
+        const { notification, response } = await this.notificationsService.markRead(user.id, id);
         await this.notificationsGateway.emitNotificationRead(notification);
-        return notification;
+        return response;
     }
 }

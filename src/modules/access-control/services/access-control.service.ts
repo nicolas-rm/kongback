@@ -43,12 +43,24 @@ export class AccessControlService {
         return this.repository.updateRole(id, dto);
     }
 
-    deleteRole(id: string) {
-        return this.repository.softDeleteRole(id);
+    async deleteRole(id: string) {
+        await this.repository.softDeleteRole(id);
+        return { id, deleted: true };
     }
 
-    assignRolePermissions(roleId: string, dto: AssignRolePermissionsDto) {
-        return this.repository.syncRolePermissions(roleId, dto.permissionIds);
+    async assignRolePermissions(roleId: string, dto: AssignRolePermissionsDto) {
+        const role = await this.repository.syncRolePermissions(roleId, dto.permissionIds);
+        if (!role) return null;
+
+        return {
+            id: role.id,
+            code: role.code,
+            name: role.name,
+            description: role.description,
+            permissions: role.permissions.map((entry) => entry.permission),
+            createdAt: role.createdAt,
+            updatedAt: role.updatedAt,
+        };
     }
 
     createPermission(dto: CreatePermissionDto) {
@@ -72,7 +84,8 @@ export class AccessControlService {
         return this.repository.updatePermission(id, dto);
     }
 
-    deletePermission(id: string) {
-        return this.repository.softDeletePermission(id);
+    async deletePermission(id: string) {
+        await this.repository.softDeletePermission(id);
+        return { id, deleted: true };
     }
 }

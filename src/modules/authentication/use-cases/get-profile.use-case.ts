@@ -11,7 +11,14 @@ export class GetProfileUseCase {
         const currentSession = sessions.find((session) => session.isCurrent) ?? null;
 
         return {
-            ...user,
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            fullName: user.fullName,
+            mustChangePassword: user.mustChangePassword,
+            isGlobalAdmin: user.isGlobalAdmin,
+            organizationIds: user.organizationIds ?? [],
+            permissions: user.permissions ?? [],
             session: currentSession,
         };
     }

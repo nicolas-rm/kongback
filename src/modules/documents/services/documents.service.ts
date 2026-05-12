@@ -68,7 +68,9 @@ export class DocumentsService {
     }
 
     async download(id: string) {
-        const document = await this.findOne(id);
+        const document = await this.repository.findDownloadById(id);
+        if (!document) throw new NotFoundException('Documento no encontrado');
+
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
     }

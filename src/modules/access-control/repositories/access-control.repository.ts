@@ -32,11 +32,11 @@ export class AccessControlRepository {
     }
 
     createRole(data: Prisma.RoleUncheckedCreateInput) {
-        return this.prisma.role.create({ data });
+        return this.prisma.role.create({ data, select: this.roleSelect() });
     }
 
     findRoles(where: Prisma.RoleWhereInput, skip: number, take?: number) {
-        return this.prisma.role.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } });
+        return this.prisma.role.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, select: this.roleSelect() });
     }
 
     countRoles(where: Prisma.RoleWhereInput): Promise<number> {
@@ -44,15 +44,15 @@ export class AccessControlRepository {
     }
 
     findRoleById(id: string) {
-        return this.prisma.role.findFirst({ where: { id, deletedAt: null } });
+        return this.prisma.role.findFirst({ where: { id, deletedAt: null }, select: this.roleSelect() });
     }
 
     updateRole(id: string, data: Prisma.RoleUncheckedUpdateInput) {
-        return this.prisma.role.update({ where: { id }, data });
+        return this.prisma.role.update({ where: { id }, data, select: this.roleSelect() });
     }
 
     softDeleteRole(id: string) {
-        return this.prisma.role.update({ where: { id }, data: { deletedAt: new Date() } });
+        return this.prisma.role.update({ where: { id }, data: { deletedAt: new Date() }, select: { id: true } });
     }
 
     syncRolePermissions(roleId: string, permissionIds: string[]) {
@@ -66,17 +66,24 @@ export class AccessControlRepository {
             }
             return tx.role.findUnique({
                 where: { id: roleId },
-                include: { permissions: { include: { permission: true } } },
+                select: {
+                    ...this.roleSelect(),
+                    permissions: {
+                        select: {
+                            permission: { select: this.permissionSelect() },
+                        },
+                    },
+                },
             });
         });
     }
 
     createPermission(data: Prisma.PermissionUncheckedCreateInput) {
-        return this.prisma.permission.create({ data });
+        return this.prisma.permission.create({ data, select: this.permissionSelect() });
     }
 
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {
-        return this.prisma.permission.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } });
+        return this.prisma.permission.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, select: this.permissionSelect() });
     }
 
     countPermissions(where: Prisma.PermissionWhereInput): Promise<number> {
@@ -84,14 +91,36 @@ export class AccessControlRepository {
     }
 
     findPermissionById(id: string) {
-        return this.prisma.permission.findFirst({ where: { id, deletedAt: null } });
+        return this.prisma.permission.findFirst({ where: { id, deletedAt: null }, select: this.permissionSelect() });
     }
 
     updatePermission(id: string, data: Prisma.PermissionUncheckedUpdateInput) {
-        return this.prisma.permission.update({ where: { id }, data });
+        return this.prisma.permission.update({ where: { id }, data, select: this.permissionSelect() });
     }
 
     softDeletePermission(id: string) {
-        return this.prisma.permission.update({ where: { id }, data: { deletedAt: new Date() } });
+        return this.prisma.permission.update({ where: { id }, data: { deletedAt: new Date() }, select: { id: true } });
+    }
+
+    private roleSelect(): Prisma.RoleSelect {
+        return {
+            id: true,
+            code: true,
+            name: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+        };
+    }
+
+    private permissionSelect(): Prisma.PermissionSelect {
+        return {
+            id: true,
+            code: true,
+            name: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+        };
     }
 }

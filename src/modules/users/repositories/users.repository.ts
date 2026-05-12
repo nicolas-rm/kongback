@@ -46,7 +46,7 @@ export class UsersRepository {
         return this.prisma.user.update({
             where: { id },
             data: { deletedAt: new Date(), status: 'inactive' },
-            select: this.defaultSelect(),
+            select: { id: true },
         });
     }
 
@@ -76,6 +76,7 @@ export class UsersRepository {
         return this.prisma.userAccess.update({
             where: { id, userId },
             data: { deletedAt: new Date() },
+            select: { id: true },
         });
     }
 
@@ -91,7 +92,6 @@ export class UsersRepository {
             twoFactorEnabled: true,
             createdAt: true,
             updatedAt: true,
-            deletedAt: true,
         };
     }
 }
