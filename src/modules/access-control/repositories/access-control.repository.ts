@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { buildActiveUserAccessWhere } from '@/utilities/auth/active-user-access-filter';
+import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
 
 @Injectable()
 export class AccessControlRepository {

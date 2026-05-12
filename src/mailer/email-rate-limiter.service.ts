@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EmailDispatchContext, EmailDispatchStatus, Prisma } from '@prisma/client';
 import { MailerRepository } from '@/mailer/mailer.repository';
-import { normalizeEmail } from '@/utilities/auth/email.util';
+import { normalizeEmail } from '@/utilities/authentication/email.util';
 
 type LimitDimension = 'recipient_email' | 'recipient_user' | 'trigger_user' | 'ip_address' | 'global';
 

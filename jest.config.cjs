@@ -10,5 +10,6 @@ module.exports = {
     testEnvironment: 'node',
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+        '^argon2$': '<rootDir>/test/mocks/argon2.ts',
     },
 };
