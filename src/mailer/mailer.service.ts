@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { EmailDispatchContext, Prisma } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { EmailTemplateService } from '@/mailer/email-template.service';
 import { EmailRateLimiterService, ReserveEmailDispatchResult } from '@/mailer/email-rate-limiter.service';
 
 type MailContext = {
@@ -18,6 +19,7 @@ export class AppMailerService {
     constructor(
         private readonly mailer: MailerService,
         private readonly config: AppConfigService,
+        private readonly emailTemplateService: EmailTemplateService,
         private readonly emailRateLimiter: EmailRateLimiterService
     ) {}
 
@@ -37,7 +39,10 @@ export class AppMailerService {
         if (!reservation.allowed) return reservation;
 
         const resetUrl = new URL(`/reset-password/${token}`, this.config.mail.webUrl);
-        const html = buildSimpleEmailHtml({
+        await this.sendTrackedTemplateMail({
+            dispatchId: reservation.dispatchId,
+            to,
+            subject: 'Restablecer contrasena',
             appName: this.config.name,
             title: 'Restablecer contrasena',
             body: `Usa este enlace para restablecer tu contrasena. Expira en ${expiresAt.toLocaleString('es-MX')}.`,
@@ -45,7 +50,6 @@ export class AppMailerService {
             actionUrl: resetUrl.toString(),
         });
 
-        await this.sendTrackedMail(reservation.dispatchId, to, 'Restablecer contrasena', html);
         return reservation;
     }
 
@@ -60,13 +64,15 @@ export class AppMailerService {
         });
         if (!reservation.allowed) return reservation;
 
-        const html = buildSimpleEmailHtml({
+        await this.sendTrackedTemplateMail({
+            dispatchId: reservation.dispatchId,
+            to,
+            subject: `Bienvenido a ${this.config.name}`,
             appName: this.config.name,
             title: `Bienvenido a ${this.config.name}`,
             body: `Tu usuario es ${username} y tu contrasena temporal es ${password}.`,
         });
 
-        await this.sendTrackedMail(reservation.dispatchId, to, `Bienvenido a ${this.config.name}`, html);
         return reservation;
     }
 
@@ -82,7 +88,10 @@ export class AppMailerService {
         if (!reservation.allowed) return reservation;
 
         const invitationUrl = new URL(`/invitations/${token}`, this.config.mail.webUrl);
-        const html = buildSimpleEmailHtml({
+        await this.sendTrackedTemplateMail({
+            dispatchId: reservation.dispatchId,
+            to,
+            subject: `Invitacion a ${organizationName}`,
             appName: this.config.name,
             title: `Invitacion a ${organizationName}`,
             body: `Recibiste una invitacion para unirte a ${organizationName}.`,
@@ -90,8 +99,19 @@ export class AppMailerService {
             actionUrl: invitationUrl.toString(),
         });
 
-        await this.sendTrackedMail(reservation.dispatchId, to, `Invitacion a ${organizationName}`, html);
         return reservation;
+    }
+
+    private async sendTrackedTemplateMail(input: { dispatchId: string; to: string; subject: string; appName: string; title: string; body: string; actionLabel?: string; actionUrl?: string }) {
+        const html = this.emailTemplateService.buildSimpleEmail({
+            appName: input.appName,
+            title: input.title,
+            body: input.body,
+            actionLabel: input.actionLabel,
+            actionUrl: input.actionUrl,
+        });
+
+        await this.sendTrackedMail(input.dispatchId, input.to, input.subject, html);
     }
 
     private async sendTrackedMail(dispatchId: string, to: string, subject: string, html: string) {
@@ -115,17 +135,4 @@ export class AppMailerService {
             throw error;
         }
     }
-}
-
-function escapeHtml(value: string): string {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-}
-
-function buildSimpleEmailHtml(input: { appName: string; title: string; body: string; actionLabel?: string; actionUrl?: string }) {
-    const action =
-        input.actionLabel && input.actionUrl
-            ? `<p><a href="${escapeHtml(input.actionUrl)}" style="display:inline-block;background:#111827;color:white;padding:10px 14px;border-radius:6px;text-decoration:none">${escapeHtml(input.actionLabel)}</a></p>`
-            : '';
-
-    return `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#111827"><h1>${escapeHtml(input.title)}</h1><p>${escapeHtml(input.body)}</p>${action}<p style="color:#6b7280;font-size:12px">${escapeHtml(input.appName)}</p></body></html>`;
 }

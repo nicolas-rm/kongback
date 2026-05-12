@@ -3,6 +3,7 @@ import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
+import { JwtTokenService } from '@/modules/authentication/services/jwt-token.service';
 
 type TokenUser = {
     id: string;
@@ -22,6 +23,7 @@ export class AuthTokensService {
         private readonly config: AppConfigService,
         private readonly repository: AuthenticationRepository,
         private readonly jwtService: JwtService,
+        private readonly jwtTokenService: JwtTokenService,
         private readonly cryptoService: CryptoService
     ) {}
 
@@ -60,17 +62,12 @@ export class AuthTokensService {
             userId: user.id,
             sessionId: session.id,
             tokenHash: this.cryptoService.hashToken(refreshToken),
-            expiresAt: this.resolveTokenExpirationDate(refreshToken, expiresAt),
+            expiresAt: this.jwtTokenService.resolveExpirationDate(refreshToken, expiresAt),
             idleExpiresAt,
             userAgent: sessionContext.userAgent ?? null,
             ipAddress: sessionContext.ipAddress ?? null,
         });
 
         return { accessToken, refreshToken, sessionId: session.id };
-    }
-
-    private resolveTokenExpirationDate(token: string, fallback: Date): Date {
-        const decoded = this.jwtService.decode<{ exp?: number }>(token);
-        return decoded?.exp ? new Date(decoded.exp * 1000) : fallback;
     }
 }

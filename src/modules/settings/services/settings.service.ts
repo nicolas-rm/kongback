@@ -3,5 +3,5 @@ import { SettingsRepository } from '@/modules/settings/repositories/settings.rep
 
 @Injectable()
 export class SettingsService {
-    constructor(private readonly settingsRepository: SettingsRepository) {}
+    constructor(private readonly repository: SettingsRepository) {}
 }

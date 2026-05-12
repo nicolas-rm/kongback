@@ -3,5 +3,5 @@ import { DocumentsRepository } from '@/modules/documents/repositories/documents.
 
 @Injectable()
 export class DocumentsService {
-    constructor(private readonly documentsRepository: DocumentsRepository) {}
+    constructor(private readonly repository: DocumentsRepository) {}
 }

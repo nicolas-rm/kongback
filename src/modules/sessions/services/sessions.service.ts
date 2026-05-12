@@ -3,5 +3,5 @@ import { SessionsRepository } from '@/modules/sessions/repositories/sessions.rep
 
 @Injectable()
 export class SessionsService {
-    constructor(private readonly sessionsRepository: SessionsRepository) {}
+    constructor(private readonly repository: SessionsRepository) {}
 }
