@@ -1,6 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { RequestValidationException } from '@/configurations/request-validation';
+import { ERROR_CODES } from '@/errors/error-codes';
+import { buildErrorResponse } from '@/errors/error-response';
 
 @Catch(RequestValidationException)
 export class ValidationExceptionFilter implements ExceptionFilter {
@@ -10,12 +12,8 @@ export class ValidationExceptionFilter implements ExceptionFilter {
         const request = context.getRequest<Request>();
         const message = exception.errors.length > 0 ? exception.errors.join('; ') : 'Error de validacion';
 
-        response.status(HttpStatus.BAD_REQUEST).json({
-            statusCode: HttpStatus.BAD_REQUEST,
-            message,
-            errors: exception.errors,
-            path: request.url,
-            timestamp: new Date().toISOString(),
-        });
+        response
+            .status(HttpStatus.BAD_REQUEST)
+            .json(buildErrorResponse({ statusCode: HttpStatus.BAD_REQUEST, code: ERROR_CODES.VALIDATION_ERROR, message, errors: exception.errors, path: request.url }));
     }
 }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { activeRecordWhere, softDeleteData } from '@/utilities/prisma/soft-delete';
 
 @Injectable()
 export class DocumentsRepository {
@@ -19,12 +20,12 @@ export class DocumentsRepository {
     }
 
     findById(id: string) {
-        return this.prisma.document.findFirst({ where: { id, deletedAt: null }, select: this.publicSelect() });
+        return this.prisma.document.findFirst({ where: activeRecordWhere({ id }), select: this.publicSelect() });
     }
 
     findDownloadById(id: string) {
         return this.prisma.document.findFirst({
-            where: { id, deletedAt: null },
+            where: activeRecordWhere({ id }),
             select: {
                 id: true,
                 originalName: true,
@@ -41,7 +42,7 @@ export class DocumentsRepository {
     softDelete(id: string, userId?: string | null) {
         return this.prisma.document.update({
             where: { id },
-            data: { deletedAt: new Date(), deletedByUserId: userId ?? null },
+            data: softDeleteData(userId ?? null),
             select: { id: true },
         });
     }
