@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EmailDispatchContext, EmailDispatchStatus, Prisma } from '@prisma/client';
-import { PrismaService } from '@/prisma/prisma.service';
+import { MailerRepository } from '@/mailer/mailer.repository';
 import { normalizeEmail } from '@/utilities/auth/email.util';
 
 type LimitDimension = 'recipient_email' | 'recipient_user' | 'trigger_user' | 'ip_address' | 'global';
@@ -70,68 +70,49 @@ type NormalizedReserveInput = {
 export class EmailRateLimiterService {
     private readonly logger = new Logger(EmailRateLimiterService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly mailerRepository: MailerRepository) {}
 
     async reserve(input: ReserveEmailDispatchInput): Promise<ReserveEmailDispatchResult> {
         const normalizedInput = this.normalizeReserveInput(input);
         const denied = await this.findFirstDeniedRule(normalizedInput);
 
         if (denied) {
-            await this.prisma.emailDispatch.create({
-                data: {
-                    context: normalizedInput.context,
-                    status: EmailDispatchStatus.suppressed_rate_limit,
-                    recipientEmail: normalizedInput.recipientEmail,
-                    recipientUserId: normalizedInput.recipientUserId,
-                    triggeredByUserId: normalizedInput.triggeredByUserId,
-                    ipAddress: normalizedInput.ipAddress,
-                    reason: denied.reason,
-                    retryAfterSeconds: denied.retryAfterSeconds,
-                    metadata: normalizedInput.metadata,
-                },
+            await this.mailerRepository.createDispatch({
+                context: normalizedInput.context,
+                status: EmailDispatchStatus.suppressed_rate_limit,
+                recipientEmail: normalizedInput.recipientEmail,
+                recipientUserId: normalizedInput.recipientUserId,
+                triggeredByUserId: normalizedInput.triggeredByUserId,
+                ipAddress: normalizedInput.ipAddress,
+                reason: denied.reason,
+                retryAfterSeconds: denied.retryAfterSeconds,
+                metadata: normalizedInput.metadata,
             });
 
             this.logger.warn(`mail.rate_limit context=${normalizedInput.context} reason=${denied.reason}`);
             return denied;
         }
 
-        const created = await this.prisma.emailDispatch.create({
-            data: {
-                context: normalizedInput.context,
-                status: EmailDispatchStatus.accepted,
-                recipientEmail: normalizedInput.recipientEmail,
-                recipientUserId: normalizedInput.recipientUserId,
-                triggeredByUserId: normalizedInput.triggeredByUserId,
-                ipAddress: normalizedInput.ipAddress,
-                metadata: normalizedInput.metadata,
-            },
-            select: { id: true },
+        const created = await this.mailerRepository.createDispatchReservation({
+            context: normalizedInput.context,
+            status: EmailDispatchStatus.accepted,
+            recipientEmail: normalizedInput.recipientEmail,
+            recipientUserId: normalizedInput.recipientUserId,
+            triggeredByUserId: normalizedInput.triggeredByUserId,
+            ipAddress: normalizedInput.ipAddress,
+            metadata: normalizedInput.metadata,
         });
 
         return { allowed: true, dispatchId: created.id };
     }
 
     async markSent(dispatchId: string): Promise<void> {
-        await this.prisma.emailDispatch.update({
-            where: { id: dispatchId },
-            data: {
-                status: EmailDispatchStatus.sent,
-                reason: null,
-                retryAfterSeconds: null,
-                errorMessage: null,
-            },
-        });
+        await this.mailerRepository.markDispatchSent(dispatchId);
     }
 
     async markFailed(dispatchId: string, error: unknown): Promise<void> {
         const message = error instanceof Error ? error.message : String(error ?? 'mail_send_failed');
-        await this.prisma.emailDispatch.update({
-            where: { id: dispatchId },
-            data: {
-                status: EmailDispatchStatus.failed,
-                errorMessage: message.slice(0, 1000),
-            },
-        });
+        await this.mailerRepository.markDispatchFailed(dispatchId, message);
     }
 
     private normalizeReserveInput(input: ReserveEmailDispatchInput): NormalizedReserveInput {
@@ -160,16 +141,12 @@ export class EmailRateLimiterService {
                 ...scopedWhere,
             };
 
-            const count = await this.prisma.emailDispatch.count({ where });
+            const count = await this.mailerRepository.countDispatches(where);
             if (count < rule.limit) continue;
 
-            const oldest = await this.prisma.emailDispatch.findFirst({
-                where,
-                orderBy: { createdAt: 'asc' },
-                select: { createdAt: true },
-            });
+            const oldestCreatedAt = await this.mailerRepository.findOldestDispatchCreatedAt(where);
 
-            const retryAfterMs = Math.max(1000, (oldest?.createdAt.getTime() ?? now) + rule.windowMs - now);
+            const retryAfterMs = Math.max(1000, (oldestCreatedAt?.getTime() ?? now) + rule.windowMs - now);
             return {
                 allowed: false,
                 reason: `${rule.name}:${count}/${rule.limit}`,

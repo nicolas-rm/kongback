@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { AppConfigService } from '@/configurations/app-config.service';
-import { PrismaService } from '@/prisma/prisma.service';
+import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 
 type JwtPayload = {
@@ -19,7 +19,7 @@ function cookieExtractor(request: Request): string | null {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(
-        private readonly prisma: PrismaService,
+        private readonly repository: AuthenticationRepository,
         config: AppConfigService
     ) {
         super({
@@ -30,35 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     async validate(payload: JwtPayload): Promise<RequestUser> {
-        const user = await this.prisma.user.findFirst({
-            where: {
-                id: payload.sub,
-                deletedAt: null,
-                status: 'active',
-            },
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                fullName: true,
-                mustChangePassword: true,
-                accesses: {
-                    where: { deletedAt: null, role: { deletedAt: null } },
-                    select: {
-                        organizationId: true,
-                        role: {
-                            select: {
-                                code: true,
-                                permissions: {
-                                    where: { permission: { deletedAt: null } },
-                                    select: { permission: { select: { code: true } } },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        const user = await this.repository.findActiveUserForRequest(payload.sub);
 
         if (!user) return null as never;
 

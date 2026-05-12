@@ -3,6 +3,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { AppConfigModule } from '@/configurations/app-config.module';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { EmailRateLimiterService } from '@/mailer/email-rate-limiter.service';
+import { MailerRepository } from '@/mailer/mailer.repository';
 import { AppMailerService } from '@/mailer/mailer.service';
 
 @Global()
@@ -25,7 +26,7 @@ import { AppMailerService } from '@/mailer/mailer.service';
             }),
         }),
     ],
-    providers: [EmailRateLimiterService, AppMailerService],
+    providers: [MailerRepository, EmailRateLimiterService, AppMailerService],
     exports: [AppMailerService],
 })
 export class AppMailerModule {}
