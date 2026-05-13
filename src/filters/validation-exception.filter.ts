@@ -10,10 +10,17 @@ export class ValidationExceptionFilter implements ExceptionFilter {
         const context = host.switchToHttp();
         const response = context.getResponse<Response>();
         const request = context.getRequest<Request>();
-        const message = exception.errors.length > 0 ? exception.errors.join('; ') : 'Error de validacion';
 
         response
             .status(HttpStatus.BAD_REQUEST)
-            .json(buildErrorResponse({ statusCode: HttpStatus.BAD_REQUEST, code: ERROR_CODES.VALIDATION_ERROR, message, errors: exception.errors, path: request.url }));
+            .json(
+                buildErrorResponse({
+                    statusCode: HttpStatus.BAD_REQUEST,
+                    code: ERROR_CODES.VALIDATION_ERROR,
+                    message: 'La solicitud contiene datos invalidos',
+                    errors: exception.errors,
+                    path: request.url,
+                })
+            );
     }
 }
