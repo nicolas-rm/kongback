@@ -7,6 +7,7 @@ describe('Authentication use-cases', () => {
         session: {
             maxFailedAttempts: 3,
             lockDurationMinutes: 15,
+            idleTimeoutMinutes: 60,
         },
     };
 
@@ -17,6 +18,9 @@ describe('Authentication use-cases', () => {
         findStoredRefreshToken: jest.fn(),
         revokeRefreshToken: jest.fn(),
         revokeUserRefreshTokens: jest.fn(),
+        revokeUserSessions: jest.fn(),
+        revokeSession: jest.fn(),
+        touchSession: jest.fn(),
         listActiveSessions: jest.fn(),
         findUserForPasswordChange: jest.fn(),
         updatePassword: jest.fn(),
@@ -48,6 +52,9 @@ describe('Authentication use-cases', () => {
             status: UserStatus.active,
             failedLoginAttempts: 2,
             lockedUntil: null,
+            twoFactorEnabled: false,
+            requiresEmailVerification: false,
+            emailVerifiedAt: null,
         });
         cryptoService.verifyPassword.mockResolvedValue(true);
         authTokensService.issueTokens.mockResolvedValue(issuedTokens);
@@ -68,6 +75,9 @@ describe('Authentication use-cases', () => {
             status: UserStatus.active,
             failedLoginAttempts: 2,
             lockedUntil: null,
+            twoFactorEnabled: false,
+            requiresEmailVerification: false,
+            emailVerifiedAt: null,
         });
         cryptoService.verifyPassword.mockResolvedValue(false);
 
@@ -77,15 +87,18 @@ describe('Authentication use-cases', () => {
 
     it('rotates refresh token when stored token is active', async () => {
         const repository = buildRepository();
-        const useCase = new RefreshUseCase(repository as never, cryptoService as never, authTokensService as never);
+        const useCase = new RefreshUseCase(config as never, repository as never, cryptoService as never, authTokensService as never);
         const issuedTokens = { accessToken: 'new-access', refreshToken: 'new-refresh', sessionId: 'new-session' };
 
         repository.findStoredRefreshToken.mockResolvedValue({
             id: 'refresh-id',
             userId: 'user-id',
+            sessionId: 'session-id',
             expiresAt: new Date(Date.now() + 60_000),
             idleExpiresAt: new Date(Date.now() + 60_000),
+            revokedAt: null,
             user: { id: 'user-id', username: 'admin', status: UserStatus.active },
+            session: { id: 'session-id', revokedAt: null, expiresAt: new Date(Date.now() + 60_000), idleExpiresAt: new Date(Date.now() + 60_000) },
         });
         authTokensService.issueTokens.mockResolvedValue(issuedTokens);
 
@@ -98,10 +111,10 @@ describe('Authentication use-cases', () => {
         const repository = buildRepository();
         const useCase = new LogoutUseCase(repository as never, cryptoService as never);
 
-        repository.revokeUserRefreshTokens.mockResolvedValue({ count: 2 });
+        repository.revokeUserSessions.mockResolvedValue({ count: 2 });
 
         await expect(useCase.execute('user-id', {})).resolves.toEqual({ revokedSessions: 2 });
-        expect(repository.revokeUserRefreshTokens).toHaveBeenCalledWith('user-id');
+        expect(repository.revokeUserSessions).toHaveBeenCalledWith('user-id');
     });
 
     it('marks the current session in session list', async () => {
@@ -109,11 +122,19 @@ describe('Authentication use-cases', () => {
         const useCase = new ListSessionsUseCase(repository as never, cryptoService as never);
 
         repository.findStoredRefreshToken.mockResolvedValue({ sessionId: 'session-2' });
-        repository.listActiveSessions.mockResolvedValue([{ id: 'session-1' }, { id: 'session-2' }]);
+        const sessionDates = {
+            lastActivityAt: new Date('2026-01-01T00:00:00.000Z'),
+            expiresAt: new Date('2026-01-02T00:00:00.000Z'),
+            createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        };
+        repository.listActiveSessions.mockResolvedValue([
+            { id: 'session-1', deviceName: null, userAgent: null, ipAddress: null, ...sessionDates },
+            { id: 'session-2', deviceName: null, userAgent: null, ipAddress: null, ...sessionDates },
+        ]);
 
         await expect(useCase.execute('user-id', 'refresh')).resolves.toEqual([
-            { id: 'session-1', isCurrent: false },
-            { id: 'session-2', isCurrent: true },
+            { id: 'session-1', deviceName: null, userAgent: null, ipAddress: null, ...sessionDates, isCurrent: false },
+            { id: 'session-2', deviceName: null, userAgent: null, ipAddress: null, ...sessionDates, isCurrent: true },
         ]);
     });
 

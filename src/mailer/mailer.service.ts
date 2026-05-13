@@ -76,6 +76,32 @@ export class AppMailerService {
         return reservation;
     }
 
+    async sendEmailVerification(to: string, token: string, context: MailContext = {}) {
+        const reservation = await this.emailRateLimiter.reserve({
+            context: EmailDispatchContext.verify_email,
+            recipientEmail: to,
+            recipientUserId: context.recipientUserId,
+            triggeredByUserId: context.triggeredByUserId,
+            ipAddress: context.ipAddress,
+            metadata: context.metadata,
+        });
+        if (!reservation.allowed) return reservation;
+
+        const verificationUrl = new URL(`/verify-email/${token}`, this.config.mail.webUrl);
+        await this.sendTrackedTemplateMail({
+            dispatchId: reservation.dispatchId,
+            to,
+            subject: 'Verificar correo electronico',
+            appName: this.config.name,
+            title: 'Verificar correo electronico',
+            body: 'Confirma tu correo para completar la configuracion de tu cuenta.',
+            actionLabel: 'Verificar correo',
+            actionUrl: verificationUrl.toString(),
+        });
+
+        return reservation;
+    }
+
     async sendOrganizationInvitation(to: string, token: string, organizationName: string, context: MailContext = {}) {
         const reservation = await this.emailRateLimiter.reserve({
             context: EmailDispatchContext.custom,

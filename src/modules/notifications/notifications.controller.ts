@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser, Permissions } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsGateway } from '@/modules/notifications/notifications.gateway';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
+@ApiTags('notifications')
 @Controller('notifications')
 export class NotificationsController {
     constructor(
@@ -21,6 +23,7 @@ export class NotificationsController {
     }
 }
 
+@ApiTags('my-notifications')
 @Controller('me/notifications')
 export class MyNotificationsController {
     constructor(

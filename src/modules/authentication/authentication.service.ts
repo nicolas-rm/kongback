@@ -1,7 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto, UpdateMyProfileDto } from '@/modules/authentication/dto';
+import {
+    ChangePasswordDto,
+    LoginDto,
+    LogoutDto,
+    RefreshTokenDto,
+    RegisterDto,
+    RequestPasswordResetDto,
+    ResetPasswordDto,
+    TwoFactorCodeDto,
+    UpdateMyProfileDto,
+    VerifyEmailDto,
+    VerifyTwoFactorLoginDto,
+} from '@/modules/authentication/dto';
 import {
     ChangePasswordUseCase,
     GetProfileUseCase,
@@ -9,11 +21,13 @@ import {
     LoginUseCase,
     LogoutUseCase,
     RefreshUseCase,
+    RegisterUseCase,
     RequestPasswordResetUseCase,
     ResetPasswordUseCase,
     RevokeSessionUseCase,
     TwoFactorUseCase,
     UpdateMyProfileUseCase,
+    VerifyEmailUseCase,
 } from '@/modules/authentication/use-cases';
 
 @Injectable()
@@ -21,6 +35,7 @@ export class AuthenticationService {
     constructor(
         private readonly loginUseCase: LoginUseCase,
         private readonly refreshUseCase: RefreshUseCase,
+        private readonly registerUseCase: RegisterUseCase,
         private readonly logoutUseCase: LogoutUseCase,
         private readonly listSessionsUseCase: ListSessionsUseCase,
         private readonly revokeSessionUseCase: RevokeSessionUseCase,
@@ -29,11 +44,20 @@ export class AuthenticationService {
         private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
         private readonly resetPasswordUseCase: ResetPasswordUseCase,
+        private readonly verifyEmailUseCase: VerifyEmailUseCase,
         private readonly twoFactorUseCase: TwoFactorUseCase
     ) {}
 
     login(dto: LoginDto, sessionContext?: SessionContext) {
         return this.loginUseCase.execute(dto, sessionContext);
+    }
+
+    verifyTwoFactorLogin(dto: VerifyTwoFactorLoginDto, sessionContext?: SessionContext) {
+        return this.loginUseCase.verifyTwoFactorLogin(dto.challengeToken, dto.code, sessionContext);
+    }
+
+    register(dto: RegisterDto, sessionContext?: SessionContext) {
+        return this.registerUseCase.execute(dto, sessionContext);
     }
 
     refresh(dto: RefreshTokenDto, sessionContext?: SessionContext) {
@@ -74,6 +98,14 @@ export class AuthenticationService {
 
     resetPassword(dto: ResetPasswordDto) {
         return this.resetPasswordUseCase.execute(dto);
+    }
+
+    requestEmailVerification(email: string, sessionContext?: SessionContext) {
+        return this.registerUseCase.resendVerification(email, sessionContext);
+    }
+
+    verifyEmail(dto: VerifyEmailDto) {
+        return this.verifyEmailUseCase.execute(dto);
     }
 
     getTwoFactorStatus(userId: string) {

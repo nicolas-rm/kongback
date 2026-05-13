@@ -1,8 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Permissions } from '@/decorators';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { AssignRolePermissionsDto, CreateRoleDto, FindAccessControlDto, UpdateRoleDto } from '@/modules/access-control/dto';
 
+@ApiTags('roles')
 @Controller('roles')
 export class RolesController {
     constructor(private readonly accessControlService: AccessControlService) {}

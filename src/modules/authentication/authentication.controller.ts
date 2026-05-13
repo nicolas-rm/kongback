@@ -1,12 +1,26 @@
 import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser, Public, RefreshToken, RequestConfig, SessionContextData, SkipMustChangePassword } from '@/decorators';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
 import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { ChangePasswordDto, LoginDto, RefreshTokenDto, RequestPasswordResetDto, ResetPasswordDto, TwoFactorCodeDto, UpdateMyProfileDto } from '@/modules/authentication/dto';
+import {
+    ChangePasswordDto,
+    LoginDto,
+    RefreshTokenDto,
+    RegisterDto,
+    RequestEmailVerificationDto,
+    RequestPasswordResetDto,
+    ResetPasswordDto,
+    TwoFactorCodeDto,
+    UpdateMyProfileDto,
+    VerifyEmailDto,
+    VerifyTwoFactorLoginDto,
+} from '@/modules/authentication/dto';
 
+@ApiTags('authentication')
 @Controller('auth')
 export class AuthenticationController {
     constructor(
@@ -16,16 +30,36 @@ export class AuthenticationController {
 
     @Post('login')
     @Public()
-    @RequestConfig({ statusCode: HttpStatus.OK, throttle: true })
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     async login(@Body() dto: LoginDto, @SessionContextData() sessionContext: SessionContext, @Res({ passthrough: true }) response: Response) {
         const tokens = await this.authenticationService.login(dto, sessionContext);
+        if ('requiresTwoFactor' in tokens) {
+            this.authCookiesService.clearAuthCookies(response);
+            return tokens;
+        }
         this.authCookiesService.setAuthCookies(response, tokens.accessToken, tokens.refreshToken);
         return tokens;
     }
 
+    @Post('2fa/verify-login')
+    @Public()
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
+    async verifyTwoFactorLogin(@Body() dto: VerifyTwoFactorLoginDto, @SessionContextData() sessionContext: SessionContext, @Res({ passthrough: true }) response: Response) {
+        const tokens = await this.authenticationService.verifyTwoFactorLogin(dto, sessionContext);
+        this.authCookiesService.setAuthCookies(response, tokens.accessToken, tokens.refreshToken);
+        return tokens;
+    }
+
+    @Post('register')
+    @Public()
+    @RequestConfig({ throttle: { limit: 3, ttl: 60_000 } })
+    register(@Body() dto: RegisterDto, @SessionContextData() sessionContext: SessionContext) {
+        return this.authenticationService.register(dto, sessionContext);
+    }
+
     @Post('refresh')
     @Public()
-    @RequestConfig({ statusCode: HttpStatus.OK, throttle: true })
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 20, ttl: 60_000 } })
     async refresh(
         @Body() dto: RefreshTokenDto,
         @RefreshToken() refreshToken: string | undefined,
@@ -88,16 +122,30 @@ export class AuthenticationController {
 
     @Post('password/reset/request')
     @Public()
-    @RequestConfig({ statusCode: HttpStatus.OK, throttle: true })
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 3, ttl: 60_000 } })
     requestPasswordReset(@Body() dto: RequestPasswordResetDto, @SessionContextData() sessionContext: SessionContext) {
         return this.authenticationService.requestPasswordReset(dto, sessionContext);
     }
 
     @Post('password/reset')
     @Public()
-    @RequestConfig({ statusCode: HttpStatus.OK, throttle: true })
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     resetPassword(@Body() dto: ResetPasswordDto) {
         return this.authenticationService.resetPassword(dto);
+    }
+
+    @Post('email/verification/request')
+    @Public()
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 3, ttl: 60_000 } })
+    requestEmailVerification(@Body() dto: RequestEmailVerificationDto, @SessionContextData() sessionContext: SessionContext) {
+        return this.authenticationService.requestEmailVerification(dto.email, sessionContext);
+    }
+
+    @Post('email/verification/confirm')
+    @Public()
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
+    verifyEmail(@Body() dto: VerifyEmailDto) {
+        return this.authenticationService.verifyEmail(dto);
     }
 
     @Get('2fa/status')

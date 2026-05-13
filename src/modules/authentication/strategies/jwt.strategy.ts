@@ -16,7 +16,7 @@ type JwtPayload = {
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(
         private readonly repository: AuthenticationRepository,
-        config: AppConfigService
+        private readonly config: AppConfigService
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([extractAccessTokenFromRequest]),
@@ -26,6 +26,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     async validate(payload: JwtPayload): Promise<RequestUser> {
+        if (payload.sessionId) {
+            const session = await this.repository.findActiveSession(payload.sessionId);
+            if (!session || session.userId !== payload.sub) return null as never;
+            const touchEveryMs = this.config.session.touchIntervalSeconds * 1000;
+            if (Date.now() - session.lastActivityAt.getTime() >= touchEveryMs) {
+                await this.repository.touchSession(session.id, new Date(Date.now() + this.config.session.idleTimeoutMinutes * 60 * 1000));
+            }
+        }
+
         const user = await this.repository.findActiveUserForRequest(payload.sub);
 
         if (!user) return null as never;
