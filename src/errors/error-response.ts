@@ -2,12 +2,17 @@ import { STATUS_CODES } from 'node:http';
 import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODES, type ErrorCode } from '@/errors/error-codes';
 
+export type ErrorDetail = {
+    field?: string;
+    message: string;
+};
+
 export type ErrorResponseInput = {
     statusCode: number;
     message: string;
     code?: ErrorCode;
     path: string;
-    errors?: string[];
+    errors?: ErrorDetail[];
 };
 
 export function buildErrorResponse(input: ErrorResponseInput) {

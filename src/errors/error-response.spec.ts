@@ -9,14 +9,14 @@ describe('buildErrorResponse', () => {
                 statusCode: HttpStatus.BAD_REQUEST,
                 code: ERROR_CODES.VALIDATION_ERROR,
                 message: 'Datos no validos',
-                errors: ['email debe ser valido'],
+                errors: [{ field: 'email', message: 'email debe ser valido' }],
                 path: '/api/users',
             })
         ).toMatchObject({
             statusCode: HttpStatus.BAD_REQUEST,
             code: ERROR_CODES.VALIDATION_ERROR,
             message: 'Datos no validos',
-            errors: ['email debe ser valido'],
+            errors: [{ field: 'email', message: 'email debe ser valido' }],
             path: '/api/users',
         });
     });

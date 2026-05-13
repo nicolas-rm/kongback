@@ -1,7 +1,8 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { STATUS_CODES } from 'node:http';
 import type { Request, Response } from 'express';
-import { buildErrorResponse } from '@/errors/error-response';
+import { buildErrorResponse, type ErrorDetail } from '@/errors/error-response';
+import type { ErrorCode } from '@/errors/error-codes';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -13,26 +14,30 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const request = context.getRequest<Request>();
         const isHttpException = exception instanceof HttpException;
         const status = isHttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-        const message = isHttpException ? this.resolveHttpMessage(exception, status) : 'Solicitud no procesada, intente nuevamente mas tarde';
+        const details = isHttpException ? this.resolveHttpDetails(exception, status) : { message: 'Solicitud no procesada, intente nuevamente mas tarde' };
 
         if (status >= 500) {
-            this.logger.error(`${status} ${message} path=${request.url} method=${request.method}`, exception instanceof Error ? exception.stack : undefined);
+            this.logger.error(`${status} ${details.message} path=${request.url} method=${request.method}`, exception instanceof Error ? exception.stack : undefined);
         }
 
-        response.status(status).json(buildErrorResponse({ statusCode: status, message, path: request.url }));
+        response.status(status).json(buildErrorResponse({ statusCode: status, message: details.message, code: details.code, errors: details.errors, path: request.url }));
     }
 
-    private resolveHttpMessage(exception: HttpException, status: number): string {
+    private resolveHttpDetails(exception: HttpException, status: number): { message: string; code?: ErrorCode; errors?: ErrorDetail[] } {
         const body = exception.getResponse();
 
-        if (typeof body === 'string') return body || this.defaultMessage(status);
+        if (typeof body === 'string') return { message: body || this.defaultMessage(status) };
         if (body && typeof body === 'object') {
-            const message = (body as { message?: string | string[] }).message;
-            if (Array.isArray(message)) return message.join('; ');
-            if (message) return message;
+            const payload = body as { message?: string | string[]; code?: ErrorCode; errors?: ErrorDetail[] };
+            const message = Array.isArray(payload.message) ? payload.message.join('; ') : payload.message;
+            return {
+                message: message || this.defaultMessage(status),
+                code: payload.code,
+                errors: payload.errors,
+            };
         }
 
-        return this.defaultMessage(status);
+        return { message: this.defaultMessage(status) };
     }
 
     private defaultMessage(status: number): string {
