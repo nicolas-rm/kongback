@@ -1,0 +1,83 @@
+{
+    "authentication": {
+        "invalidCredentials": "凭据无效",
+        "accountLocked": "账户已锁定。请稍后再试",
+        "emailVerificationRequired": "登录前必须先验证邮箱",
+        "invalidTwoFactorChallenge": "无效的 2FA 验证挑战",
+        "invalidTwoFactorCode": "无效的 2FA 验证码",
+        "invalidRefreshToken": "无效的刷新令牌",
+        "reusedRefreshToken": "刷新令牌已被重复使用",
+        "expiredRefreshToken": "刷新令牌已过期",
+        "unauthorizedUser": "用户未授权",
+        "invalidCurrentPassword": "当前密码无效",
+        "invalidVerificationToken": "验证令牌无效或已过期",
+        "invalidResetToken": "令牌无效或已过期",
+        "twoFactorPendingNotFound": "没有待处理的 2FA 配置",
+        "twoFactorSetupExpired": "2FA 配置已过期。请重新开始流程",
+        "twoFactorNotEnabled": "2FA 未启用"
+    },
+    "authorization": {
+        "unauthorized": "未授权",
+        "insufficientPermissions": "权限不足",
+        "organizationDenied": "无权访问该组织",
+        "mustChangePassword": "继续之前必须修改密码。"
+    },
+    "documents": {
+        "notFound": "未找到文档",
+        "fileRequired": "文件是必需的",
+        "fileTooLarge": "文件过大",
+        "mimeTypeNotAllowed": "不允许的文件类型",
+        "storageFileNotFound": "存储中未找到文件",
+        "invalidFilePath": "文件路径无效"
+    },
+    "notifications": {
+        "notFound": "未找到通知"
+    },
+    "users": {
+        "notFound": "未找到用户",
+        "missingEmail": "该用户未配置邮箱"
+    },
+    "validation": {
+        "invalidData": "请求包含无效数据"
+    },
+    "internal": {
+        "unprocessed": "请求无法处理，请稍后重试"
+    },
+    "mail": {
+        "passwordReset": {
+            "subject": "重置密码",
+            "title": "重置密码",
+            "body": "请使用此链接重置密码。过期时间：{expiresAt}。",
+            "action": "重置密码"
+        },
+        "welcomeCredentials": {
+            "subject": "欢迎使用 {appName}",
+            "title": "欢迎使用 {appName}",
+            "body": "您的用户名是 {username}，临时密码是 {password}。"
+        },
+        "emailVerification": {
+            "subject": "验证邮箱地址",
+            "title": "验证邮箱地址",
+            "body": "请确认您的邮箱以完成账户设置。",
+            "action": "验证邮箱"
+        },
+        "organizationInvitation": {
+            "subject": "{organizationName} 邀请",
+            "title": "{organizationName} 邀请",
+            "body": "您收到加入 {organizationName} 的邀请。",
+            "action": "接受邀请"
+        }
+    },
+    "prisma": {
+        "uniqueConstraint": "({fields}) 的值已存在",
+        "invalidRelation": "关系无效",
+        "valueTooLong": "值过长",
+        "recordNotFound": "未找到记录",
+        "invalidData": "数据无效",
+        "internalFailure": "服务器内部错误",
+        "unknownField": "未知"
+    },
+    "socket": {
+        "unauthorized": "未授权"
+    }
+}

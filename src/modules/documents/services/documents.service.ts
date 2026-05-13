@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
 import { DocumentsRepository } from '@/modules/documents/repositories/documents.repository';
@@ -65,7 +66,7 @@ export class DocumentsService {
 
     async findOne(id: string) {
         const document = await this.repository.findById(id);
-        if (!document) throw new NotFoundException('Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
         return DocumentResponse.from(document);
     }
 
@@ -76,7 +77,7 @@ export class DocumentsService {
 
     async download(id: string) {
         const document = await this.repository.findDownloadById(id);
-        if (!document) throw new NotFoundException('Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
@@ -84,7 +85,7 @@ export class DocumentsService {
 
     async remove(id: string, userId?: string | null) {
         const document = await this.repository.findDownloadById(id);
-        if (!document) throw new NotFoundException('Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.repository.softDelete(id, userId);
         await this.storage.removeFile(document.storageKey);
@@ -92,8 +93,8 @@ export class DocumentsService {
     }
 
     private assertAllowedFile(file: UploadedFile): void {
-        if (!file) throw new BadRequestException('Archivo requerido');
-        if (file.size > this.config.documents.maxFileSizeMb * 1024 * 1024) throw new BadRequestException('Archivo demasiado grande');
-        if (!this.config.documents.allowedMimeTypes.includes(file.mimetype.toLowerCase())) throw new BadRequestException('Tipo de archivo no permitido');
+        if (!file) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileRequired, 'Archivo requerido');
+        if (file.size > this.config.documents.maxFileSizeMb * 1024 * 1024) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileTooLarge, 'Archivo demasiado grande');
+        if (!this.config.documents.allowedMimeTypes.includes(file.mimetype.toLowerCase())) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
     }
 }

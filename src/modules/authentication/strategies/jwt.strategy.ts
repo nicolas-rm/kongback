@@ -56,6 +56,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             username: user.username,
             email: user.email,
             fullName: user.fullName,
+            preferredLanguage: user.preferredLanguage,
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin,
             organizationIds: [...organizationIds],

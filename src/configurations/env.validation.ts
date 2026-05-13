@@ -20,6 +20,7 @@ export const envSchema = z.object({
     SESSION_TOUCH_INTERVAL_SECONDS: z.coerce.number().int().positive().default(APP_DEFAULTS.session.touchIntervalSeconds),
     LOGIN_LOCK_DURATION_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.session.lockDurationMinutes),
     LOGIN_MAX_FAILED_ATTEMPTS: z.coerce.number().int().positive().default(APP_DEFAULTS.session.maxFailedAttempts),
+    SESSION_MAX_ACTIVE: z.coerce.number().int().positive().default(APP_DEFAULTS.session.maxActiveSessions),
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.session.passwordResetTtlMinutes),
     EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.session.emailVerificationTtlMinutes),
     ORGANIZATION_INVITATION_TTL_HOURS: z.coerce.number().int().positive().default(APP_DEFAULTS.session.organizationInvitationTtlHours),
@@ -50,6 +51,8 @@ export const envSchema = z.object({
     DOCUMENTS_STORAGE_DIR: z.string().default(APP_DEFAULTS.documents.storageDir),
     DOCUMENTS_MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(APP_DEFAULTS.documents.maxFileSizeMb),
     DOCUMENTS_ALLOWED_MIME_TYPES: z.string().default(APP_DEFAULTS.documents.allowedMimeTypes),
+
+    SECURITY_ALLOWED_ORIGINS: z.string().default(APP_DEFAULTS.security.allowedOrigins),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

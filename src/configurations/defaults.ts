@@ -12,6 +12,7 @@ export const APP_DEFAULTS = {
         touchIntervalSeconds: 30,
         lockDurationMinutes: 15,
         maxFailedAttempts: 5,
+        maxActiveSessions: 5,
         passwordResetTtlMinutes: 60,
         emailVerificationTtlMinutes: 60,
         organizationInvitationTtlHours: 72,
@@ -37,5 +38,8 @@ export const APP_DEFAULTS = {
         storageDir: 'uploads/documents',
         maxFileSizeMb: 20,
         allowedMimeTypes: 'application/pdf,image/jpeg,image/png,image/webp,text/plain',
+    },
+    security: {
+        allowedOrigins: '',
     },
 } as const;

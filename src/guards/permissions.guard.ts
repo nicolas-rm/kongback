@@ -1,9 +1,10 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
+import { I18N_KEYS, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 
@@ -25,19 +26,19 @@ export class PermissionsGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest<Request & { user?: RequestUser }>();
         const user = request.user;
-        if (!user?.id) throw new ForbiddenException('Usuario no autorizado');
+        if (!user?.id) throw new I18nForbiddenException(I18N_KEYS.errors.authorization.unauthorized, 'Usuario no autorizado');
 
         if (requiredRoles.length > 0) {
             const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles);
             if (!hasRole) {
-                throw new ForbiddenException('Permisos insuficientes');
+                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }
         }
 
         if (requiredPermissions.length > 0) {
             const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions);
             if (!hasPermissions) {
-                throw new ForbiddenException('Permisos insuficientes');
+                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }
         }
 

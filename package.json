@@ -1,6 +1,6 @@
 {
     "name": "kong",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "description": "",
     "author": "",
     "private": true,
@@ -49,6 +49,7 @@
         "cookie-parser": "^1.4.7",
         "dotenv": "^17.4.2",
         "generate-password": "^1.7.1",
+        "nestjs-i18n": "^10.8.4",
         "nodemailer": "^8.0.7",
         "passport": "^0.7.0",
         "passport-jwt": "^4.0.1",

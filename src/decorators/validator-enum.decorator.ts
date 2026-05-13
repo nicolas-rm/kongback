@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsIn, IsOptional, ValidationArguments } from 'class-validator';
+import { IsEnum, IsIn, IsOptional } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorEnumOptions {
     optional?: boolean;
@@ -8,14 +9,6 @@ export interface ValidatorEnumOptions {
     message?: string;
     toLowerCase?: boolean;
     toUpperCase?: boolean;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string, values: string[]) => string) {
-    return (args: ValidationArguments) => {
-        if (message) return message;
-        const values = Object.values(args.constraints[0]) as string[];
-        return fallback(args.property, values);
-    };
 }
 
 export function ValidatorEnum<T extends object>(enumOrValues: T | readonly string[], options: ValidatorEnumOptions = {}) {
@@ -33,7 +26,7 @@ export function ValidatorEnum<T extends object>(enumOrValues: T | readonly strin
         }),
         ...(optional ? [IsOptional()] : []),
         ...(isArray
-            ? [IsIn(enumOrValues as string[], { message: buildMessage(message, (property, values) => `${property} debe ser uno de: ${values.join(', ')}`) })]
-            : [IsEnum(enumOrValues as T, { message: buildMessage(message, (property, values) => `${property} debe ser uno de: ${values.join(', ')}`) })])
+            ? [IsIn(enumOrValues as string[], { message: buildI18nValidationMessage(message, I18N_KEYS.validation.enum) })]
+            : [IsEnum(enumOrValues as T, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.enum) })])
     );
 }

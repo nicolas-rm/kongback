@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Socket } from 'socket.io';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 
 type JwtPayload = {
@@ -23,11 +24,11 @@ export class NotificationsSocketAuthenticationService {
 
     async authenticate(client: Socket): Promise<SocketAuthenticationUser> {
         const accessToken = this.getAccessToken(client);
-        if (!accessToken) throw new UnauthorizedException('No autorizado');
+        if (!accessToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
 
         const payload = await this.verifyAccessToken(accessToken);
         const user = await this.authenticationRepository.findActiveUserForRequest(payload.sub);
-        if (!user) throw new UnauthorizedException('No autorizado');
+        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
 
         return { id: user.id, username: user.username };
     }
@@ -36,7 +37,7 @@ export class NotificationsSocketAuthenticationService {
         try {
             return await this.jwtService.verifyAsync<JwtPayload>(accessToken, { secret: this.config.jwt.accessSecret });
         } catch {
-            throw new UnauthorizedException('No autorizado');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
         }
     }
 

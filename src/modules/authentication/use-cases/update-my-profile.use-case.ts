@@ -12,6 +12,7 @@ export class UpdateMyProfileUseCase {
         const profile = await this.repository.updateProfile(user.id, {
             email: dto.email,
             fullName: dto.fullName,
+            preferredLanguage: dto.preferredLanguage,
         });
         return UpdateProfileResponse.from(profile);
     }

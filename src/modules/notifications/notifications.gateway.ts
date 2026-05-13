@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Notification } from '@prisma/client';
 import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { I18nService } from 'nestjs-i18n';
 import type { Server, Socket } from 'socket.io';
+import { I18N_KEYS } from '@/i18n';
 import { NotificationsSerializerService } from '@/modules/notifications/services/notifications-serializer.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationsSocketAuthenticationService } from '@/modules/notifications/notifications-socket-authentication.service';
@@ -23,7 +25,8 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     constructor(
         private readonly socketAuthenticationService: NotificationsSocketAuthenticationService,
         private readonly serializer: NotificationsSerializerService,
-        private readonly notificationsService: NotificationsService
+        private readonly notificationsService: NotificationsService,
+        private readonly i18n: I18nService
     ) {}
 
     async handleConnection(@ConnectedSocket() client: Socket) {
@@ -35,7 +38,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
             await this.emitUnreadCount(user.id);
             client.emit('notifications.connected', { userId: user.id, connectedAt: new Date().toISOString() });
         } catch {
-            client.emit('notifications.error', { message: 'No autorizado' });
+            client.emit('notifications.error', { message: this.translateSocket(client, I18N_KEYS.socket.unauthorized, 'No autorizado') });
             client.disconnect(true);
         }
     }
@@ -70,5 +73,16 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
     private getUserRoom(userId: string): string {
         return `${this.userRoomPrefix}${userId}`;
+    }
+
+    private translateSocket(client: Socket, key: string, fallback: string): string {
+        const lang = this.resolveLanguage(client.handshake.headers['accept-language']);
+        const translated = this.i18n.t(key, { lang }) as string;
+        return translated && translated !== key ? translated : fallback;
+    }
+
+    private resolveLanguage(header: string | string[] | undefined): string {
+        const value = Array.isArray(header) ? header[0] : header;
+        return value?.split(',')[0]?.trim().split('-')[0] || 'es';
     }
 }

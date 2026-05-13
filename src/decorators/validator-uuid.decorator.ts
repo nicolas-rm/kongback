@@ -1,16 +1,13 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsUUID, ValidationArguments } from 'class-validator';
+import { IsOptional, IsUUID } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorUUIDOptions {
     optional?: boolean;
     version?: '3' | '4' | '5' | 'all';
     emptyTo?: 'undefined' | 'null';
     message?: string;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
 }
 
 export function ValidatorUUID(options: ValidatorUUIDOptions = {}) {
@@ -24,6 +21,6 @@ export function ValidatorUUID(options: ValidatorUUIDOptions = {}) {
             return result;
         }),
         ...(optional ? [IsOptional()] : []),
-        IsUUID(version === 'all' ? undefined : version, { message: buildMessage(message, (property) => `${property} debe ser un UUID valido`) })
+        IsUUID(version === 'all' ? undefined : version, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.uuid) })
     );
 }

@@ -16,4 +16,7 @@ export class UpdateUserDto {
 
     @ValidatorBoolean({ optional: true })
     mustChangePassword?: boolean;
+
+    @ValidatorString({ optional: true, toLowerCase: true })
+    preferredLanguage?: string;
 }

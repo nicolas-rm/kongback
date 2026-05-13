@@ -23,7 +23,7 @@ export class RequestPasswordResetUseCase {
         const token = randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + this.config.session.passwordResetTtlMinutes * 60 * 1000);
         await this.repository.createPasswordResetToken(user.id, this.cryptoService.hashToken(token), expiresAt);
-        await this.mailerService.sendPasswordReset(user.email, token, expiresAt, { recipientUserId: user.id, ipAddress: sessionContext.ipAddress });
+        await this.mailerService.sendPasswordReset(user.email, token, expiresAt, { recipientUserId: user.id, ipAddress: sessionContext.ipAddress, language: sessionContext.language });
 
         return { accepted: true };
     }

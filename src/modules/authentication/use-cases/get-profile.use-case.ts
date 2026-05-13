@@ -16,6 +16,7 @@ export class GetProfileUseCase {
             username: user.username,
             email: user.email,
             fullName: user.fullName,
+            preferredLanguage: user.preferredLanguage,
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin: user.isGlobalAdmin,
             organizationIds: user.organizationIds ?? [],

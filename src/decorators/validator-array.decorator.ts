@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsOptional, ValidationArguments } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsOptional } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export type ValidatorArrayOptions = {
     optional?: boolean;
@@ -12,10 +13,6 @@ export type ValidatorArrayOptions = {
     preserveEmptyArray?: boolean;
     message?: string;
 };
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
-}
 
 export function ValidatorArray(options: ValidatorArrayOptions = {}) {
     const { optional = false, unique = false, minSize, maxSize, separator = ',', emptyTo = 'undefined', preserveEmptyArray = false, message } = options;
@@ -40,8 +37,8 @@ export function ValidatorArray(options: ValidatorArrayOptions = {}) {
         }),
         ...(optional ? [IsOptional()] : []),
         ...(unique ? [ArrayUnique()] : []),
-        IsArray({ message: buildMessage(message, (property) => `${property} debe ser un arreglo`) }),
-        ...(minSize !== undefined ? [ArrayMinSize(minSize, { message: ({ property }) => `${property} debe tener al menos ${minSize} elementos` })] : []),
-        ...(maxSize !== undefined ? [ArrayMaxSize(maxSize, { message: ({ property }) => `${property} no puede tener mas de ${maxSize} elementos` })] : [])
+        IsArray({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.array) }),
+        ...(minSize !== undefined ? [ArrayMinSize(minSize, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.minItems, { minSize }) })] : []),
+        ...(maxSize !== undefined ? [ArrayMaxSize(maxSize, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.maxItems, { maxSize }) })] : [])
     );
 }

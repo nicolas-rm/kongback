@@ -6,4 +6,7 @@ export class UpdateMyProfileDto {
 
     @ValidatorString({ optional: true })
     fullName?: string;
+
+    @ValidatorString({ optional: true, toLowerCase: true })
+    preferredLanguage?: string;
 }

@@ -142,7 +142,7 @@ export class UsersRepository {
     findCredentialRecipient(id: string) {
         return this.prisma.user.findFirst({
             where: activeRecordWhere({ id }),
-            select: { id: true, username: true, email: true },
+            select: { id: true, username: true, email: true, preferredLanguage: true },
         });
     }
 
@@ -160,6 +160,7 @@ export class UsersRepository {
             username: true,
             email: true,
             fullName: true,
+            preferredLanguage: true,
             status: true,
             mustChangePassword: true,
             emailVerifiedAt: true,

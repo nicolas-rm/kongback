@@ -1,0 +1,19 @@
+{
+    "required": "{property} is required",
+    "string": "{property} must be a valid text",
+    "minLength": "{property} must have at least {minLength} characters",
+    "maxLength": "{property} cannot exceed {maxLength} characters",
+    "password": "The password must include at least 8 characters, one uppercase letter, one lowercase letter and one number",
+    "boolean": "{property} must be true or false",
+    "array": "{property} must be an array",
+    "minItems": "{property} must have at least {minSize} items",
+    "maxItems": "{property} cannot have more than {maxSize} items",
+    "date": "{property} must be a valid date",
+    "isoDate": "{property} must be a valid ISO date",
+    "enum": "{property} must be one of the allowed values",
+    "integer": "{property} must be a valid integer",
+    "number": "{property} must be a valid number",
+    "minValue": "{property} must be greater than or equal to {min}",
+    "maxValue": "{property} must be less than or equal to {max}",
+    "uuid": "{property} must be a valid UUID"
+}

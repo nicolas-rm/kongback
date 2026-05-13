@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
+import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
 import { LoginDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
@@ -19,22 +20,22 @@ export class LoginUseCase {
 
     async execute(dto: LoginDto, sessionContext: SessionContext = {}) {
         const user = await this.repository.findLoginUser(dto.username);
-        if (!user || user.status !== 'active') throw new UnauthorizedException('Credenciales invalidas');
+        if (!user || user.status !== 'active') throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'Credenciales invalidas');
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
-            throw new UnauthorizedException(`Cuenta bloqueada. Intenta de nuevo mas tarde`);
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.accountLocked, 'Cuenta bloqueada. Intenta de nuevo mas tarde');
         }
 
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.password);
         if (!validPassword) {
             await this.registerFailedAttempt(user.id, user.failedLoginAttempts);
-            throw new UnauthorizedException('Credenciales invalidas');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'Credenciales invalidas');
         }
 
         await this.repository.resetLoginState(user.id);
 
         if (user.requiresEmailVerification && !user.emailVerifiedAt) {
-            throw new UnauthorizedException('Debes verificar tu correo antes de iniciar sesion');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.emailVerificationRequired, 'Debes verificar tu correo antes de iniciar sesion');
         }
 
         if (user.twoFactorEnabled) {
@@ -70,11 +71,11 @@ export class LoginUseCase {
     async verifyTwoFactorLogin(challengeToken: string, code: string, sessionContext: SessionContext = {}) {
         const challenge = await this.repository.findTwoFactorLoginChallenge(this.cryptoService.hashToken(challengeToken));
         if (!challenge || !challenge.user.twoFactorEnabled || !challenge.user.twoFactorSecret || challenge.user.status !== 'active') {
-            throw new UnauthorizedException('Desafio 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
         }
 
         if (challenge.attemptCount >= this.config.twoFactor.loginChallengeMaxAttempts) {
-            throw new UnauthorizedException('Desafio 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
         }
 
         const secret = this.cryptoService.decrypt(challenge.user.twoFactorSecret);
@@ -88,7 +89,7 @@ export class LoginUseCase {
 
         if (!validCode) {
             await this.repository.incrementTwoFactorChallengeAttempt(challenge.id);
-            throw new UnauthorizedException('Codigo 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'Codigo 2FA invalido');
         }
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);

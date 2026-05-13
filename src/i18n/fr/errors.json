@@ -1,0 +1,83 @@
+{
+    "authentication": {
+        "invalidCredentials": "Identifiants invalides",
+        "accountLocked": "Compte verrouille. Reessayez plus tard",
+        "emailVerificationRequired": "Vous devez verifier votre e-mail avant de vous connecter",
+        "invalidTwoFactorChallenge": "Defi 2FA invalide",
+        "invalidTwoFactorCode": "Code 2FA invalide",
+        "invalidRefreshToken": "Refresh token invalide",
+        "reusedRefreshToken": "Refresh token reutilise",
+        "expiredRefreshToken": "Refresh token expire",
+        "unauthorizedUser": "Utilisateur non autorise",
+        "invalidCurrentPassword": "Mot de passe actuel invalide",
+        "invalidVerificationToken": "Token de verification invalide ou expire",
+        "invalidResetToken": "Token invalide ou expire",
+        "twoFactorPendingNotFound": "Aucune configuration 2FA en attente",
+        "twoFactorSetupExpired": "La configuration 2FA a expire. Redemarrez le processus",
+        "twoFactorNotEnabled": "La 2FA n'est pas activee"
+    },
+    "authorization": {
+        "unauthorized": "Non autorise",
+        "insufficientPermissions": "Permissions insuffisantes",
+        "organizationDenied": "Acces refuse a cette organisation",
+        "mustChangePassword": "Vous devez changer votre mot de passe avant de continuer."
+    },
+    "documents": {
+        "notFound": "Document introuvable",
+        "fileRequired": "Le fichier est requis",
+        "fileTooLarge": "Le fichier est trop volumineux",
+        "mimeTypeNotAllowed": "Type de fichier non autorise",
+        "storageFileNotFound": "Fichier introuvable dans le stockage",
+        "invalidFilePath": "Chemin de fichier invalide"
+    },
+    "notifications": {
+        "notFound": "Notification introuvable"
+    },
+    "users": {
+        "notFound": "Utilisateur introuvable",
+        "missingEmail": "L'utilisateur n'a pas d'e-mail configure"
+    },
+    "validation": {
+        "invalidData": "La requete contient des donnees invalides"
+    },
+    "internal": {
+        "unprocessed": "La requete n'a pas pu etre traitee, veuillez reessayer plus tard"
+    },
+    "mail": {
+        "passwordReset": {
+            "subject": "Reinitialiser le mot de passe",
+            "title": "Reinitialiser le mot de passe",
+            "body": "Utilisez ce lien pour reinitialiser votre mot de passe. Il expire le {expiresAt}.",
+            "action": "Reinitialiser le mot de passe"
+        },
+        "welcomeCredentials": {
+            "subject": "Bienvenue sur {appName}",
+            "title": "Bienvenue sur {appName}",
+            "body": "Votre nom d'utilisateur est {username} et votre mot de passe temporaire est {password}."
+        },
+        "emailVerification": {
+            "subject": "Verifier l'adresse e-mail",
+            "title": "Verifier l'adresse e-mail",
+            "body": "Confirmez votre e-mail pour terminer la configuration de votre compte.",
+            "action": "Verifier l'e-mail"
+        },
+        "organizationInvitation": {
+            "subject": "Invitation a {organizationName}",
+            "title": "Invitation a {organizationName}",
+            "body": "Vous avez recu une invitation a rejoindre {organizationName}.",
+            "action": "Accepter l'invitation"
+        }
+    },
+    "prisma": {
+        "uniqueConstraint": "La valeur de ({fields}) existe deja",
+        "invalidRelation": "Relation invalide",
+        "valueTooLong": "Valeur trop longue",
+        "recordNotFound": "Enregistrement introuvable",
+        "invalidData": "Donnees invalides",
+        "internalFailure": "Erreur interne du serveur",
+        "unknownField": "inconnu"
+    },
+    "socket": {
+        "unauthorized": "Non autorise"
+    }
+}

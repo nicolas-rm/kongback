@@ -42,8 +42,14 @@ export class AuthenticationTokensService {
             deviceName: sessionContext.deviceName ?? null,
         });
 
+        await this.repository.enforceActiveSessionLimit(user.id, session.id, this.config.session.maxActiveSessions);
+
+        return this.issueTokensForSession(user, session.id, expiresAt, idleExpiresAt, sessionContext);
+    }
+
+    async issueTokensForSession(user: TokenUser, sessionId: string, expiresAt: Date, idleExpiresAt: Date, sessionContext: SessionContext = {}) {
         const accessToken = await this.jwtService.signAsync(
-            { sub: user.id, username: user.username, sessionId: session.id },
+            { sub: user.id, username: user.username, sessionId },
             {
                 secret: this.config.jwt.accessSecret,
                 expiresIn: this.config.jwt.accessExpiresIn as JwtSignOptions['expiresIn'],
@@ -51,7 +57,7 @@ export class AuthenticationTokensService {
         );
 
         const refreshToken = await this.jwtService.signAsync(
-            { sub: user.id, sessionId: session.id },
+            { sub: user.id, sessionId },
             {
                 secret: this.config.jwt.refreshSecret,
                 expiresIn: this.config.jwt.refreshExpiresIn as JwtSignOptions['expiresIn'],
@@ -60,7 +66,7 @@ export class AuthenticationTokensService {
 
         await this.repository.createRefreshToken({
             userId: user.id,
-            sessionId: session.id,
+            sessionId,
             tokenHash: this.cryptoService.hashToken(refreshToken),
             expiresAt: this.jwtTokenService.resolveExpirationDate(refreshToken, expiresAt),
             idleExpiresAt,
@@ -68,6 +74,6 @@ export class AuthenticationTokensService {
             ipAddress: sessionContext.ipAddress ?? null,
         });
 
-        return { accessToken, refreshToken, sessionId: session.id };
+        return { accessToken, refreshToken, sessionId };
     }
 }
