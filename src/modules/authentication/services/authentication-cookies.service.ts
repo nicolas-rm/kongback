@@ -4,13 +4,13 @@ import { AppConfigService } from '@/configurations/app-config.service';
 import { JwtTokenService } from '@/modules/authentication/services/jwt-token.service';
 
 @Injectable()
-export class AuthCookiesService {
+export class AuthenticationCookiesService {
     constructor(
         private readonly config: AppConfigService,
         private readonly jwtTokenService: JwtTokenService
     ) {}
 
-    setAuthCookies(response: Response, accessToken: string, refreshToken: string): void {
+    setAuthenticationCookies(response: Response, accessToken: string, refreshToken: string): void {
         const secure = this.config.nodeEnv === 'production';
         const base = { httpOnly: true, secure, sameSite: 'lax' as const, path: '/' };
 
@@ -18,7 +18,7 @@ export class AuthCookiesService {
         response.cookie('refresh_token', refreshToken, { ...base, maxAge: this.jwtTokenService.resolveMaxAgeMs(refreshToken, this.config.jwt.refreshExpiresIn) });
     }
 
-    clearAuthCookies(response: Response): void {
+    clearAuthenticationCookies(response: Response): void {
         const secure = this.config.nodeEnv === 'production';
         const base = { httpOnly: true, secure, sameSite: 'lax' as const, path: '/' };
 

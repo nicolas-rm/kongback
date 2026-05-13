@@ -8,20 +8,20 @@ type JwtPayload = {
     sub: string;
 };
 
-export type SocketAuthenticatedUser = {
+export type SocketAuthenticationUser = {
     id: string;
     username: string;
 };
 
 @Injectable()
-export class NotificationsSocketAuthService {
+export class NotificationsSocketAuthenticationService {
     constructor(
         private readonly jwtService: JwtService,
         private readonly config: AppConfigService,
         private readonly authenticationRepository: AuthenticationRepository
     ) {}
 
-    async authenticate(client: Socket): Promise<SocketAuthenticatedUser> {
+    async authenticate(client: Socket): Promise<SocketAuthenticationUser> {
         const accessToken = this.getAccessToken(client);
         if (!accessToken) throw new UnauthorizedException('No autorizado');
 
@@ -41,8 +41,8 @@ export class NotificationsSocketAuthService {
     }
 
     private getAccessToken(client: Socket): string | null {
-        const authToken = typeof client.handshake.auth?.token === 'string' ? client.handshake.auth.token : null;
-        if (authToken) return authToken;
+        const authenticationToken = typeof client.handshake.auth?.token === 'string' ? client.handshake.auth.token : null;
+        if (authenticationToken) return authenticationToken;
 
         const cookieHeader = client.handshake.headers.cookie;
         if (!cookieHeader) return null;

@@ -4,7 +4,7 @@ import request from 'supertest';
 import type { Response } from 'express';
 import { AuthenticationController } from '@/modules/authentication/authentication.controller';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
-import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
+import { AuthenticationCookiesService } from '@/modules/authentication/services/authentication-cookies.service';
 
 function getSetCookieHeader(headers: request.Response['headers']): string {
     const cookies = headers['set-cookie'];
@@ -23,12 +23,12 @@ describe('AuthenticationController (e2e)', () => {
         requestEmailVerification: jest.fn(),
         verifyEmail: jest.fn(),
     };
-    const authCookiesService = {
-        setAuthCookies: jest.fn((response: Response, accessToken: string, refreshToken: string) => {
+    const authenticationCookiesService = {
+        setAuthenticationCookies: jest.fn((response: Response, accessToken: string, refreshToken: string) => {
             response.cookie('access_token', accessToken, { httpOnly: true, path: '/' });
             response.cookie('refresh_token', refreshToken, { httpOnly: true, path: '/' });
         }),
-        clearAuthCookies: jest.fn((response: Response) => {
+        clearAuthenticationCookies: jest.fn((response: Response) => {
             response.clearCookie('access_token', { path: '/' });
             response.clearCookie('refresh_token', { path: '/' });
         }),
@@ -41,7 +41,7 @@ describe('AuthenticationController (e2e)', () => {
             controllers: [AuthenticationController],
             providers: [
                 { provide: AuthenticationService, useValue: authenticationService },
-                { provide: AuthCookiesService, useValue: authCookiesService },
+                { provide: AuthenticationCookiesService, useValue: authenticationCookiesService },
             ],
         }).compile();
 
@@ -53,11 +53,11 @@ describe('AuthenticationController (e2e)', () => {
         await app.close();
     });
 
-    it('sets auth cookies on password login', async () => {
+    it('sets authentication cookies on password login', async () => {
         authenticationService.login.mockResolvedValue({ accessToken: 'access-token', refreshToken: 'refresh-token', sessionId: 'session-id' });
 
         await request(app.getHttpServer())
-            .post('/auth/login')
+            .post('/authentication/login')
             .send({ username: 'admin', password: 'secret' })
             .expect(200)
             .expect(({ body, headers }) => {
@@ -68,11 +68,11 @@ describe('AuthenticationController (e2e)', () => {
             });
     });
 
-    it('returns a 2fa challenge without auth cookies when user has 2fa enabled', async () => {
+    it('returns a 2fa challenge without authentication cookies when user has 2fa enabled', async () => {
         authenticationService.login.mockResolvedValue({ requiresTwoFactor: true, challengeToken: 'challenge-token' });
 
         await request(app.getHttpServer())
-            .post('/auth/login')
+            .post('/authentication/login')
             .send({ username: 'admin', password: 'secret' })
             .expect(200)
             .expect(({ body, headers }) => {
@@ -83,11 +83,11 @@ describe('AuthenticationController (e2e)', () => {
             });
     });
 
-    it('sets auth cookies after 2fa login verification', async () => {
+    it('sets authentication cookies after 2fa login verification', async () => {
         authenticationService.verifyTwoFactorLogin.mockResolvedValue({ accessToken: 'access-token', refreshToken: 'refresh-token', sessionId: 'session-id' });
 
         await request(app.getHttpServer())
-            .post('/auth/2fa/verify-login')
+            .post('/authentication/2fa/verify-login')
             .send({ challengeToken: 'challenge-token', code: '123456' })
             .expect(200)
             .expect(({ body, headers }) => {
@@ -102,7 +102,7 @@ describe('AuthenticationController (e2e)', () => {
         authenticationService.requestEmailVerification.mockResolvedValue({ accepted: true });
         authenticationService.verifyEmail.mockResolvedValue({ emailVerified: true });
 
-        await request(app.getHttpServer()).post('/auth/email/verification/request').send({ email: 'user@example.com' }).expect(200, { accepted: true });
-        await request(app.getHttpServer()).post('/auth/email/verification/confirm').send({ token: 'token' }).expect(200, { emailVerified: true });
+        await request(app.getHttpServer()).post('/authentication/email/verification/request').send({ email: 'user@example.com' }).expect(200, { accepted: true });
+        await request(app.getHttpServer()).post('/authentication/email/verification/confirm').send({ token: 'token' }).expect(200, { emailVerified: true });
     });
 });

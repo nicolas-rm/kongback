@@ -32,7 +32,7 @@ describe('Authentication use-cases', () => {
         hashToken: jest.fn((token: string) => `hash:${token}`),
     };
 
-    const authTokensService = {
+    const authenticationTokensService = {
         issueTokens: jest.fn(),
     };
 
@@ -42,7 +42,7 @@ describe('Authentication use-cases', () => {
 
     it('issues tokens and resets login state on successful login', async () => {
         const repository = buildRepository();
-        const useCase = new LoginUseCase(config as never, repository as never, cryptoService as never, authTokensService as never);
+        const useCase = new LoginUseCase(config as never, repository as never, cryptoService as never, authenticationTokensService as never);
         const issuedTokens = { accessToken: 'access', refreshToken: 'refresh', sessionId: 'session-id' };
 
         repository.findLoginUser.mockResolvedValue({
@@ -57,16 +57,16 @@ describe('Authentication use-cases', () => {
             emailVerifiedAt: null,
         });
         cryptoService.verifyPassword.mockResolvedValue(true);
-        authTokensService.issueTokens.mockResolvedValue(issuedTokens);
+        authenticationTokensService.issueTokens.mockResolvedValue(issuedTokens);
 
         await expect(useCase.execute({ username: 'admin', password: 'secret' }, { ipAddress: '127.0.0.1' })).resolves.toEqual(issuedTokens);
         expect(repository.resetLoginState).toHaveBeenCalledWith('user-id');
-        expect(authTokensService.issueTokens).toHaveBeenCalledWith({ id: 'user-id', username: 'admin' }, { userAgent: undefined, ipAddress: '127.0.0.1', deviceName: undefined });
+        expect(authenticationTokensService.issueTokens).toHaveBeenCalledWith({ id: 'user-id', username: 'admin' }, { userAgent: undefined, ipAddress: '127.0.0.1', deviceName: undefined });
     });
 
     it('registers a failed login attempt when password is invalid', async () => {
         const repository = buildRepository();
-        const useCase = new LoginUseCase(config as never, repository as never, cryptoService as never, authTokensService as never);
+        const useCase = new LoginUseCase(config as never, repository as never, cryptoService as never, authenticationTokensService as never);
 
         repository.findLoginUser.mockResolvedValue({
             id: 'user-id',
@@ -87,7 +87,7 @@ describe('Authentication use-cases', () => {
 
     it('rotates refresh token when stored token is active', async () => {
         const repository = buildRepository();
-        const useCase = new RefreshUseCase(config as never, repository as never, cryptoService as never, authTokensService as never);
+        const useCase = new RefreshUseCase(config as never, repository as never, cryptoService as never, authenticationTokensService as never);
         const issuedTokens = { accessToken: 'new-access', refreshToken: 'new-refresh', sessionId: 'new-session' };
 
         repository.findStoredRefreshToken.mockResolvedValue({
@@ -100,7 +100,7 @@ describe('Authentication use-cases', () => {
             user: { id: 'user-id', username: 'admin', status: UserStatus.active },
             session: { id: 'session-id', revokedAt: null, expiresAt: new Date(Date.now() + 60_000), idleExpiresAt: new Date(Date.now() + 60_000) },
         });
-        authTokensService.issueTokens.mockResolvedValue(issuedTokens);
+        authenticationTokensService.issueTokens.mockResolvedValue(issuedTokens);
 
         await expect(useCase.execute({ refreshToken: 'refresh' })).resolves.toEqual(issuedTokens);
         expect(repository.findStoredRefreshToken).toHaveBeenCalledWith('hash:refresh');

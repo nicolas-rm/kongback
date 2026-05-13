@@ -18,7 +18,7 @@ type SessionContext = {
 };
 
 @Injectable()
-export class AuthTokensService {
+export class AuthenticationTokensService {
     constructor(
         private readonly config: AppConfigService,
         private readonly repository: AuthenticationRepository,

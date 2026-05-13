@@ -14,7 +14,7 @@ export function generateTotpSecret(bytesLength = 20): string {
     return base32Encode(randomBytes(Math.max(10, bytesLength)));
 }
 
-export function buildTotpOtpAuthUrl(input: { secret: string; accountName: string; issuer: string; digits?: number; periodSeconds?: number }): string {
+export function buildTotpOtpAuthenticationUrl(input: { secret: string; accountName: string; issuer: string; digits?: number; periodSeconds?: number }): string {
     const digits = input.digits ?? 6;
     const periodSeconds = input.periodSeconds ?? 30;
     const label = `${input.issuer}:${input.accountName}`;

@@ -3,7 +3,7 @@ module.exports = {
     rootDir: '.',
     testRegex: '.*\\.spec\\.ts$',
     transform: {
-        '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+        '^.+\\.(t|j)s$': ['<rootDir>/node_modules/ts-jest/dist/index.js', { tsconfig: 'tsconfig.json' }],
     },
     collectCoverageFrom: ['src/**/*.(t|j)s'],
     coverageDirectory: 'coverage',

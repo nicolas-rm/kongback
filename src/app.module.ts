@@ -10,7 +10,7 @@ import { AppConfigModule } from '@/configurations/app-config.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { CryptoModule } from '@/crypto/crypto.module';
 import { AppMailerModule } from '@/mailer/mailer.module';
-import { JwtAuthGuard } from '@/guards/jwt-auth.guard';
+import { JwtAuthenticationGuard } from '@/guards/jwt-authentication.guard';
 import { MustChangePasswordGuard } from '@/guards/must-change-password.guard';
 import { PermissionsGuard } from '@/guards/permissions.guard';
 import { HttpExceptionFilter } from '@/filters/http-exception.filter';
@@ -54,7 +54,7 @@ import { APP_MODULES } from '@/modules';
         },
         {
             provide: APP_GUARD,
-            useClass: JwtAuthGuard,
+            useClass: JwtAuthenticationGuard,
         },
         {
             provide: APP_GUARD,
