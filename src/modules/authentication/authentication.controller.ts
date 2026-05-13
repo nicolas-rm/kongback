@@ -3,7 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser, Public, RefreshToken, RequestConfig, SessionContextData, SkipMustChangePassword } from '@/decorators';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
-import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
+import { AuthenticationCookiesService } from '@/modules/authentication/services/authentication-cookies.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
 import {
@@ -21,11 +21,11 @@ import {
 } from '@/modules/authentication/dto';
 
 @ApiTags('authentication')
-@Controller('auth')
+@Controller('authentication')
 export class AuthenticationController {
     constructor(
         private readonly authenticationService: AuthenticationService,
-        private readonly authCookiesService: AuthCookiesService
+        private readonly authenticationCookiesService: AuthenticationCookiesService
     ) {}
 
     @Post('login')
@@ -34,10 +34,10 @@ export class AuthenticationController {
     async login(@Body() dto: LoginDto, @SessionContextData() sessionContext: SessionContext, @Res({ passthrough: true }) response: Response) {
         const tokens = await this.authenticationService.login(dto, sessionContext);
         if ('requiresTwoFactor' in tokens) {
-            this.authCookiesService.clearAuthCookies(response);
+            this.authenticationCookiesService.clearAuthenticationCookies(response);
             return tokens;
         }
-        this.authCookiesService.setAuthCookies(response, tokens.accessToken, tokens.refreshToken);
+        this.authenticationCookiesService.setAuthenticationCookies(response, tokens.accessToken, tokens.refreshToken);
         return tokens;
     }
 
@@ -46,7 +46,7 @@ export class AuthenticationController {
     @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     async verifyTwoFactorLogin(@Body() dto: VerifyTwoFactorLoginDto, @SessionContextData() sessionContext: SessionContext, @Res({ passthrough: true }) response: Response) {
         const tokens = await this.authenticationService.verifyTwoFactorLogin(dto, sessionContext);
-        this.authCookiesService.setAuthCookies(response, tokens.accessToken, tokens.refreshToken);
+        this.authenticationCookiesService.setAuthenticationCookies(response, tokens.accessToken, tokens.refreshToken);
         return tokens;
     }
 
@@ -67,7 +67,7 @@ export class AuthenticationController {
         @Res({ passthrough: true }) response: Response
     ) {
         const tokens = await this.authenticationService.refresh({ refreshToken: dto.refreshToken ?? refreshToken }, sessionContext);
-        this.authCookiesService.setAuthCookies(response, tokens.accessToken, tokens.refreshToken);
+        this.authenticationCookiesService.setAuthenticationCookies(response, tokens.accessToken, tokens.refreshToken);
         return tokens;
     }
 
@@ -75,7 +75,7 @@ export class AuthenticationController {
     @RequestConfig({ statusCode: HttpStatus.OK })
     @SkipMustChangePassword()
     async logout(@CurrentUser() user: RequestUser, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
-        this.authCookiesService.clearAuthCookies(response);
+        this.authenticationCookiesService.clearAuthenticationCookies(response);
         return this.authenticationService.logout(user.id, { refreshToken });
     }
 
@@ -83,7 +83,7 @@ export class AuthenticationController {
     @RequestConfig({ statusCode: HttpStatus.OK })
     @SkipMustChangePassword()
     async logoutAll(@CurrentUser() user: RequestUser, @Res({ passthrough: true }) response: Response) {
-        this.authCookiesService.clearAuthCookies(response);
+        this.authenticationCookiesService.clearAuthenticationCookies(response);
         return this.authenticationService.logoutAll(user.id);
     }
 
@@ -109,14 +109,14 @@ export class AuthenticationController {
     @SkipMustChangePassword()
     async revokeSession(@CurrentUser() user: RequestUser, @Param('sessionId') sessionId: string, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
         const result = await this.authenticationService.revokeSession(user.id, sessionId, refreshToken);
-        if (result.revokedCurrent) this.authCookiesService.clearAuthCookies(response);
+        if (result.revokedCurrent) this.authenticationCookiesService.clearAuthenticationCookies(response);
         return result;
     }
 
     @Patch('password')
     @SkipMustChangePassword()
     changePassword(@CurrentUser() user: RequestUser, @Body() dto: ChangePasswordDto, @Res({ passthrough: true }) response: Response) {
-        this.authCookiesService.clearAuthCookies(response);
+        this.authenticationCookiesService.clearAuthenticationCookies(response);
         return this.authenticationService.changePassword(user.id, dto);
     }
 

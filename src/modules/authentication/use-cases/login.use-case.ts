@@ -4,7 +4,7 @@ import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { LoginDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
-import { AuthTokensService } from '@/modules/authentication/services/auth-tokens.service';
+import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
 import { verifyTotpCode } from '@/utilities/authentication/totp.util';
 
@@ -14,7 +14,7 @@ export class LoginUseCase {
         private readonly config: AppConfigService,
         private readonly repository: AuthenticationRepository,
         private readonly cryptoService: CryptoService,
-        private readonly authTokensService: AuthTokensService
+        private readonly authenticationTokensService: AuthenticationTokensService
     ) {}
 
     async execute(dto: LoginDto, sessionContext: SessionContext = {}) {
@@ -50,7 +50,7 @@ export class LoginUseCase {
             return { requiresTwoFactor: true, challengeToken };
         }
 
-        return this.authTokensService.issueTokens(
+        return this.authenticationTokensService.issueTokens(
             { id: user.id, username: user.username },
             {
                 userAgent: sessionContext.userAgent,
@@ -92,7 +92,7 @@ export class LoginUseCase {
         }
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);
-        return this.authTokensService.issueTokens(
+        return this.authenticationTokensService.issueTokens(
             { id: challenge.user.id, username: challenge.user.username },
             {
                 userAgent: sessionContext.userAgent,

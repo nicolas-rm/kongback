@@ -5,8 +5,8 @@ import { AppMailerModule } from '@/mailer/mailer.module';
 import { AuthenticationController } from '@/modules/authentication/authentication.controller';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
-import { AuthCookiesService } from '@/modules/authentication/services/auth-cookies.service';
-import { AuthTokensService } from '@/modules/authentication/services/auth-tokens.service';
+import { AuthenticationCookiesService } from '@/modules/authentication/services/authentication-cookies.service';
+import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
 import { JwtTokenService } from '@/modules/authentication/services/jwt-token.service';
 import { JwtStrategy } from '@/modules/authentication/strategies/jwt.strategy';
 import * as useCases from '@/modules/authentication/use-cases';
@@ -17,8 +17,8 @@ import * as useCases from '@/modules/authentication/use-cases';
     providers: [
         AuthenticationRepository,
         AuthenticationService,
-        AuthCookiesService,
-        AuthTokensService,
+        AuthenticationCookiesService,
+        AuthenticationTokensService,
         JwtTokenService,
         JwtStrategy,
         useCases.LoginUseCase,
@@ -35,6 +35,6 @@ import * as useCases from '@/modules/authentication/use-cases';
         useCases.VerifyEmailUseCase,
         useCases.TwoFactorUseCase,
     ],
-    exports: [AuthenticationRepository, AuthCookiesService, AuthTokensService, AuthenticationService],
+    exports: [AuthenticationRepository, AuthenticationCookiesService, AuthenticationTokensService, AuthenticationService],
 })
 export class AuthenticationModule {}

@@ -6,7 +6,7 @@ import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { extractAccessTokenFromRequest } from '@/modules/authentication/utils/token-extractor';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {
+export class JwtAuthenticationGuard extends AuthGuard('jwt') {
     constructor(private readonly reflector: Reflector) {
         super();
     }
@@ -34,7 +34,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     private resolveUnauthorizedReason(message: string, accessToken: string | null) {
         const normalized = message.toLowerCase();
-        if (!accessToken || normalized.includes('no auth token')) return 'missing_access_token';
+        if (!accessToken || normalized.includes('no auth token') || normalized.includes('no authentication token')) return 'missing_access_token';
         if (normalized.includes('jwt expired')) return 'access_token_expired';
         return 'access_token_invalid';
     }

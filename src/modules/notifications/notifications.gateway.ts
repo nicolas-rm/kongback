@@ -4,7 +4,7 @@ import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, WebSocketGat
 import type { Server, Socket } from 'socket.io';
 import { NotificationsSerializerService } from '@/modules/notifications/services/notifications-serializer.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
-import { NotificationsSocketAuthService } from '@/modules/notifications/notifications-socket-auth.service';
+import { NotificationsSocketAuthenticationService } from '@/modules/notifications/notifications-socket-authentication.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -21,14 +21,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     private readonly userRoomPrefix = 'user:';
 
     constructor(
-        private readonly socketAuthService: NotificationsSocketAuthService,
+        private readonly socketAuthenticationService: NotificationsSocketAuthenticationService,
         private readonly serializer: NotificationsSerializerService,
         private readonly notificationsService: NotificationsService
     ) {}
 
     async handleConnection(@ConnectedSocket() client: Socket) {
         try {
-            const user = await this.socketAuthService.authenticate(client);
+            const user = await this.socketAuthenticationService.authenticate(client);
             client.data.userId = user.id;
             client.data.username = user.username;
             await client.join(this.getUserRoom(user.id));

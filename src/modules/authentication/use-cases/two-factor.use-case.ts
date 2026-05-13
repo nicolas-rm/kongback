@@ -3,7 +3,7 @@ import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { TwoFactorCodeDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
-import { buildTotpOtpAuthUrl, generateRecoveryCodes, generateTotpSecret, verifyTotpCode } from '@/utilities/authentication/totp.util';
+import { buildTotpOtpAuthenticationUrl, generateRecoveryCodes, generateTotpSecret, verifyTotpCode } from '@/utilities/authentication/totp.util';
 
 @Injectable()
 export class TwoFactorUseCase {
@@ -32,7 +32,7 @@ export class TwoFactorUseCase {
 
         return {
             secret,
-            otpauthUrl: buildTotpOtpAuthUrl({
+            otpAuthenticationUrl: buildTotpOtpAuthenticationUrl({
                 secret,
                 accountName: user.email ?? user.username,
                 issuer: this.config.twoFactor.issuer,
