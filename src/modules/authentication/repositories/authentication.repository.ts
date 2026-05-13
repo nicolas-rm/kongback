@@ -59,6 +59,18 @@ export class AuthenticationRepository {
         });
     }
 
+    findActiveSession(sessionId: string) {
+        return this.prisma.session.findFirst({
+            where: {
+                id: sessionId,
+                revokedAt: null,
+                expiresAt: { gt: new Date() },
+                idleExpiresAt: { gt: new Date() },
+            },
+            select: { id: true, userId: true, lastActivityAt: true },
+        });
+    }
+
     createSession(input: CreateSessionInput) {
         return this.prisma.session.create({
             data: {
@@ -105,6 +117,10 @@ export class AuthenticationRepository {
                 mustChangePassword: true,
                 failedLoginAttempts: true,
                 lockedUntil: true,
+                twoFactorEnabled: true,
+                twoFactorSecret: true,
+                requiresEmailVerification: true,
+                emailVerifiedAt: true,
             },
         });
     }
@@ -125,15 +141,31 @@ export class AuthenticationRepository {
 
     findStoredRefreshToken(tokenHash: string) {
         return this.prisma.refreshToken.findFirst({
-            where: { tokenHash, revokedAt: null },
+            where: { tokenHash },
             select: {
                 id: true,
                 userId: true,
                 sessionId: true,
                 expiresAt: true,
                 idleExpiresAt: true,
+                revokedAt: true,
                 user: { select: { id: true, username: true, email: true, fullName: true, status: true } },
+                session: { select: { id: true, revokedAt: true, expiresAt: true, idleExpiresAt: true } },
             },
+        });
+    }
+
+    touchSession(sessionId: string, idleExpiresAt: Date, touchedAt = new Date()) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.session.update({
+                where: { id: sessionId },
+                data: { lastActivityAt: touchedAt, idleExpiresAt },
+                select: { id: true },
+            });
+            await tx.refreshToken.updateMany({
+                where: { sessionId, revokedAt: null },
+                data: { lastActivityAt: touchedAt, idleExpiresAt },
+            });
         });
     }
 
@@ -148,6 +180,22 @@ export class AuthenticationRepository {
         return this.prisma.refreshToken.updateMany({
             where: { userId, revokedAt: null },
             data: { revokedAt },
+        });
+    }
+
+    revokeUserSessions(userId: string, revokedAt = new Date()) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.session.updateMany({
+                where: { userId, revokedAt: null },
+                data: { revokedAt },
+            });
+
+            await tx.refreshToken.updateMany({
+                where: { userId, revokedAt: null },
+                data: { revokedAt },
+            });
+
+            return result;
         });
     }
 
@@ -219,6 +267,19 @@ export class AuthenticationRepository {
         });
     }
 
+    createUser(data: { username: string; email: string; fullName: string; passwordHash: string; requiresEmailVerification: boolean }) {
+        return this.prisma.user.create({
+            data: {
+                username: data.username,
+                email: data.email,
+                fullName: data.fullName,
+                passwordHash: data.passwordHash,
+                requiresEmailVerification: data.requiresEmailVerification,
+            },
+            select: { id: true, username: true, email: true, fullName: true },
+        });
+    }
+
     findUserByEmail(email: string) {
         return this.prisma.user.findFirst({
             where: { email: { equals: email, mode: 'insensitive' }, deletedAt: null, status: 'active' },
@@ -230,6 +291,35 @@ export class AuthenticationRepository {
         return this.prisma.passwordResetToken.create({
             data: { userId, tokenHash, expiresAt },
             select: { id: true },
+        });
+    }
+
+    createEmailVerificationToken(userId: string, tokenHash: string, expiresAt: Date) {
+        return this.prisma.emailVerificationToken.create({
+            data: { userId, tokenHash, expiresAt },
+            select: { id: true },
+        });
+    }
+
+    findEmailVerificationToken(tokenHash: string) {
+        return this.prisma.emailVerificationToken.findFirst({
+            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+            select: { id: true, userId: true },
+        });
+    }
+
+    verifyEmail(tokenId: string, userId: string, usedAt = new Date()) {
+        return this.prisma.$transaction(async (tx) => {
+            await tx.emailVerificationToken.update({
+                where: { id: tokenId },
+                data: { usedAt },
+                select: { id: true },
+            });
+            await tx.user.update({
+                where: { id: userId },
+                data: { emailVerifiedAt: usedAt, requiresEmailVerification: false },
+                select: { id: true },
+            });
         });
     }
 
@@ -269,6 +359,55 @@ export class AuthenticationRepository {
                 twoFactorPendingSecret: encryptedSecret,
                 twoFactorPendingCreatedAt: new Date(),
             },
+        });
+    }
+
+    createTwoFactorLoginChallenge(input: { userId: string; challengeHash: string; expiresAt: Date; userAgent?: string | null; ipAddress?: string | null }) {
+        return this.prisma.twoFactorLoginChallenge.create({
+            data: {
+                userId: input.userId,
+                challengeHash: input.challengeHash,
+                expiresAt: input.expiresAt,
+                userAgent: input.userAgent ?? null,
+                ipAddress: input.ipAddress ?? null,
+            },
+            select: { id: true },
+        });
+    }
+
+    findTwoFactorLoginChallenge(challengeHash: string) {
+        return this.prisma.twoFactorLoginChallenge.findFirst({
+            where: { challengeHash, consumedAt: null, expiresAt: { gt: new Date() } },
+            select: {
+                id: true,
+                userId: true,
+                attemptCount: true,
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        twoFactorEnabled: true,
+                        twoFactorSecret: true,
+                        status: true,
+                    },
+                },
+            },
+        });
+    }
+
+    incrementTwoFactorChallengeAttempt(id: string) {
+        return this.prisma.twoFactorLoginChallenge.update({
+            where: { id },
+            data: { attemptCount: { increment: 1 } },
+            select: { id: true },
+        });
+    }
+
+    consumeTwoFactorChallenge(id: string, consumedAt = new Date()) {
+        return this.prisma.twoFactorLoginChallenge.update({
+            where: { id },
+            data: { consumedAt },
+            select: { id: true },
         });
     }
 

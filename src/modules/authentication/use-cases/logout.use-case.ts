@@ -12,14 +12,14 @@ export class LogoutUseCase {
 
     async execute(userId: string, dto: LogoutDto = {}) {
         if (!dto.refreshToken) {
-            const result = await this.repository.revokeUserRefreshTokens(userId);
+            const result = await this.repository.revokeUserSessions(userId);
             return { revokedSessions: result.count };
         }
 
         const storedToken = await this.repository.findStoredRefreshToken(this.cryptoService.hashToken(dto.refreshToken));
         if (!storedToken || storedToken.userId !== userId) return { revokedSessions: 0 };
 
-        await this.repository.revokeRefreshToken(storedToken.id);
+        await this.repository.revokeSession(userId, storedToken.sessionId);
         return { revokedSessions: 1 };
     }
 }

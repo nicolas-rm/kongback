@@ -5,7 +5,7 @@ import { Public } from '@/decorators/public.decorator';
 type RequestConfigOptions = {
     statusCode?: HttpStatus | number;
     isPublic?: boolean;
-    throttle?: boolean;
+    throttle?: boolean | { limit: number; ttl: number };
 };
 
 export function RequestConfig(options: RequestConfigOptions = {}) {
@@ -13,7 +13,10 @@ export function RequestConfig(options: RequestConfigOptions = {}) {
     const decorators: Array<ClassDecorator | MethodDecorator | PropertyDecorator> = [HttpCode(statusCode)];
 
     if (isPublic) decorators.push(Public());
-    if (throttle) decorators.push(Throttle({ default: { limit: 5, ttl: 60_000 } }));
+    if (throttle) {
+        const throttleOptions = typeof throttle === 'object' ? throttle : { limit: 5, ttl: 60_000 };
+        decorators.push(Throttle({ default: throttleOptions }));
+    }
 
     return applyDecorators(...decorators);
 }

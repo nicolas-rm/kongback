@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { formatValidationErrors } from '@/configurations/validation-messages';
 import { RequestValidationException } from '@/configurations/request-validation';
+import { requestContextMiddleware } from '@/middlewares/request-context.middleware';
 
 export function registerProcessHandlers(): void {
     process.on('unhandledRejection', (reason: unknown) => {
@@ -16,6 +17,7 @@ export function registerProcessHandlers(): void {
 }
 
 export function configureApp(app: INestApplication): void {
+    app.use(requestContextMiddleware);
     app.use(cookieParser());
     app.enableCors({
         origin: true,
