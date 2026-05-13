@@ -1,9 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import type { UploadedFile } from '@/modules/documents/types/uploaded-file.type';
 
 export type StoredDocumentFile = {
@@ -42,7 +43,7 @@ export class DocumentsStorageService {
         try {
             await fs.access(this.resolveAbsolutePath(storageKey));
         } catch {
-            throw new NotFoundException('Archivo no encontrado en almacenamiento');
+            throw new I18nNotFoundException(I18N_KEYS.errors.documents.storageFileNotFound, 'Archivo no encontrado en almacenamiento');
         }
     }
 
@@ -52,11 +53,11 @@ export class DocumentsStorageService {
 
     private resolveAbsolutePath(storageKey: string): string {
         const normalized = path.posix.normalize(storageKey.replace(/\\/g, '/'));
-        if (normalized.startsWith('..') || path.posix.isAbsolute(normalized)) throw new BadRequestException('Ruta de archivo invalida');
+        if (normalized.startsWith('..') || path.posix.isAbsolute(normalized)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
 
         const baseDirectory = this.getBaseDirectory();
         const absolutePath = path.resolve(baseDirectory, normalized);
-        if (absolutePath !== baseDirectory && !absolutePath.startsWith(`${baseDirectory}${path.sep}`)) throw new BadRequestException('Ruta de archivo invalida');
+        if (absolutePath !== baseDirectory && !absolutePath.startsWith(`${baseDirectory}${path.sep}`)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
 
         return absolutePath;
     }

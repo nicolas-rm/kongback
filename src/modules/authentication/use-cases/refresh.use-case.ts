@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
+import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
 import { RefreshTokenDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
@@ -17,29 +18,33 @@ export class RefreshUseCase {
     ) {}
 
     async execute(dto: RefreshTokenDto, sessionContext: SessionContext = {}) {
-        if (!dto.refreshToken) throw new UnauthorizedException('Refresh token invalido');
+        if (!dto.refreshToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
 
         const storedToken = await this.repository.findStoredRefreshToken(this.cryptoService.hashToken(dto.refreshToken));
-        if (!storedToken) throw new UnauthorizedException('Refresh token invalido');
+        if (!storedToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
 
         if (storedToken.revokedAt) {
             await this.repository.revokeSession(storedToken.userId, storedToken.sessionId);
-            throw new UnauthorizedException('Refresh token reutilizado');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.reusedRefreshToken, 'Refresh token reutilizado');
         }
 
-        if (storedToken.user.status !== UserStatus.active || storedToken.session.revokedAt) throw new UnauthorizedException('Refresh token invalido');
+        if (storedToken.user.status !== UserStatus.active || storedToken.session.revokedAt) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
 
         const now = new Date();
         if (storedToken.expiresAt <= now || storedToken.idleExpiresAt <= now || storedToken.session.expiresAt <= now || storedToken.session.idleExpiresAt <= now) {
             await this.repository.revokeRefreshToken(storedToken.id, now);
-            throw new UnauthorizedException('Refresh token expirado');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.expiredRefreshToken, 'Refresh token expirado');
         }
 
         await this.repository.revokeRefreshToken(storedToken.id, now);
-        await this.repository.touchSession(storedToken.sessionId, new Date(now.getTime() + this.config.session.idleTimeoutMinutes * 60 * 1000), now);
+        const idleExpiresAt = new Date(now.getTime() + this.config.session.idleTimeoutMinutes * 60 * 1000);
+        await this.repository.touchSession(storedToken.sessionId, idleExpiresAt, now);
 
-        return this.authenticationTokensService.issueTokens(
+        return this.authenticationTokensService.issueTokensForSession(
             { id: storedToken.user.id, username: storedToken.user.username },
+            storedToken.sessionId,
+            storedToken.session.expiresAt,
+            idleExpiresAt,
             {
                 userAgent: sessionContext.userAgent,
                 ipAddress: sessionContext.ipAddress,

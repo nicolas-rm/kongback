@@ -1,15 +1,12 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, ValidationArguments } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorBooleanOptions {
     optional?: boolean;
     emptyTo?: 'undefined' | 'null';
     message?: string;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
 }
 
 export function ValidatorBoolean(options: ValidatorBooleanOptions = {}) {
@@ -26,6 +23,6 @@ export function ValidatorBoolean(options: ValidatorBooleanOptions = {}) {
             return value;
         }),
         ...(optional ? [IsOptional()] : []),
-        IsBoolean({ message: buildMessage(message, (property) => `${property} debe ser true o false`) })
+        IsBoolean({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.boolean) })
     );
 }

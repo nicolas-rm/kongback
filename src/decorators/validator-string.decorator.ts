@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength, ValidationArguments } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorStringOptions {
     optional?: boolean;
@@ -11,10 +12,6 @@ export interface ValidatorStringOptions {
     collapseSpaces?: boolean;
     emptyTo?: 'undefined' | 'null';
     message?: string;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
 }
 
 export function ValidatorString(options: ValidatorStringOptions = {}) {
@@ -30,9 +27,9 @@ export function ValidatorString(options: ValidatorStringOptions = {}) {
             if (result === '') return emptyTo === 'null' ? null : undefined;
             return result;
         }),
-        ...(optional ? [IsOptional()] : [IsNotEmpty({ message: buildMessage(message, (property) => `${property} es obligatorio`) })]),
-        IsString({ message: buildMessage(message, (property) => `${property} debe ser un texto valido`) }),
-        ...(minLength !== undefined ? [MinLength(minLength, { message: ({ property }) => `${property} debe tener al menos ${minLength} caracteres` })] : []),
-        ...(maxLength !== undefined ? [MaxLength(maxLength, { message: ({ property }) => `${property} no puede exceder ${maxLength} caracteres` })] : [])
+        ...(optional ? [IsOptional()] : [IsNotEmpty({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.required) })]),
+        IsString({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.string) }),
+        ...(minLength !== undefined ? [MinLength(minLength, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.minLength, { minLength }) })] : []),
+        ...(maxLength !== undefined ? [MaxLength(maxLength, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.maxLength, { maxLength }) })] : [])
     );
 }

@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { I18N_KEYS, I18nForbiddenException } from '@/i18n';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 
 export function buildOrganizationScope(user: RequestUser) {
@@ -9,6 +9,6 @@ export function buildOrganizationScope(user: RequestUser) {
 export function assertOrganizationAccess(user: RequestUser, organizationId: string): void {
     if (user.isGlobalAdmin) return;
     if (!(user.organizationIds ?? []).includes(organizationId)) {
-        throw new ForbiddenException('Acceso denegado a esta organizacion');
+        throw new I18nForbiddenException(I18N_KEYS.errors.authorization.organizationDenied, 'Acceso denegado a esta organizacion');
     }
 }

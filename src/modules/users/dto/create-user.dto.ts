@@ -16,4 +16,7 @@ export class CreateUserDto {
 
     @ValidatorEnum(UserStatus, { optional: true })
     status?: UserStatus;
+
+    @ValidatorString({ optional: true, toLowerCase: true })
+    preferredLanguage?: string;
 }

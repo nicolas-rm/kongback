@@ -5,6 +5,7 @@ type ProfileResponseData = {
     username: string;
     email?: string | null;
     fullName?: string | null;
+    preferredLanguage?: string | null;
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
     organizationIds?: string[];
@@ -18,6 +19,7 @@ export class ProfileResponse {
         public username: string,
         public email: string | null,
         public fullName: string | null,
+        public preferredLanguage: string,
         public mustChangePassword: boolean,
         public isGlobalAdmin: boolean,
         public organizationIds: string[],
@@ -31,6 +33,7 @@ export class ProfileResponse {
             data.username,
             data.email ?? null,
             data.fullName ?? null,
+            data.preferredLanguage ?? 'es',
             data.mustChangePassword ?? false,
             data.isGlobalAdmin ?? false,
             data.organizationIds ?? [],
@@ -46,10 +49,11 @@ export class UpdateProfileResponse {
         public username: string,
         public email: string | null,
         public fullName: string,
+        public preferredLanguage: string,
         public updatedAt: Date
     ) {}
 
-    static from(data: { id: string; username: string; email: string | null; fullName: string; updatedAt: Date }): UpdateProfileResponse {
-        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.updatedAt);
+    static from(data: { id: string; username: string; email: string | null; fullName: string; preferredLanguage: string; updatedAt: Date }): UpdateProfileResponse {
+        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.updatedAt);
     }
 }

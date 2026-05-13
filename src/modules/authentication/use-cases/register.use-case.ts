@@ -38,6 +38,6 @@ export class RegisterUseCase {
     private async sendVerification(userId: string, email: string, sessionContext: SessionContext): Promise<void> {
         const token = randomBytes(32).toString('hex');
         await this.repository.createEmailVerificationToken(userId, this.cryptoService.hashToken(token), new Date(Date.now() + this.config.session.emailVerificationTtlMinutes * 60 * 1000));
-        await this.mailerService.sendEmailVerification(email, token, { recipientUserId: userId, ipAddress: sessionContext.ipAddress });
+        await this.mailerService.sendEmailVerification(email, token, { recipientUserId: userId, ipAddress: sessionContext.ipAddress, language: sessionContext.language });
     }
 }

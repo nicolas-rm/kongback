@@ -1,5 +1,5 @@
-import { UnauthorizedException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
+import { I18nUnauthorizedException } from '@/i18n';
 import { ChangePasswordUseCase, ListSessionsUseCase, LoginUseCase, LogoutUseCase, RefreshUseCase } from '@/modules/authentication/use-cases';
 
 describe('Authentication use-cases', () => {
@@ -34,6 +34,7 @@ describe('Authentication use-cases', () => {
 
     const authenticationTokensService = {
         issueTokens: jest.fn(),
+        issueTokensForSession: jest.fn(),
     };
 
     beforeEach(() => {
@@ -57,7 +58,7 @@ describe('Authentication use-cases', () => {
             emailVerifiedAt: null,
         });
         cryptoService.verifyPassword.mockResolvedValue(true);
-        authenticationTokensService.issueTokens.mockResolvedValue(issuedTokens);
+        authenticationTokensService.issueTokensForSession.mockResolvedValue(issuedTokens);
 
         await expect(useCase.execute({ username: 'admin', password: 'secret' }, { ipAddress: '127.0.0.1' })).resolves.toEqual(issuedTokens);
         expect(repository.resetLoginState).toHaveBeenCalledWith('user-id');
@@ -81,7 +82,7 @@ describe('Authentication use-cases', () => {
         });
         cryptoService.verifyPassword.mockResolvedValue(false);
 
-        await expect(useCase.execute({ username: 'admin', password: 'bad' })).rejects.toBeInstanceOf(UnauthorizedException);
+        await expect(useCase.execute({ username: 'admin', password: 'bad' })).rejects.toBeInstanceOf(I18nUnauthorizedException);
         expect(repository.updateFailedLoginState).toHaveBeenCalledWith('user-id', 3, expect.any(Date));
     });
 
@@ -105,6 +106,13 @@ describe('Authentication use-cases', () => {
         await expect(useCase.execute({ refreshToken: 'refresh' })).resolves.toEqual(issuedTokens);
         expect(repository.findStoredRefreshToken).toHaveBeenCalledWith('hash:refresh');
         expect(repository.revokeRefreshToken).toHaveBeenCalledWith('refresh-id', expect.any(Date));
+        expect(authenticationTokensService.issueTokensForSession).toHaveBeenCalledWith(
+            { id: 'user-id', username: 'admin' },
+            'session-id',
+            expect.any(Date),
+            expect.any(Date),
+            { userAgent: undefined, ipAddress: undefined, deviceName: undefined }
+        );
     });
 
     it('revokes all active refresh tokens on logout-all', async () => {
@@ -138,7 +146,7 @@ describe('Authentication use-cases', () => {
         ]);
     });
 
-    it('changes password and revokes active refresh tokens', async () => {
+    it('changes password and revokes active sessions', async () => {
         const repository = buildRepository();
         const useCase = new ChangePasswordUseCase(repository as never, cryptoService as never);
 
@@ -148,6 +156,6 @@ describe('Authentication use-cases', () => {
 
         await expect(useCase.execute('user-id', { currentPassword: 'old', newPassword: 'new' })).resolves.toEqual({ passwordChanged: true });
         expect(repository.updatePassword).toHaveBeenCalledWith('user-id', 'new-hash');
-        expect(repository.revokeUserRefreshTokens).toHaveBeenCalledWith('user-id');
+        expect(repository.revokeUserSessions).toHaveBeenCalledWith('user-id');
     });
 });

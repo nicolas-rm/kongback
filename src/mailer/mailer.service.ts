@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { EmailDispatchContext, Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { I18N_KEYS, type I18nKey } from '@/i18n';
 import { EmailTemplateService } from '@/mailer/email-template.service';
 import { EmailRateLimiterService, ReserveEmailDispatchResult } from '@/mailer/email-rate-limiter.service';
 
@@ -9,6 +11,7 @@ type MailContext = {
     recipientUserId?: string | null;
     triggeredByUserId?: string | null;
     ipAddress?: string | null;
+    language?: string | null;
     metadata?: Prisma.InputJsonValue;
 };
 
@@ -19,6 +22,7 @@ export class AppMailerService {
     constructor(
         private readonly mailer: MailerService,
         private readonly config: AppConfigService,
+        private readonly i18n: I18nService,
         private readonly emailTemplateService: EmailTemplateService,
         private readonly emailRateLimiter: EmailRateLimiterService
     ) {}
@@ -39,14 +43,16 @@ export class AppMailerService {
         if (!reservation.allowed) return reservation;
 
         const resetUrl = new URL(`/reset-password/${token}`, this.config.mail.webUrl);
+        const lang = this.resolveLanguage(context.language);
+        const expiresAtText = this.formatDate(expiresAt, lang);
         await this.sendTrackedTemplateMail({
             dispatchId: reservation.dispatchId,
             to,
-            subject: 'Restablecer contrasena',
+            subject: this.translate(lang, I18N_KEYS.mail.passwordReset.subject, 'Restablecer contrasena'),
             appName: this.config.name,
-            title: 'Restablecer contrasena',
-            body: `Usa este enlace para restablecer tu contrasena. Expira en ${expiresAt.toLocaleString('es-MX')}.`,
-            actionLabel: 'Restablecer contrasena',
+            title: this.translate(lang, I18N_KEYS.mail.passwordReset.title, 'Restablecer contrasena'),
+            body: this.translate(lang, I18N_KEYS.mail.passwordReset.body, 'Usa este enlace para restablecer tu contrasena. Expira en {expiresAt}.', { expiresAt: expiresAtText }),
+            actionLabel: this.translate(lang, I18N_KEYS.mail.passwordReset.action, 'Restablecer contrasena'),
             actionUrl: resetUrl.toString(),
         });
 
@@ -64,13 +70,14 @@ export class AppMailerService {
         });
         if (!reservation.allowed) return reservation;
 
+        const lang = this.resolveLanguage(context.language);
         await this.sendTrackedTemplateMail({
             dispatchId: reservation.dispatchId,
             to,
-            subject: `Bienvenido a ${this.config.name}`,
+            subject: this.translate(lang, I18N_KEYS.mail.welcomeCredentials.subject, 'Bienvenido a {appName}', { appName: this.config.name }),
             appName: this.config.name,
-            title: `Bienvenido a ${this.config.name}`,
-            body: `Tu usuario es ${username} y tu contrasena temporal es ${password}.`,
+            title: this.translate(lang, I18N_KEYS.mail.welcomeCredentials.title, 'Bienvenido a {appName}', { appName: this.config.name }),
+            body: this.translate(lang, I18N_KEYS.mail.welcomeCredentials.body, 'Tu usuario es {username} y tu contrasena temporal es {password}.', { username, password }),
         });
 
         return reservation;
@@ -88,14 +95,15 @@ export class AppMailerService {
         if (!reservation.allowed) return reservation;
 
         const verificationUrl = new URL(`/verify-email/${token}`, this.config.mail.webUrl);
+        const lang = this.resolveLanguage(context.language);
         await this.sendTrackedTemplateMail({
             dispatchId: reservation.dispatchId,
             to,
-            subject: 'Verificar correo electronico',
+            subject: this.translate(lang, I18N_KEYS.mail.emailVerification.subject, 'Verificar correo electronico'),
             appName: this.config.name,
-            title: 'Verificar correo electronico',
-            body: 'Confirma tu correo para completar la configuracion de tu cuenta.',
-            actionLabel: 'Verificar correo',
+            title: this.translate(lang, I18N_KEYS.mail.emailVerification.title, 'Verificar correo electronico'),
+            body: this.translate(lang, I18N_KEYS.mail.emailVerification.body, 'Confirma tu correo para completar la configuracion de tu cuenta.'),
+            actionLabel: this.translate(lang, I18N_KEYS.mail.emailVerification.action, 'Verificar correo'),
             actionUrl: verificationUrl.toString(),
         });
 
@@ -114,14 +122,15 @@ export class AppMailerService {
         if (!reservation.allowed) return reservation;
 
         const invitationUrl = new URL(`/invitations/${token}`, this.config.mail.webUrl);
+        const lang = this.resolveLanguage(context.language);
         await this.sendTrackedTemplateMail({
             dispatchId: reservation.dispatchId,
             to,
-            subject: `Invitacion a ${organizationName}`,
+            subject: this.translate(lang, I18N_KEYS.mail.organizationInvitation.subject, 'Invitacion a {organizationName}', { organizationName }),
             appName: this.config.name,
-            title: `Invitacion a ${organizationName}`,
-            body: `Recibiste una invitacion para unirte a ${organizationName}.`,
-            actionLabel: 'Aceptar invitacion',
+            title: this.translate(lang, I18N_KEYS.mail.organizationInvitation.title, 'Invitacion a {organizationName}', { organizationName }),
+            body: this.translate(lang, I18N_KEYS.mail.organizationInvitation.body, 'Recibiste una invitacion para unirte a {organizationName}.', { organizationName }),
+            actionLabel: this.translate(lang, I18N_KEYS.mail.organizationInvitation.action, 'Aceptar invitacion'),
             actionUrl: invitationUrl.toString(),
         });
 
@@ -160,5 +169,24 @@ export class AppMailerService {
             await this.emailRateLimiter.markFailed(dispatchId, error);
             throw error;
         }
+    }
+
+    private translate(lang: string, key: I18nKey, fallback: string, args?: Record<string, unknown>): string {
+        const translated = this.i18n.t(key, { lang, args }) as string;
+        return translated && translated !== key ? translated : this.interpolate(fallback, args);
+    }
+
+    private resolveLanguage(language?: string | null): string {
+        return language?.split(',')[0]?.trim().split('-')[0] || 'es';
+    }
+
+    private formatDate(date: Date, lang: string): string {
+        const locales: Record<string, string> = { es: 'es-MX', en: 'en-US', fr: 'fr-FR', de: 'de-DE', zh: 'zh-CN' };
+        return date.toLocaleString(locales[lang] ?? 'es-MX');
+    }
+
+    private interpolate(template: string, args?: Record<string, unknown>): string {
+        if (!args) return template;
+        return template.replace(/\{(\w+)\}/g, (_match, key: string) => String(args[key] ?? `{${key}}`));
     }
 }

@@ -114,6 +114,7 @@ export class AuthenticationController {
     }
 
     @Patch('password')
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     @SkipMustChangePassword()
     changePassword(@CurrentUser() user: RequestUser, @Body() dto: ChangePasswordDto, @Res({ passthrough: true }) response: Response) {
         this.authenticationCookiesService.clearAuthenticationCookies(response);
@@ -155,31 +156,35 @@ export class AuthenticationController {
     }
 
     @Post('2fa/setup')
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 3, ttl: 60_000 } })
     @SkipMustChangePassword()
     beginTwoFactorSetup(@CurrentUser() user: RequestUser) {
         return this.authenticationService.beginTwoFactorSetup(user.id);
     }
 
     @Post('2fa/enable')
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     @SkipMustChangePassword()
     enableTwoFactor(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
         return this.authenticationService.enableTwoFactor(user.id, dto);
     }
 
     @Post('2fa/disable')
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 5, ttl: 60_000 } })
     @SkipMustChangePassword()
     disableTwoFactor(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
         return this.authenticationService.disableTwoFactor(user.id, dto);
     }
 
     @Post('2fa/recovery-codes/regenerate')
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 3, ttl: 60_000 } })
     @SkipMustChangePassword()
     regenerateRecoveryCodes(@CurrentUser() user: RequestUser, @Body() dto: TwoFactorCodeDto) {
         return this.authenticationService.regenerateTwoFactorRecoveryCodes(user.id, dto);
     }
 
     @Delete('2fa/reset')
-    @RequestConfig({ statusCode: HttpStatus.OK })
+    @RequestConfig({ statusCode: HttpStatus.OK, throttle: { limit: 2, ttl: 60_000 } })
     @SkipMustChangePassword()
     resetTwoFactor(@CurrentUser() user: RequestUser) {
         return this.authenticationService.resetTwoFactor(user.id);

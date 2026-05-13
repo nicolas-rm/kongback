@@ -39,6 +39,7 @@ export class AuthenticationRepository {
                 username: true,
                 email: true,
                 fullName: true,
+                preferredLanguage: true,
                 mustChangePassword: true,
                 accesses: {
                     where: { deletedAt: null, role: { deletedAt: null } },
@@ -98,6 +99,36 @@ export class AuthenticationRepository {
                 ipAddress: input.ipAddress ?? null,
             },
             select: { id: true },
+        });
+    }
+
+    async enforceActiveSessionLimit(userId: string, keepSessionId: string, maxActiveSessions: number, revokedAt = new Date()) {
+        if (maxActiveSessions < 1) return { count: 0 };
+
+        const activeSessions = await this.prisma.session.findMany({
+            where: { userId, revokedAt: null, expiresAt: { gt: revokedAt } },
+            orderBy: { lastActivityAt: 'asc' },
+            select: { id: true },
+        });
+        const revokeCount = activeSessions.length - maxActiveSessions;
+        if (revokeCount <= 0) return { count: 0 };
+
+        const sessionIds = activeSessions
+            .filter((session) => session.id !== keepSessionId)
+            .slice(0, revokeCount)
+            .map((session) => session.id);
+        if (sessionIds.length === 0) return { count: 0 };
+
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.session.updateMany({
+                where: { id: { in: sessionIds }, userId, revokedAt: null },
+                data: { revokedAt },
+            });
+            await tx.refreshToken.updateMany({
+                where: { sessionId: { in: sessionIds }, revokedAt: null },
+                data: { revokedAt },
+            });
+            return result;
         });
     }
 
@@ -253,7 +284,7 @@ export class AuthenticationRepository {
         });
     }
 
-    updateProfile(userId: string, data: { email?: string | null; fullName?: string }) {
+    updateProfile(userId: string, data: { email?: string | null; fullName?: string; preferredLanguage?: string }) {
         return this.prisma.user.update({
             where: { id: userId },
             data,
@@ -262,6 +293,7 @@ export class AuthenticationRepository {
                 username: true,
                 email: true,
                 fullName: true,
+                preferredLanguage: true,
                 updatedAt: true,
             },
         });
@@ -358,6 +390,16 @@ export class AuthenticationRepository {
             data: {
                 twoFactorPendingSecret: encryptedSecret,
                 twoFactorPendingCreatedAt: new Date(),
+            },
+        });
+    }
+
+    clearPendingTwoFactorSecret(userId: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                twoFactorPendingSecret: null,
+                twoFactorPendingCreatedAt: null,
             },
         });
     }

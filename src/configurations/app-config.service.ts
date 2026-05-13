@@ -44,6 +44,10 @@ export class AppConfigService {
         return this.config.documents;
     }
 
+    get security() {
+        return this.config.security;
+    }
+
     get port() {
         return this.config.port;
     }

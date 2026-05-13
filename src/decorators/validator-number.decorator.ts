@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, Max, Min, ValidationArguments } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorNumberOptions {
     optional?: boolean;
@@ -9,10 +10,6 @@ export interface ValidatorNumberOptions {
     max?: number;
     emptyTo?: 'undefined' | 'null';
     message?: string;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
 }
 
 export function ValidatorNumber(options: ValidatorNumberOptions = {}) {
@@ -30,9 +27,9 @@ export function ValidatorNumber(options: ValidatorNumberOptions = {}) {
         }),
         ...(optional ? [IsOptional()] : []),
         ...(type === 'int'
-            ? [IsInt({ message: buildMessage(message, (property) => `${property} debe ser un numero entero valido`) })]
-            : [IsNumber({}, { message: buildMessage(message, (property) => `${property} debe ser un numero valido`) })]),
-        ...(min !== undefined ? [Min(min, { message: ({ property }) => `${property} debe ser mayor o igual a ${min}` })] : []),
-        ...(max !== undefined ? [Max(max, { message: ({ property }) => `${property} debe ser menor o igual a ${max}` })] : [])
+            ? [IsInt({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.integer) })]
+            : [IsNumber({}, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.number) })]),
+        ...(min !== undefined ? [Min(min, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.minValue, { min }) })] : []),
+        ...(max !== undefined ? [Max(max, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.maxValue, { max }) })] : [])
     );
 }

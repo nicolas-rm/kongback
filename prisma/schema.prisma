@@ -56,6 +56,7 @@ model User {
   username                  String
   email                     String?
   fullName                  String
+  preferredLanguage         String     @default("es")
   passwordHash              String
   status                    UserStatus @default(active)
   mustChangePassword        Boolean    @default(false)

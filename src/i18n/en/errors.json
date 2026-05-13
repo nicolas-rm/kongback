@@ -1,0 +1,83 @@
+{
+    "authentication": {
+        "invalidCredentials": "Invalid credentials",
+        "accountLocked": "Account locked. Try again later",
+        "emailVerificationRequired": "You must verify your email before signing in",
+        "invalidTwoFactorChallenge": "Invalid 2FA challenge",
+        "invalidTwoFactorCode": "Invalid 2FA code",
+        "invalidRefreshToken": "Invalid refresh token",
+        "reusedRefreshToken": "Refresh token reused",
+        "expiredRefreshToken": "Refresh token expired",
+        "unauthorizedUser": "Unauthorized user",
+        "invalidCurrentPassword": "Invalid current password",
+        "invalidVerificationToken": "Invalid or expired verification token",
+        "invalidResetToken": "Invalid or expired token",
+        "twoFactorPendingNotFound": "There is no pending 2FA configuration",
+        "twoFactorSetupExpired": "The 2FA setup expired. Start the process again",
+        "twoFactorNotEnabled": "2FA is not enabled"
+    },
+    "authorization": {
+        "unauthorized": "Unauthorized",
+        "insufficientPermissions": "Insufficient permissions",
+        "organizationDenied": "Access denied to this organization",
+        "mustChangePassword": "You must change your password before continuing."
+    },
+    "documents": {
+        "notFound": "Document not found",
+        "fileRequired": "File is required",
+        "fileTooLarge": "File is too large",
+        "mimeTypeNotAllowed": "File type is not allowed",
+        "storageFileNotFound": "File not found in storage",
+        "invalidFilePath": "Invalid file path"
+    },
+    "notifications": {
+        "notFound": "Notification not found"
+    },
+    "users": {
+        "notFound": "User not found",
+        "missingEmail": "The user does not have an email configured"
+    },
+    "validation": {
+        "invalidData": "The request contains invalid data"
+    },
+    "internal": {
+        "unprocessed": "Request could not be processed, please try again later"
+    },
+    "mail": {
+        "passwordReset": {
+            "subject": "Reset password",
+            "title": "Reset password",
+            "body": "Use this link to reset your password. It expires on {expiresAt}.",
+            "action": "Reset password"
+        },
+        "welcomeCredentials": {
+            "subject": "Welcome to {appName}",
+            "title": "Welcome to {appName}",
+            "body": "Your username is {username} and your temporary password is {password}."
+        },
+        "emailVerification": {
+            "subject": "Verify email address",
+            "title": "Verify email address",
+            "body": "Confirm your email to complete your account setup.",
+            "action": "Verify email"
+        },
+        "organizationInvitation": {
+            "subject": "Invitation to {organizationName}",
+            "title": "Invitation to {organizationName}",
+            "body": "You received an invitation to join {organizationName}.",
+            "action": "Accept invitation"
+        }
+    },
+    "prisma": {
+        "uniqueConstraint": "The value of ({fields}) already exists",
+        "invalidRelation": "Invalid relation",
+        "valueTooLong": "Value is too long",
+        "recordNotFound": "Record not found",
+        "invalidData": "Invalid data",
+        "internalFailure": "Internal server failure",
+        "unknownField": "unknown"
+    },
+    "socket": {
+        "unauthorized": "Unauthorized"
+    }
+}

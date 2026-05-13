@@ -24,6 +24,7 @@ export default registerAs('app', () => ({
         touchIntervalSeconds: parseEnvInt('SESSION_TOUCH_INTERVAL_SECONDS', APP_DEFAULTS.session.touchIntervalSeconds),
         lockDurationMinutes: parseEnvInt('LOGIN_LOCK_DURATION_MINUTES', APP_DEFAULTS.session.lockDurationMinutes),
         maxFailedAttempts: parseEnvInt('LOGIN_MAX_FAILED_ATTEMPTS', APP_DEFAULTS.session.maxFailedAttempts),
+        maxActiveSessions: parseEnvInt('SESSION_MAX_ACTIVE', APP_DEFAULTS.session.maxActiveSessions),
         passwordResetTtlMinutes: parseEnvInt('PASSWORD_RESET_TTL_MINUTES', APP_DEFAULTS.session.passwordResetTtlMinutes),
         emailVerificationTtlMinutes: parseEnvInt('EMAIL_VERIFICATION_TTL_MINUTES', APP_DEFAULTS.session.emailVerificationTtlMinutes),
         organizationInvitationTtlHours: parseEnvInt('ORGANIZATION_INVITATION_TTL_HOURS', APP_DEFAULTS.session.organizationInvitationTtlHours),
@@ -58,6 +59,12 @@ export default registerAs('app', () => ({
         allowedMimeTypes: (process.env.DOCUMENTS_ALLOWED_MIME_TYPES ?? APP_DEFAULTS.documents.allowedMimeTypes)
             .split(',')
             .map((value) => value.trim().toLowerCase())
+            .filter(Boolean),
+    },
+    security: {
+        allowedOrigins: (process.env.SECURITY_ALLOWED_ORIGINS ?? APP_DEFAULTS.security.allowedOrigins)
+            .split(',')
+            .map((value) => value.trim())
             .filter(Boolean),
     },
     port: parseEnvInt('PORT', APP_DEFAULTS.port),

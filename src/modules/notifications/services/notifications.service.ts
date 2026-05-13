@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
+import { I18N_KEYS, I18nNotFoundException } from '@/i18n';
+import type { I18nKey } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
@@ -7,10 +10,35 @@ import { NotificationResponse } from '@/modules/notifications/responses';
 
 @Injectable()
 export class NotificationsService {
-    constructor(private readonly repository: NotificationsRepository) {}
+    constructor(
+        private readonly repository: NotificationsRepository,
+        private readonly i18n: I18nService
+    ) {}
 
     createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
         return this.repository.createForUser(userId, data);
+    }
+
+    createSystemForUser(
+        userId: string,
+        data: {
+            titleKey: I18nKey;
+            messageKey: I18nKey;
+            detailKey?: I18nKey;
+            args?: Record<string, unknown>;
+            language?: string | null;
+            type?: NotificationType;
+            link?: string | null;
+        }
+    ) {
+        const lang = this.resolveLanguage(data.language);
+        return this.repository.createForUser(userId, {
+            title: this.translate(lang, data.titleKey, data.titleKey, data.args),
+            message: this.translate(lang, data.messageKey, data.messageKey, data.args),
+            detail: data.detailKey ? this.translate(lang, data.detailKey, data.detailKey, data.args) : null,
+            type: data.type,
+            link: data.link,
+        });
     }
 
     countUnreadForUser(userId: string): Promise<number> {
@@ -43,7 +71,7 @@ export class NotificationsService {
 
     async findOneForUser(userId: string, notificationId: string) {
         const notification = await this.repository.findOne({ id: notificationId, userId, deletedAt: null });
-        if (!notification) throw new NotFoundException('Notificacion no encontrada');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'Notificacion no encontrada');
         return notification;
     }
 
@@ -59,5 +87,14 @@ export class NotificationsService {
 
     markAllRead(userId: string) {
         return this.repository.markAllRead(userId);
+    }
+
+    private translate(lang: string, key: I18nKey, fallback: string, args?: Record<string, unknown>): string {
+        const translated = this.i18n.t(key, { lang, args }) as string;
+        return translated && translated !== key ? translated : fallback;
+    }
+
+    private resolveLanguage(language?: string | null): string {
+        return language?.split(',')[0]?.trim().split('-')[0] || 'es';
     }
 }

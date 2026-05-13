@@ -1,8 +1,9 @@
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
+import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
 import { extractAccessTokenFromRequest } from '@/modules/authentication/utils/token-extractor';
 
 @Injectable()
@@ -22,10 +23,7 @@ export class JwtAuthenticationGuard extends AuthGuard('jwt') {
 
         const request = context.switchToHttp().getRequest<Request>();
         const message = err instanceof Error ? err.message : info instanceof Error ? info.message : 'No autorizado';
-        throw new UnauthorizedException({
-            message: 'No autorizado',
-            reason: this.resolveUnauthorizedReason(message, this.getAccessToken(request)),
-        });
+        throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado', { extra: { reason: this.resolveUnauthorizedReason(message, this.getAccessToken(request)) } });
     }
 
     private getAccessToken(request: Request): string | null {

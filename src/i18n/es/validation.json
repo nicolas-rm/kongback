@@ -1,0 +1,19 @@
+{
+    "required": "{property} es obligatorio",
+    "string": "{property} debe ser un texto valido",
+    "minLength": "{property} debe tener al menos {minLength} caracteres",
+    "maxLength": "{property} no puede exceder {maxLength} caracteres",
+    "password": "La contrasena debe incluir al menos 8 caracteres, una mayuscula, una minuscula y un numero",
+    "boolean": "{property} debe ser true o false",
+    "array": "{property} debe ser un arreglo",
+    "minItems": "{property} debe tener al menos {minSize} elementos",
+    "maxItems": "{property} no puede tener mas de {maxSize} elementos",
+    "date": "{property} debe ser una fecha valida",
+    "isoDate": "{property} debe ser una fecha ISO valida",
+    "enum": "{property} debe ser uno de los valores permitidos",
+    "integer": "{property} debe ser un numero entero valido",
+    "number": "{property} debe ser un numero valido",
+    "minValue": "{property} debe ser mayor o igual a {min}",
+    "maxValue": "{property} debe ser menor o igual a {max}",
+    "uuid": "{property} debe ser un UUID valido"
+}

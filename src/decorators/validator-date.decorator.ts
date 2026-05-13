@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import { Transform } from 'class-transformer';
-import { IsDate, IsDateString, IsOptional, ValidationArguments } from 'class-validator';
+import { IsDate, IsDateString, IsOptional } from 'class-validator';
+import { buildI18nValidationMessage, I18N_KEYS } from '@/i18n';
 
 export interface ValidatorDateOptions {
     optional?: boolean;
@@ -8,10 +9,6 @@ export interface ValidatorDateOptions {
     emptyTo?: 'undefined' | 'null';
     toDate?: boolean;
     message?: string;
-}
-
-function buildMessage(message: string | undefined, fallback: (property: string) => string) {
-    return (args: ValidationArguments) => message ?? fallback(args.property);
 }
 
 export function ValidatorDate(options: ValidatorDateOptions = {}) {
@@ -28,7 +25,7 @@ export function ValidatorDate(options: ValidatorDateOptions = {}) {
         }),
         ...(optional ? [IsOptional()] : []),
         ...(mode === 'date'
-            ? [IsDate({ message: buildMessage(message, (property) => `${property} debe ser una fecha valida`) })]
-            : [IsDateString({}, { message: buildMessage(message, (property) => `${property} debe ser una fecha ISO valida`) })])
+            ? [IsDate({ message: buildI18nValidationMessage(message, I18N_KEYS.validation.date) })]
+            : [IsDateString({}, { message: buildI18nValidationMessage(message, I18N_KEYS.validation.isoDate) })])
     );
 }

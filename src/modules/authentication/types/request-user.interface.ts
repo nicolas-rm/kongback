@@ -3,6 +3,7 @@ export type RequestUser = {
     username: string;
     email?: string | null;
     fullName?: string | null;
+    preferredLanguage?: string | null;
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
     organizationIds?: string[];

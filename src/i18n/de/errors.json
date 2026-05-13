@@ -1,0 +1,83 @@
+{
+    "authentication": {
+        "invalidCredentials": "Ungueltige Zugangsdaten",
+        "accountLocked": "Konto gesperrt. Versuchen Sie es spaeter erneut",
+        "emailVerificationRequired": "Sie muessen Ihre E-Mail bestaetigen, bevor Sie sich anmelden",
+        "invalidTwoFactorChallenge": "Ungueltige 2FA-Challenge",
+        "invalidTwoFactorCode": "Ungueltiger 2FA-Code",
+        "invalidRefreshToken": "Ungueltiger Refresh Token",
+        "reusedRefreshToken": "Refresh Token wurde wiederverwendet",
+        "expiredRefreshToken": "Refresh Token ist abgelaufen",
+        "unauthorizedUser": "Nicht autorisierter Benutzer",
+        "invalidCurrentPassword": "Aktuelles Passwort ist ungueltig",
+        "invalidVerificationToken": "Ungueltiger oder abgelaufener Bestaetigungstoken",
+        "invalidResetToken": "Ungueltiger oder abgelaufener Token",
+        "twoFactorPendingNotFound": "Keine ausstehende 2FA-Konfiguration vorhanden",
+        "twoFactorSetupExpired": "Die 2FA-Einrichtung ist abgelaufen. Starten Sie den Vorgang erneut",
+        "twoFactorNotEnabled": "2FA ist nicht aktiviert"
+    },
+    "authorization": {
+        "unauthorized": "Nicht autorisiert",
+        "insufficientPermissions": "Unzureichende Berechtigungen",
+        "organizationDenied": "Zugriff auf diese Organisation verweigert",
+        "mustChangePassword": "Sie muessen Ihr Passwort aendern, bevor Sie fortfahren."
+    },
+    "documents": {
+        "notFound": "Dokument nicht gefunden",
+        "fileRequired": "Datei ist erforderlich",
+        "fileTooLarge": "Datei ist zu gross",
+        "mimeTypeNotAllowed": "Dateityp ist nicht erlaubt",
+        "storageFileNotFound": "Datei im Speicher nicht gefunden",
+        "invalidFilePath": "Ungueltiger Dateipfad"
+    },
+    "notifications": {
+        "notFound": "Benachrichtigung nicht gefunden"
+    },
+    "users": {
+        "notFound": "Benutzer nicht gefunden",
+        "missingEmail": "Der Benutzer hat keine E-Mail konfiguriert"
+    },
+    "validation": {
+        "invalidData": "Die Anfrage enthaelt ungueltige Daten"
+    },
+    "internal": {
+        "unprocessed": "Die Anfrage konnte nicht verarbeitet werden, bitte versuchen Sie es spaeter erneut"
+    },
+    "mail": {
+        "passwordReset": {
+            "subject": "Passwort zuruecksetzen",
+            "title": "Passwort zuruecksetzen",
+            "body": "Verwenden Sie diesen Link, um Ihr Passwort zurueckzusetzen. Er laeuft am {expiresAt} ab.",
+            "action": "Passwort zuruecksetzen"
+        },
+        "welcomeCredentials": {
+            "subject": "Willkommen bei {appName}",
+            "title": "Willkommen bei {appName}",
+            "body": "Ihr Benutzername ist {username} und Ihr temporaeres Passwort ist {password}."
+        },
+        "emailVerification": {
+            "subject": "E-Mail-Adresse bestaetigen",
+            "title": "E-Mail-Adresse bestaetigen",
+            "body": "Bestaetigen Sie Ihre E-Mail, um die Kontoeinrichtung abzuschliessen.",
+            "action": "E-Mail bestaetigen"
+        },
+        "organizationInvitation": {
+            "subject": "Einladung zu {organizationName}",
+            "title": "Einladung zu {organizationName}",
+            "body": "Sie haben eine Einladung erhalten, {organizationName} beizutreten.",
+            "action": "Einladung annehmen"
+        }
+    },
+    "prisma": {
+        "uniqueConstraint": "Der Wert von ({fields}) existiert bereits",
+        "invalidRelation": "Ungueltige Beziehung",
+        "valueTooLong": "Wert ist zu lang",
+        "recordNotFound": "Datensatz nicht gefunden",
+        "invalidData": "Ungueltige Daten",
+        "internalFailure": "Interner Serverfehler",
+        "unknownField": "unbekannt"
+    },
+    "socket": {
+        "unauthorized": "Nicht autorisiert"
+    }
+}

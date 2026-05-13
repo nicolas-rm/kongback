@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AcceptLanguageResolver, I18nJsonLoader, I18nModule } from 'nestjs-i18n';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import appConfig from '@/configurations/app.config';
@@ -18,6 +21,13 @@ import { PrismaExceptionFilter } from '@/filters/prisma-exception.filter';
 import { ValidationExceptionFilter } from '@/filters/validation-exception.filter';
 import { APP_MODULES } from '@/modules';
 
+function resolveI18nPath(): string {
+    const candidates = [path.join(__dirname, 'i18n'), path.join(__dirname, '..', 'i18n'), path.join(process.cwd(), 'src', 'i18n')];
+    return candidates.find((candidate) => existsSync(path.join(candidate, 'es')) && existsSync(path.join(candidate, 'en'))) ?? path.join(process.cwd(), 'src', 'i18n');
+}
+
+const I18N_PATH = resolveI18nPath();
+
 @Module({
     imports: [
         NestConfigModule.forRoot({
@@ -25,6 +35,15 @@ import { APP_MODULES } from '@/modules';
             load: [appConfig],
             validate,
             cache: true,
+        }),
+        I18nModule.forRoot({
+            fallbackLanguage: 'es',
+            loader: I18nJsonLoader,
+            loaderOptions: {
+                path: I18N_PATH,
+                watch: process.env.NODE_ENV !== 'production',
+            },
+            resolvers: [new AcceptLanguageResolver({ matchType: 'strict-loose' })],
         }),
         AppConfigModule,
         ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),

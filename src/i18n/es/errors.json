@@ -1,0 +1,83 @@
+{
+    "authentication": {
+        "invalidCredentials": "Credenciales invalidas",
+        "accountLocked": "Cuenta bloqueada. Intenta de nuevo mas tarde",
+        "emailVerificationRequired": "Debes verificar tu correo antes de iniciar sesion",
+        "invalidTwoFactorChallenge": "Desafio 2FA invalido",
+        "invalidTwoFactorCode": "Codigo 2FA invalido",
+        "invalidRefreshToken": "Refresh token invalido",
+        "reusedRefreshToken": "Refresh token reutilizado",
+        "expiredRefreshToken": "Refresh token expirado",
+        "unauthorizedUser": "Usuario no autorizado",
+        "invalidCurrentPassword": "Contrasena actual invalida",
+        "invalidVerificationToken": "Token de verificacion invalido o expirado",
+        "invalidResetToken": "Token invalido o expirado",
+        "twoFactorPendingNotFound": "No hay configuracion 2FA pendiente",
+        "twoFactorSetupExpired": "La configuracion 2FA expiro. Inicia el proceso nuevamente",
+        "twoFactorNotEnabled": "2FA no esta habilitado"
+    },
+    "authorization": {
+        "unauthorized": "No autorizado",
+        "insufficientPermissions": "Permisos insuficientes",
+        "organizationDenied": "Acceso denegado a esta organizacion",
+        "mustChangePassword": "Debes cambiar tu contrasena antes de continuar."
+    },
+    "documents": {
+        "notFound": "Documento no encontrado",
+        "fileRequired": "Archivo requerido",
+        "fileTooLarge": "Archivo demasiado grande",
+        "mimeTypeNotAllowed": "Tipo de archivo no permitido",
+        "storageFileNotFound": "Archivo no encontrado en almacenamiento",
+        "invalidFilePath": "Ruta de archivo invalida"
+    },
+    "notifications": {
+        "notFound": "Notificacion no encontrada"
+    },
+    "users": {
+        "notFound": "Usuario no encontrado",
+        "missingEmail": "El usuario no tiene correo configurado"
+    },
+    "validation": {
+        "invalidData": "La solicitud contiene datos invalidos"
+    },
+    "internal": {
+        "unprocessed": "Solicitud no procesada, intente nuevamente mas tarde"
+    },
+    "mail": {
+        "passwordReset": {
+            "subject": "Restablecer contrasena",
+            "title": "Restablecer contrasena",
+            "body": "Usa este enlace para restablecer tu contrasena. Expira en {expiresAt}.",
+            "action": "Restablecer contrasena"
+        },
+        "welcomeCredentials": {
+            "subject": "Bienvenido a {appName}",
+            "title": "Bienvenido a {appName}",
+            "body": "Tu usuario es {username} y tu contrasena temporal es {password}."
+        },
+        "emailVerification": {
+            "subject": "Verificar correo electronico",
+            "title": "Verificar correo electronico",
+            "body": "Confirma tu correo para completar la configuracion de tu cuenta.",
+            "action": "Verificar correo"
+        },
+        "organizationInvitation": {
+            "subject": "Invitacion a {organizationName}",
+            "title": "Invitacion a {organizationName}",
+            "body": "Recibiste una invitacion para unirte a {organizationName}.",
+            "action": "Aceptar invitacion"
+        }
+    },
+    "prisma": {
+        "uniqueConstraint": "El valor de ({fields}) ya existe",
+        "invalidRelation": "Relacion invalida",
+        "valueTooLong": "Valor demasiado largo",
+        "recordNotFound": "Registro no encontrado",
+        "invalidData": "Datos no validos",
+        "internalFailure": "Falla interna del servidor",
+        "unknownField": "desconocido"
+    },
+    "socket": {
+        "unauthorized": "No autorizado"
+    }
+}

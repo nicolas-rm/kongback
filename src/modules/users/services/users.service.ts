@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { CryptoService } from '@/crypto/crypto.service';
+import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AppMailerService } from '@/mailer/mailer.service';
 import { PermissionResponse } from '@/modules/access-control/responses';
 import { paginate } from '@/utilities/pagination/pagination.dto';
@@ -24,6 +25,7 @@ export class UsersService {
             fullName: dto.fullName,
             passwordHash: await this.cryptoService.hashPassword(dto.password),
             status: dto.status ?? 'active',
+            preferredLanguage: dto.preferredLanguage ?? 'es',
         });
         return UserResponse.from(user);
     }
@@ -62,6 +64,7 @@ export class UsersService {
             fullName: dto.fullName,
             status: dto.status,
             mustChangePassword: dto.mustChangePassword,
+            preferredLanguage: dto.preferredLanguage,
         });
         return UserResponse.from(user);
     }
@@ -123,12 +126,12 @@ export class UsersService {
 
     async resendCredentials(userId: string) {
         const user = await this.repository.findCredentialRecipient(userId);
-        if (!user) throw new NotFoundException('Usuario no encontrado');
-        if (!user.email) throw new BadRequestException('El usuario no tiene correo configurado');
+        if (!user) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+        if (!user.email) throw new I18nBadRequestException(I18N_KEYS.errors.users.missingEmail, 'El usuario no tiene correo configurado');
 
         const password = generateSecurePassword();
         await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(password), true);
-        await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id });
+        await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id, language: user.preferredLanguage });
 
         return { credentialsSent: true };
     }
