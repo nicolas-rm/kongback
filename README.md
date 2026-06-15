@@ -96,3 +96,11 @@ src/
 - Errores usan `statusCode`, `code`, `message`, `path`, `timestamp`.
 
 Ver más en `docs/standards/project-standard.md`.
+
+## Producto Vinka
+
+La propuesta de producto para convertir esta base en una plataforma SaaS de links de pago con Stripe esta documentada en `docs/product/vinka-payment-links-platform.md`.
+
+## Ideas De Producto
+
+El portafolio de ideas SaaS que podrian construirse con esta base esta documentado en `docs/product/business-ideas-portfolio.md`.
