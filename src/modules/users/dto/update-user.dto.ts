@@ -1,4 +1,4 @@
-import { UserStatus } from '@prisma/client';
+import { Status } from '@prisma/client';
 import { ValidatorBoolean, ValidatorEnum, ValidatorString } from '@/decorators';
 
 export class UpdateUserDto {
@@ -11,8 +11,8 @@ export class UpdateUserDto {
     @ValidatorString({ optional: true })
     fullName?: string;
 
-    @ValidatorEnum(UserStatus, { optional: true })
-    status?: UserStatus;
+    @ValidatorEnum(Status, { optional: true })
+    status?: Status;
 
     @ValidatorBoolean({ optional: true })
     mustChangePassword?: boolean;

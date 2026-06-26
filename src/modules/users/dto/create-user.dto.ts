@@ -1,4 +1,4 @@
-import { UserStatus } from '@prisma/client';
+import { Status } from '@prisma/client';
 import { ValidatorEnum, ValidatorPassword, ValidatorString } from '@/decorators';
 
 export class CreateUserDto {
@@ -14,8 +14,8 @@ export class CreateUserDto {
     @ValidatorPassword()
     password!: string;
 
-    @ValidatorEnum(UserStatus, { optional: true })
-    status?: UserStatus;
+    @ValidatorEnum(Status, { optional: true })
+    status?: Status;
 
     @ValidatorString({ optional: true, toLowerCase: true })
     preferredLanguage?: string;

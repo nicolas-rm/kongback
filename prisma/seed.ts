@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import * as argon2 from 'argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { PrismaClient, Status } from '@prisma/client';
 import { Pool } from 'pg';
 import { ALL_PERMISSION_CODES, PERMISSION_CATALOG } from './permission-catalog';
 
@@ -161,24 +161,24 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
 
     const user = existing
         ? await prisma.user.update({
-              where: { id: existing.id },
-              data: {
-                  fullName,
-                  passwordHash,
-                  status: UserStatus.active,
-              },
-              select: { id: true, username: true, fullName: true },
-          })
+            where: { id: existing.id },
+            data: {
+                fullName,
+                passwordHash,
+                status: Status.active,
+            },
+            select: { id: true, username: true, fullName: true },
+        })
         : await prisma.user.create({
-              data: {
-                  username,
-                  email: null,
-                  fullName,
-                  passwordHash,
-                  status: UserStatus.active,
-              },
-              select: { id: true, username: true, fullName: true },
-          });
+            data: {
+                username,
+                email: null,
+                fullName,
+                passwordHash,
+                status: Status.active,
+            },
+            select: { id: true, username: true, fullName: true },
+        });
 
     await ensureGlobalAdminAccess(user.id, roleId);
 
