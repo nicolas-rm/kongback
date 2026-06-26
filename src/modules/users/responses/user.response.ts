@@ -1,4 +1,4 @@
-import { UserStatus } from '@prisma/client';
+import { Status } from '@prisma/client';
 
 type UserResponseData = {
     id: string;
@@ -6,7 +6,7 @@ type UserResponseData = {
     email: string | null;
     fullName: string;
     preferredLanguage: string;
-    status: UserStatus;
+    status: Status;
     mustChangePassword: boolean;
     emailVerifiedAt: Date | null;
     twoFactorEnabled: boolean;
@@ -19,11 +19,11 @@ export class UserResponse {
         public email: string | null,
         public fullName: string,
         public preferredLanguage: string,
-        public status: UserStatus,
+        public status: Status,
         public mustChangePassword: boolean,
         public emailVerified: boolean,
         public twoFactorEnabled: boolean
-    ) {}
+    ) { }
 
     static from(data: UserResponseData): UserResponse {
         return new UserResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.status, data.mustChangePassword, Boolean(data.emailVerifiedAt), data.twoFactorEnabled);
