@@ -5,7 +5,6 @@ type SessionResponseData = {
     ipAddress: string | null;
     lastActivityAt: Date;
     expiresAt: Date;
-    createdAt: Date;
     isCurrent: boolean;
 };
 
@@ -17,12 +16,11 @@ export class SessionResponse {
         public ipAddress: string | null,
         public lastActivityAt: Date,
         public expiresAt: Date,
-        public createdAt: Date,
         public isCurrent: boolean
     ) {}
 
     static from(data: SessionResponseData): SessionResponse {
-        return new SessionResponse(data.id, data.deviceName, data.userAgent, data.ipAddress, data.lastActivityAt, data.expiresAt, data.createdAt, data.isCurrent);
+        return new SessionResponse(data.id, data.deviceName, data.userAgent, data.ipAddress, data.lastActivityAt, data.expiresAt, data.isCurrent);
     }
 }
 

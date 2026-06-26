@@ -72,7 +72,6 @@ export class NotificationsRepository {
             isRead: true,
             readAt: true,
             createdAt: true,
-            updatedAt: true,
         };
     }
 }

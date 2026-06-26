@@ -122,8 +122,6 @@ export class AccessControlRepository {
             code: true,
             name: true,
             description: true,
-            createdAt: true,
-            updatedAt: true,
         };
     }
 
@@ -133,8 +131,6 @@ export class AccessControlRepository {
             code: true,
             name: true,
             description: true,
-            createdAt: true,
-            updatedAt: true,
         };
     }
 }

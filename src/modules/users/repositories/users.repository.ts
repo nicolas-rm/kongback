@@ -79,7 +79,7 @@ export class UsersRepository {
     assignAccess(data: Prisma.UserAccessUncheckedCreateInput) {
         return this.prisma.userAccess.create({
             data,
-            select: { id: true, userId: true, roleId: true, organizationId: true, scopeKey: true, scopeId: true, assignedAt: true },
+            select: { id: true, userId: true, roleId: true, organizationId: true, scopeKey: true, scopeId: true },
         });
     }
 
@@ -165,8 +165,6 @@ export class UsersRepository {
             mustChangePassword: true,
             emailVerifiedAt: true,
             twoFactorEnabled: true,
-            createdAt: true,
-            updatedAt: true,
         };
     }
 
@@ -176,7 +174,6 @@ export class UsersRepository {
             organizationId: true,
             scopeKey: true,
             scopeId: true,
-            assignedAt: true,
             role: { select: { id: true, code: true, name: true } },
         };
     }

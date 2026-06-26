@@ -1,26 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { Notification } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 
-export type SerializableNotification = {
+export type SerializableNotificationData = {
     id: string;
-    userId: string;
     title: string;
     message: string;
     detail: string | null;
-    type: Notification['type'];
+    type: NotificationType;
+    link: string | null;
+    isRead: boolean;
+    readAt: Date | null;
+    createdAt: Date;
+};
+
+export type SerializableNotification = {
+    id: string;
+    title: string;
+    message: string;
+    detail: string | null;
+    type: NotificationType;
     link: string | null;
     isRead: boolean;
     readAt: string | null;
     createdAt: string;
-    updatedAt: string;
 };
 
 @Injectable()
 export class NotificationsSerializerService {
-    serialize(notification: Notification): SerializableNotification {
+    serialize(notification: SerializableNotificationData): SerializableNotification {
         return {
             id: notification.id,
-            userId: notification.userId,
             title: notification.title,
             message: notification.message,
             detail: notification.detail,
@@ -29,7 +38,6 @@ export class NotificationsSerializerService {
             isRead: notification.isRead,
             readAt: notification.readAt?.toISOString() ?? null,
             createdAt: notification.createdAt.toISOString(),
-            updatedAt: notification.updatedAt.toISOString(),
         };
     }
 }

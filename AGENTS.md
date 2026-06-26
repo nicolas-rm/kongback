@@ -73,6 +73,7 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 - Usa Prisma Migrations para evolucionar la base de datos; no edites la base manualmente como sustituto de una migracion.
 - Despues de cambiar `prisma/schema.prisma`, ejecuta `pnpm prisma:generate` y las verificaciones necesarias.
 - Define relaciones con `onDelete`/`onUpdate` de forma explicita cuando el comportamiento importe.
+- Al modificar `prisma/schema.prisma`, decide por modelo si corresponde `deletedAt` para soft delete, borrado fisico con `onDelete: Cascade`, `onDelete: SetNull`/`Restrict`, o ningun mecanismo especial. Toda relacion nueva debe declarar `onDelete` segun la regla de dominio y `onUpdate: Cascade` salvo motivo claro documentado.
 - Agrega indices para filtros, ordenamientos, relaciones y busquedas frecuentes; evita indices decorativos sin uso claro.
 - Usa transactions para operaciones que deban ser atomicas.
 - Implementa soft delete solo si el modelo o feature ya lo requiere; filtra `deletedAt` de forma consistente.
@@ -86,6 +87,7 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 - Manten versioning, naming y rutas consistentes con los controllers existentes.
 - Usa paginacion, filtros y sorting estandarizados para listados.
 - No filtres datos sensibles solo en el frontend; serializa responses seguras desde backend.
+- Las respuestas de endpoints deben devolver solo lo esencial para confirmar la operacion o renderizar la vista inmediata. Evita timestamps, metadatos, datos anidados, flags redundantes o campos administrativos si el cliente no los necesita claramente.
 
 ## Seguridad
 

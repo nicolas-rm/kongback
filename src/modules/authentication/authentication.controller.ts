@@ -87,8 +87,8 @@ export class AuthenticationController {
 
     @Get('me')
     @SkipMustChangePassword()
-    me(@CurrentUser() user: RequestUser, @RefreshToken() refreshToken: string | undefined) {
-        return this.authenticationService.getProfile(user, refreshToken);
+    me(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.getProfile(user);
     }
 
     @Patch('me')

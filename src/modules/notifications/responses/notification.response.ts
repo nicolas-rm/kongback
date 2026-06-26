@@ -2,7 +2,6 @@ import { NotificationType } from '@prisma/client';
 
 type NotificationResponseData = {
     id: string;
-    userId?: string;
     title: string;
     message: string;
     detail: string | null;
@@ -11,7 +10,6 @@ type NotificationResponseData = {
     isRead: boolean;
     readAt: Date | null;
     createdAt: Date;
-    updatedAt: Date;
 };
 
 export class NotificationResponse {
@@ -24,12 +22,10 @@ export class NotificationResponse {
         public link: string | null,
         public isRead: boolean,
         public readAt: Date | null,
-        public createdAt: Date,
-        public updatedAt: Date,
-        public userId?: string
+        public createdAt: Date
     ) {}
 
-    static from(data: NotificationResponseData, options: { includeUserId?: boolean } = {}): NotificationResponse {
+    static from(data: NotificationResponseData): NotificationResponse {
         return new NotificationResponse(
             data.id,
             data.title,
@@ -39,9 +35,7 @@ export class NotificationResponse {
             data.link,
             data.isRead,
             data.readAt,
-            data.createdAt,
-            data.updatedAt,
-            options.includeUserId ? data.userId : undefined
+            data.createdAt
         );
     }
 }

@@ -5,8 +5,6 @@ type RoleResponseData = {
     code: string;
     name: string;
     description: string | null;
-    createdAt: Date;
-    updatedAt: Date;
 };
 
 type RoleWithPermissionsResponseData = RoleResponseData & {
@@ -18,13 +16,11 @@ export class RoleResponse {
         public id: string,
         public code: string,
         public name: string,
-        public description: string | null,
-        public createdAt: Date,
-        public updatedAt: Date
+        public description: string | null
     ) {}
 
     static from(data: RoleResponseData): RoleResponse {
-        return new RoleResponse(data.id, data.code, data.name, data.description, data.createdAt, data.updatedAt);
+        return new RoleResponse(data.id, data.code, data.name, data.description);
     }
 }
 
@@ -34,11 +30,9 @@ export class RoleWithPermissionsResponse extends RoleResponse {
         code: string,
         name: string,
         description: string | null,
-        createdAt: Date,
-        updatedAt: Date,
         public permissions: PermissionResponse[]
     ) {
-        super(id, code, name, description, createdAt, updatedAt);
+        super(id, code, name, description);
     }
 
     static from(data: RoleWithPermissionsResponseData): RoleWithPermissionsResponse {
@@ -47,8 +41,6 @@ export class RoleWithPermissionsResponse extends RoleResponse {
             data.code,
             data.name,
             data.description,
-            data.createdAt,
-            data.updatedAt,
             data.permissions.map((entry) => PermissionResponse.from(entry.permission))
         );
     }

@@ -22,7 +22,6 @@ export class ListSessionsUseCase {
                 ipAddress: session.ipAddress,
                 lastActivityAt: session.lastActivityAt,
                 expiresAt: session.expiresAt,
-                createdAt: session.createdAt,
                 isCurrent: session.id === currentSessionId,
             })
         );

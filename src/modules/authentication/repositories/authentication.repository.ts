@@ -268,7 +268,6 @@ export class AuthenticationRepository {
                 deviceName: true,
                 lastActivityAt: true,
                 expiresAt: true,
-                createdAt: true,
             },
         });
     }
@@ -298,7 +297,6 @@ export class AuthenticationRepository {
                 email: true,
                 fullName: true,
                 preferredLanguage: true,
-                updatedAt: true,
             },
         });
     }

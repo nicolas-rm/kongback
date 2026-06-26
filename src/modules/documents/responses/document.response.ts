@@ -10,11 +10,7 @@ type DocumentResponseData = {
     scopeId: string | null;
     originalName: string;
     mimeType: string;
-    extension: string | null;
     sizeBytes: number;
-    uploadedByUserId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
 };
 
 export class DocumentResponse {
@@ -30,11 +26,7 @@ export class DocumentResponse {
         public scopeId: string | null,
         public originalName: string,
         public mimeType: string,
-        public extension: string | null,
-        public sizeBytes: number,
-        public uploadedByUserId: string | null,
-        public createdAt: Date,
-        public updatedAt: Date
+        public sizeBytes: number
     ) {}
 
     static from(data: DocumentResponseData): DocumentResponse {
@@ -50,11 +42,7 @@ export class DocumentResponse {
             data.scopeId,
             data.originalName,
             data.mimeType,
-            data.extension,
-            data.sizeBytes,
-            data.uploadedByUserId,
-            data.createdAt,
-            data.updatedAt
+            data.sizeBytes
         );
     }
 }

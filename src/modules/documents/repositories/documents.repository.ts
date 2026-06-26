@@ -60,11 +60,7 @@ export class DocumentsRepository {
             scopeId: true,
             originalName: true,
             mimeType: true,
-            extension: true,
             sizeBytes: true,
-            uploadedByUserId: true,
-            createdAt: true,
-            updatedAt: true,
         };
     }
 }
