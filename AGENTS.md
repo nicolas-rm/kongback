@@ -76,7 +76,9 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 - Al modificar `prisma/schema.prisma`, decide por modelo si corresponde `deletedAt` para soft delete, borrado fisico con `onDelete: Cascade`, `onDelete: SetNull`/`Restrict`, o ningun mecanismo especial. Toda relacion nueva debe declarar `onDelete` segun la regla de dominio y `onUpdate: Cascade` salvo motivo claro documentado.
 - Agrega indices para filtros, ordenamientos, relaciones y busquedas frecuentes; evita indices decorativos sin uso claro.
 - Usa transactions para operaciones que deban ser atomicas.
-- Implementa soft delete solo si el modelo o feature ya lo requiere; filtra `deletedAt` de forma consistente.
+- Implementa soft delete solo si el modelo o feature ya lo requiere; actualmente `Document` es el caso activo. No agregues `deletedAt` por inercia si el dominio se resuelve mejor con estado, borrado fisico o constraints relacionales.
+- Para modelos con soft delete, las lecturas y mutaciones de endpoints deben incluir `deletedAt: null` o usar helpers como `activeRecordWhere()` para no leer, actualizar, asignar ni eliminar registros ya eliminados. Las migraciones e indices parciales no sustituyen esta validacion en repositories/services.
+- Usa indices unicos parciales en migraciones solo cuando Prisma no pueda expresar una unicidad real del dominio, por ejemplo scopes opcionales con `NULL` o, si aplica, unicidad entre registros activos de un modelo con soft delete. No los trates como validacion de estado eliminado.
 - Nunca retornes `passwordHash`, tokens, secretos TOTP, recovery codes, hashes ni datos sensibles desde repositories o responses.
 - Para paginacion, filtering y sorting, valida entradas y limita tamanos de pagina.
 

@@ -31,7 +31,6 @@ export class AuthenticationRepository {
         return this.prisma.user.findFirst({
             where: {
                 id: userId,
-                deletedAt: null,
                 status: 'active',
             },
             select: {
@@ -42,14 +41,13 @@ export class AuthenticationRepository {
                 preferredLanguage: true,
                 mustChangePassword: true,
                 accesses: {
-                    where: { deletedAt: null, role: { deletedAt: null } },
+                    where: { OR: [{ organizationId: null }, { organization: { status: 'active' } }] },
                     select: {
                         organizationId: true,
                         role: {
                             select: {
                                 code: true,
                                 permissions: {
-                                    where: { permission: { deletedAt: null } },
                                     select: { permission: { select: { code: true } } },
                                 },
                             },
@@ -135,7 +133,6 @@ export class AuthenticationRepository {
     findLoginUser(identifier: string) {
         return this.prisma.user.findFirst({
             where: {
-                deletedAt: null,
                 OR: [{ username: identifier }, { email: { equals: identifier, mode: 'insensitive' } }],
             },
             select: {
@@ -157,24 +154,22 @@ export class AuthenticationRepository {
     }
 
     resetLoginState(userId: string) {
-        return this.prisma.user.update({
-            where: { id: userId },
+        return this.prisma.user.updateMany({
+            where: { id: userId, status: 'active' },
             data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
-            select: { id: true },
         });
     }
 
     updateFailedLoginState(userId: string, failedLoginAttempts: number, lockedUntil: Date | null) {
-        return this.prisma.user.update({
-            where: { id: userId },
+        return this.prisma.user.updateMany({
+            where: { id: userId, status: 'active' },
             data: { failedLoginAttempts, lockedUntil },
-            select: { id: true },
         });
     }
 
     findStoredRefreshToken(tokenHash: string) {
         return this.prisma.refreshToken.findFirst({
-            where: { tokenHash },
+            where: { tokenHash, user: { status: 'active' } },
             select: {
                 id: true,
                 userId: true,
@@ -274,16 +269,15 @@ export class AuthenticationRepository {
 
     findUserForPasswordChange(userId: string) {
         return this.prisma.user.findFirst({
-            where: { id: userId, deletedAt: null, status: 'active' },
+            where: { id: userId, status: 'active' },
             select: { id: true, username: true, passwordHash: true },
         });
     }
 
     updatePassword(userId: string, passwordHash: string) {
-        return this.prisma.user.update({
-            where: { id: userId },
+        return this.prisma.user.updateMany({
+            where: { id: userId, status: 'active' },
             data: { passwordHash, mustChangePassword: false },
-            select: { id: true },
         });
     }
 
@@ -316,7 +310,7 @@ export class AuthenticationRepository {
 
     findUserByEmail(email: string) {
         return this.prisma.user.findFirst({
-            where: { email: { equals: email, mode: 'insensitive' }, deletedAt: null, status: 'active' },
+            where: { email: { equals: email, mode: 'insensitive' }, status: 'active' },
             select: { id: true, email: true },
         });
     }
@@ -337,7 +331,7 @@ export class AuthenticationRepository {
 
     findEmailVerificationToken(tokenHash: string) {
         return this.prisma.emailVerificationToken.findFirst({
-            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { status: 'active' } },
             select: { id: true, userId: true },
         });
     }
@@ -349,17 +343,16 @@ export class AuthenticationRepository {
                 data: { usedAt },
                 select: { id: true },
             });
-            await tx.user.update({
-                where: { id: userId },
+            return tx.user.updateMany({
+                where: { id: userId, status: 'active' },
                 data: { emailVerifiedAt: usedAt, requiresEmailVerification: false },
-                select: { id: true },
             });
         });
     }
 
     findPasswordResetToken(tokenHash: string) {
         return this.prisma.passwordResetToken.findFirst({
-            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+            where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() }, user: { status: 'active' } },
             select: { id: true, userId: true },
         });
     }
@@ -374,7 +367,7 @@ export class AuthenticationRepository {
 
     findTwoFactorUser(userId: string) {
         return this.prisma.user.findFirst({
-            where: { id: userId, deletedAt: null, status: 'active' },
+            where: { id: userId, status: 'active' },
             select: {
                 id: true,
                 username: true,
@@ -424,7 +417,7 @@ export class AuthenticationRepository {
 
     findTwoFactorLoginChallenge(challengeHash: string) {
         return this.prisma.twoFactorLoginChallenge.findFirst({
-            where: { challengeHash, consumedAt: null, expiresAt: { gt: new Date() } },
+            where: { challengeHash, consumedAt: null, expiresAt: { gt: new Date() }, user: { status: 'active' } },
             select: {
                 id: true,
                 userId: true,

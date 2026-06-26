@@ -15,7 +15,9 @@ export class VerifyEmailUseCase {
         const token = await this.repository.findEmailVerificationToken(this.cryptoService.hashToken(dto.token));
         if (!token) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidVerificationToken, 'Token de verificacion invalido o expirado');
 
-        await this.repository.verifyEmail(token.id, token.userId);
+        const result = await this.repository.verifyEmail(token.id, token.userId);
+        if (result.count === 0) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidVerificationToken, 'Token de verificacion invalido o expirado');
+
         return { emailVerified: true };
     }
 }

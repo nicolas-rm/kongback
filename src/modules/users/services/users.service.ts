@@ -32,7 +32,6 @@ export class UsersService {
 
     async findAll(dto: FindUsersDto) {
         const where: Prisma.UserWhereInput = {
-            deletedAt: null,
             status: dto.status,
             ...(dto.search
                 ? {
@@ -66,15 +65,21 @@ export class UsersService {
             mustChangePassword: dto.mustChangePassword,
             preferredLanguage: dto.preferredLanguage,
         });
+        if (!user) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
         return UserResponse.from(user);
     }
 
     async remove(id: string) {
-        await this.repository.softDelete(id);
+        const result = await this.repository.delete(id);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
         return { id, deleted: true };
     }
 
     async assignAccess(userId: string, dto: AssignUserAccessDto) {
+        await this.assertUserActive(userId);
+        await this.assertAccessTargetsActive([{ roleId: dto.roleId, organizationId: dto.organizationId ?? null }]);
+
         await this.repository.assignAccess({
             userId,
             roleId: dto.roleId,
@@ -86,6 +91,9 @@ export class UsersService {
     }
 
     async replaceAccess(userId: string, dto: ReplaceUserAccessDto) {
+        await this.assertUserActive(userId);
+        await this.assertAccessTargetsActive(dto.accesses.map((access) => ({ roleId: access.roleId, organizationId: access.organizationId ?? null })));
+
         const accesses = await this.repository.replaceAccess(
             userId,
             dto.accesses.map((access) => ({
@@ -100,27 +108,36 @@ export class UsersService {
     }
 
     async listAccess(userId: string) {
+        await this.assertUserActive(userId);
         const accesses = await this.repository.listAccess(userId);
         return accesses.map((access) => UserAccessResponse.from(access));
     }
 
     async removeAccess(userId: string, accessId: string) {
-        await this.repository.removeAccess(userId, accessId);
+        await this.assertUserActive(userId);
+        const result = await this.repository.removeAccess(userId, accessId);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+
         return { id: accessId, deleted: true };
     }
 
     async listPermissions(userId: string) {
+        await this.assertUserActive(userId);
         const permissions = await this.repository.findPermissionCodes(userId);
         return permissions.map((entry) => PermissionResponse.from(entry.permission));
     }
 
     async changePassword(userId: string, dto: ChangeUserPasswordDto) {
-        await this.repository.updatePassword(userId, await this.cryptoService.hashPassword(dto.password), dto.mustChangePassword ?? false);
+        const result = await this.repository.updatePassword(userId, await this.cryptoService.hashPassword(dto.password), dto.mustChangePassword ?? false);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
         return { passwordChanged: true };
     }
 
     async unlinkTwoFactor(userId: string) {
-        await this.repository.resetTwoFactor(userId);
+        const result = await this.repository.resetTwoFactor(userId);
+        if (!result) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
         return { twoFactorUnlinked: true };
     }
 
@@ -130,9 +147,26 @@ export class UsersService {
         if (!user.email) throw new I18nBadRequestException(I18N_KEYS.errors.users.missingEmail, 'El usuario no tiene correo configurado');
 
         const password = generateSecurePassword();
-        await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(password), true);
+        const result = await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(password), true);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
         await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id, language: user.preferredLanguage });
 
         return { credentialsSent: true };
+    }
+
+    private async assertUserActive(userId: string): Promise<void> {
+        const user = await this.repository.findById(userId);
+        if (!user || user.status !== 'active') throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+    }
+
+    private async assertAccessTargetsActive(accesses: Array<{ roleId: string; organizationId?: string | null }>): Promise<void> {
+        const roleIds = [...new Set(accesses.map((access) => access.roleId))];
+        const organizationIds = [...new Set(accesses.map((access) => access.organizationId).filter((id): id is string => Boolean(id)))];
+
+        const [activeRoles, activeOrganizations] = await Promise.all([this.repository.countActiveRoles(roleIds), organizationIds.length > 0 ? this.repository.countActiveOrganizations(organizationIds) : Promise.resolve(0)]);
+        if (activeRoles !== roleIds.length || activeOrganizations !== organizationIds.length) {
+            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        }
     }
 }
