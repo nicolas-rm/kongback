@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { Notification } from '@prisma/client';
 import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { I18nService } from 'nestjs-i18n';
 import type { Server, Socket } from 'socket.io';
 import { I18N_KEYS } from '@/i18n';
-import { NotificationsSerializerService } from '@/modules/notifications/services/notifications-serializer.service';
+import { NotificationsSerializerService, SerializableNotificationData } from '@/modules/notifications/services/notifications-serializer.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationsSocketAuthenticationService } from '@/modules/notifications/notifications-socket-authentication.service';
+
+type GatewayNotification = SerializableNotificationData & { userId: string };
+type GatewayReadNotification = Pick<GatewayNotification, 'id' | 'userId' | 'readAt'>;
 
 @Injectable()
 @WebSocketGateway({
@@ -45,12 +47,12 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
     handleDisconnect() {}
 
-    async emitNotificationCreated(notification: Notification): Promise<void> {
+    async emitNotificationCreated(notification: GatewayNotification): Promise<void> {
         this.server.to(this.getUserRoom(notification.userId)).emit('notifications.new', this.serializer.serialize(notification));
         await this.emitUnreadCount(notification.userId);
     }
 
-    async emitNotificationRead(notification: Notification): Promise<void> {
+    async emitNotificationRead(notification: GatewayReadNotification): Promise<void> {
         this.server.to(this.getUserRoom(notification.userId)).emit('notifications.read', {
             id: notification.id,
             readAt: notification.readAt?.toISOString() ?? null,

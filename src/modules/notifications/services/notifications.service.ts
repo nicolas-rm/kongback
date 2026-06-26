@@ -49,7 +49,7 @@ export class NotificationsService {
         const notification = await this.repository.createForUser(dto.userId, dto);
         return {
             notification,
-            response: NotificationResponse.from(notification, { includeUserId: true }),
+            response: NotificationResponse.from(notification),
         };
     }
 

@@ -10,8 +10,6 @@ type UserResponseData = {
     mustChangePassword: boolean;
     emailVerifiedAt: Date | null;
     twoFactorEnabled: boolean;
-    createdAt: Date;
-    updatedAt: Date;
 };
 
 export class UserResponse {
@@ -23,13 +21,11 @@ export class UserResponse {
         public preferredLanguage: string,
         public status: UserStatus,
         public mustChangePassword: boolean,
-        public emailVerifiedAt: Date | null,
-        public twoFactorEnabled: boolean,
-        public createdAt: Date,
-        public updatedAt: Date
+        public emailVerified: boolean,
+        public twoFactorEnabled: boolean
     ) {}
 
     static from(data: UserResponseData): UserResponse {
-        return new UserResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.status, data.mustChangePassword, data.emailVerifiedAt, data.twoFactorEnabled, data.createdAt, data.updatedAt);
+        return new UserResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.status, data.mustChangePassword, Boolean(data.emailVerifiedAt), data.twoFactorEnabled);
     }
 }

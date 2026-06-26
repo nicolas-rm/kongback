@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AppConfigService } from '@/configurations/app-config.service';
 import { PrismaService } from '@/prisma/prisma.service';
 
 type HealthStatus = 'ok' | 'error';
 
 @Injectable()
 export class HealthService {
-    constructor(
-        private readonly config: AppConfigService,
-        private readonly prisma: PrismaService
-    ) {}
+    constructor(private readonly prisma: PrismaService) {}
 
     async check() {
         const database = await this.checkDatabase();
@@ -17,14 +13,9 @@ export class HealthService {
 
         return {
             status,
-            app: {
-                name: this.config.name,
-                environment: this.config.nodeEnv,
-            },
             checks: {
                 database,
             },
-            timestamp: new Date(),
         };
     }
 

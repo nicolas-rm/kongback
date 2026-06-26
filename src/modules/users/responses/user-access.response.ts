@@ -3,7 +3,6 @@ type UserAccessResponseData = {
     organizationId: string | null;
     scopeKey: string | null;
     scopeId: string | null;
-    assignedAt: Date;
     role: {
         id: string;
         code: string;
@@ -29,11 +28,10 @@ export class UserAccessResponse {
         public organizationId: string | null,
         public scopeKey: string | null,
         public scopeId: string | null,
-        public assignedAt: Date,
         public role: UserAccessRoleResponse
     ) {}
 
     static from(data: UserAccessResponseData): UserAccessResponse {
-        return new UserAccessResponse(data.id, data.organizationId, data.scopeKey, data.scopeId, data.assignedAt, UserAccessRoleResponse.from(data.role));
+        return new UserAccessResponse(data.id, data.organizationId, data.scopeKey, data.scopeId, UserAccessRoleResponse.from(data.role));
     }
 }

@@ -72,8 +72,8 @@ export class AuthenticationService {
         return this.logoutUseCase.execute(userId, {});
     }
 
-    getProfile(user: RequestUser, refreshToken?: string) {
-        return this.getProfileUseCase.execute(user, refreshToken);
+    getProfile(user: RequestUser) {
+        return this.getProfileUseCase.execute(user);
     }
 
     updateProfile(user: RequestUser, dto: UpdateMyProfileDto) {

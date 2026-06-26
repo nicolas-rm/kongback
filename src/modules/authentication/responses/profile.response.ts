@@ -1,5 +1,3 @@
-import { SessionResponse } from '@/modules/authentication/responses/session.response';
-
 type ProfileResponseData = {
     id: string;
     username: string;
@@ -10,7 +8,6 @@ type ProfileResponseData = {
     isGlobalAdmin?: boolean;
     organizationIds?: string[];
     permissions?: string[];
-    session?: SessionResponse | null;
 };
 
 export class ProfileResponse {
@@ -23,8 +20,7 @@ export class ProfileResponse {
         public mustChangePassword: boolean,
         public isGlobalAdmin: boolean,
         public organizationIds: string[],
-        public permissions: string[],
-        public session: SessionResponse | null
+        public permissions: string[]
     ) {}
 
     static from(data: ProfileResponseData): ProfileResponse {
@@ -37,8 +33,7 @@ export class ProfileResponse {
             data.mustChangePassword ?? false,
             data.isGlobalAdmin ?? false,
             data.organizationIds ?? [],
-            data.permissions ?? [],
-            data.session ?? null
+            data.permissions ?? []
         );
     }
 }
@@ -49,11 +44,10 @@ export class UpdateProfileResponse {
         public username: string,
         public email: string | null,
         public fullName: string,
-        public preferredLanguage: string,
-        public updatedAt: Date
+        public preferredLanguage: string
     ) {}
 
-    static from(data: { id: string; username: string; email: string | null; fullName: string; preferredLanguage: string; updatedAt: Date }): UpdateProfileResponse {
-        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.updatedAt);
+    static from(data: { id: string; username: string; email: string | null; fullName: string; preferredLanguage: string }): UpdateProfileResponse {
+        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage);
     }
 }
