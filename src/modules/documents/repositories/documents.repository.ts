@@ -19,6 +19,10 @@ export class DocumentsRepository {
         return this.prisma.document.count({ where });
     }
 
+    countActiveOrganizations(ids: string[]): Promise<number> {
+        return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
+    }
+
     findById(id: string) {
         return this.prisma.document.findFirst({ where: activeRecordWhere({ id }), select: this.publicSelect() });
     }
@@ -35,15 +39,19 @@ export class DocumentsRepository {
         });
     }
 
-    update(id: string, data: Prisma.DocumentUncheckedUpdateInput) {
-        return this.prisma.document.update({ where: { id }, data, select: this.publicSelect() });
+    update(id: string, data: Prisma.DocumentUncheckedUpdateManyInput) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.document.updateMany({ where: activeRecordWhere({ id }), data });
+            if (result.count === 0) return null;
+
+            return tx.document.findFirst({ where: activeRecordWhere({ id }), select: this.publicSelect() });
+        });
     }
 
     softDelete(id: string, userId?: string | null) {
-        return this.prisma.document.update({
-            where: { id },
+        return this.prisma.document.updateMany({
+            where: activeRecordWhere({ id }),
             data: softDeleteData(userId ?? null),
-            select: { id: true },
         });
     }
 

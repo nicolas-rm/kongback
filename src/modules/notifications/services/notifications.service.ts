@@ -15,11 +15,14 @@ export class NotificationsService {
         private readonly i18n: I18nService
     ) {}
 
-    createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
-        return this.repository.createForUser(userId, data);
+    async createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
+        const notification = await this.repository.createForUser(userId, data);
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
+        return notification;
     }
 
-    createSystemForUser(
+    async createSystemForUser(
         userId: string,
         data: {
             titleKey: I18nKey;
@@ -32,13 +35,16 @@ export class NotificationsService {
         }
     ) {
         const lang = this.resolveLanguage(data.language);
-        return this.repository.createForUser(userId, {
+        const notification = await this.repository.createForUser(userId, {
             title: this.translate(lang, data.titleKey, data.titleKey, data.args),
             message: this.translate(lang, data.messageKey, data.messageKey, data.args),
             detail: data.detailKey ? this.translate(lang, data.detailKey, data.detailKey, data.args) : null,
             type: data.type,
             link: data.link,
         });
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
+        return notification;
     }
 
     countUnreadForUser(userId: string): Promise<number> {
@@ -47,6 +53,8 @@ export class NotificationsService {
 
     async create(dto: CreateNotificationDto) {
         const notification = await this.repository.createForUser(dto.userId, dto);
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
         return {
             notification,
             response: NotificationResponse.from(notification),
@@ -56,7 +64,6 @@ export class NotificationsService {
     async findForUser(userId: string, dto: FindNotificationsDto) {
         const where: Prisma.NotificationWhereInput = {
             userId,
-            deletedAt: null,
             isRead: dto.isRead,
             type: dto.type,
             ...(dto.search ? { OR: [{ title: { contains: dto.search, mode: 'insensitive' } }, { message: { contains: dto.search, mode: 'insensitive' } }] } : {}),
@@ -70,7 +77,7 @@ export class NotificationsService {
     }
 
     async findOneForUser(userId: string, notificationId: string) {
-        const notification = await this.repository.findOne({ id: notificationId, userId, deletedAt: null });
+        const notification = await this.repository.findOne({ id: notificationId, userId });
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'Notificacion no encontrada');
         return notification;
     }
@@ -78,6 +85,7 @@ export class NotificationsService {
     async markRead(userId: string, notificationId: string) {
         await this.findOneForUser(userId, notificationId);
         const notification = await this.repository.markRead(notificationId, userId);
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'Notificacion no encontrada');
 
         return {
             notification,

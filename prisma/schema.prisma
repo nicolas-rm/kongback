@@ -53,8 +53,8 @@ enum SettingScope {
 
 model User {
   id                        String     @id @default(uuid())
-  username                  String
-  email                     String?
+  username                  String     @unique
+  email                     String?    @unique
   fullName                  String
   preferredLanguage         String     @default("es")
   passwordHash              String
@@ -72,7 +72,6 @@ model User {
   twoFactorConfirmedAt      DateTime?
   createdAt                 DateTime   @default(now())
   updatedAt                 DateTime   @updatedAt
-  deletedAt                 DateTime?
 
   accesses                        UserAccess[]
   emailDispatchesAsActor          EmailDispatch[]           @relation("EmailDispatchTriggeredByUser")
@@ -87,32 +86,24 @@ model User {
   refreshTokens                   RefreshToken[]
   sessions                        Session[]
   settingsCreated                 Setting[]                 @relation("SettingCreatedByUser")
-  settingsDeleted                 Setting[]                 @relation("SettingDeletedByUser")
   settingsUpdated                 Setting[]                 @relation("SettingUpdatedByUser")
   twoFactorLoginChallenges        TwoFactorLoginChallenge[]
   twoFactorRecoveryCodes          TwoFactorRecoveryCode[]
   organizationsCreated            Organization[]            @relation("OrganizationCreatedByUser")
-  organizationsDeleted            Organization[]            @relation("OrganizationDeletedByUser")
   organizationsUpdated            Organization[]            @relation("OrganizationUpdatedByUser")
   rolesCreated                    Role[]                    @relation("RoleCreatedByUser")
-  rolesDeleted                    Role[]                    @relation("RoleDeletedByUser")
   rolesUpdated                    Role[]                    @relation("RoleUpdatedByUser")
   permissionsCreated              Permission[]              @relation("PermissionCreatedByUser")
-  permissionsDeleted              Permission[]              @relation("PermissionDeletedByUser")
   permissionsUpdated              Permission[]              @relation("PermissionUpdatedByUser")
   documentsCreated                Document[]                @relation("DocumentCreatedByUser")
   documentsDeleted                Document[]                @relation("DocumentDeletedByUser")
   documentsUpdated                Document[]                @relation("DocumentUpdatedByUser")
   uploadedDocuments               Document[]
   notificationsCreated            Notification[]            @relation("NotificationCreatedByUser")
-  notificationsDeleted            Notification[]            @relation("NotificationDeletedByUser")
   notificationsUpdated            Notification[]            @relation("NotificationUpdatedByUser")
 
-  @@index([username])
-  @@index([email])
   @@index([status])
   @@index([twoFactorEnabled])
-  @@index([deletedAt, createdAt])
   @@map("users")
 }
 
@@ -140,19 +131,16 @@ model ExternalIdentity {
 model Organization {
   id              String             @id @default(uuid())
   name            String
-  slug            String
+  slug            String             @unique
   description     String?
   status          OrganizationStatus @default(active)
   createdByUserId String?
   updatedByUserId String?
-  deletedByUserId String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
-  deletedAt       DateTime?
 
   createdByUser User?                    @relation("OrganizationCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   updatedByUser User?                    @relation("OrganizationUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  deletedByUser User?                    @relation("OrganizationDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   documents     Document[]
   invitations   OrganizationInvitation[]
   memberships   OrganizationMembership[]
@@ -162,11 +150,8 @@ model Organization {
 
   @@index([status])
   @@index([name])
-  @@index([slug])
   @@index([createdByUserId])
   @@index([updatedByUserId])
-  @@index([deletedByUserId])
-  @@index([deletedAt, createdAt])
   @@map("organizations")
 }
 
@@ -176,15 +161,13 @@ model OrganizationMembership {
   userId         String
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([organizationId])
   @@index([userId])
-  @@index([organizationId, userId])
-  @@index([deletedAt, createdAt])
+  @@unique([organizationId, userId])
   @@map("organization_memberships")
 }
 
@@ -310,53 +293,41 @@ model TwoFactorRecoveryCode {
 
 model Role {
   id              String    @id @default(uuid())
-  code            String
+  code            String    @unique
   name            String
   description     String?
   createdByUserId String?
   updatedByUserId String?
-  deletedByUserId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
 
   createdByUser User?                    @relation("RoleCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   updatedByUser User?                    @relation("RoleUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  deletedByUser User?                    @relation("RoleDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   accesses      UserAccess[]
   invitations   OrganizationInvitation[]
   permissions   RolePermission[]
 
-  @@index([code])
   @@index([createdByUserId])
   @@index([updatedByUserId])
-  @@index([deletedByUserId])
-  @@index([deletedAt, createdAt])
   @@map("roles")
 }
 
 model Permission {
   id              String    @id @default(uuid())
-  code            String
+  code            String    @unique
   name            String?
   description     String?
   createdByUserId String?
   updatedByUserId String?
-  deletedByUserId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
 
   createdByUser User?            @relation("PermissionCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   updatedByUser User?            @relation("PermissionUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  deletedByUser User?            @relation("PermissionDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   roles         RolePermission[]
 
-  @@index([code])
   @@index([createdByUserId])
   @@index([updatedByUserId])
-  @@index([deletedByUserId])
-  @@index([deletedAt, createdAt])
   @@map("permissions")
 }
 
@@ -382,7 +353,6 @@ model UserAccess {
   assignedAt     DateTime  @default(now())
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   role         Role          @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -393,7 +363,6 @@ model UserAccess {
   @@index([organizationId])
   @@index([scopeKey, scopeId])
   @@index([userId, roleId, scopeKey, scopeId])
-  @@index([deletedAt, createdAt])
   @@map("user_accesses")
 }
 
@@ -420,7 +389,6 @@ model Notification {
   userId          String
   createdByUserId String?
   updatedByUserId String?
-  deletedByUserId String?
   title           String
   message         String
   detail          String?
@@ -430,21 +398,17 @@ model Notification {
   readAt          DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
 
   user          User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdByUser User? @relation("NotificationCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   updatedByUser User? @relation("NotificationUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  deletedByUser User? @relation("NotificationDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([userId])
   @@index([createdByUserId])
   @@index([updatedByUserId])
-  @@index([deletedByUserId])
   @@index([userId, isRead])
   @@index([userId, createdAt])
   @@index([userId, isRead, createdAt])
-  @@index([userId, deletedAt, createdAt])
   @@map("notifications")
 }
 
@@ -530,23 +494,18 @@ model Setting {
   organizationId  String?
   createdByUserId String?
   updatedByUserId String?
-  deletedByUserId String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
-  deletedAt       DateTime?
 
   organization  Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdByUser User?         @relation("SettingCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   updatedByUser User?         @relation("SettingUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  deletedByUser User?         @relation("SettingDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([key])
   @@index([scope, organizationId])
   @@index([organizationId])
   @@index([createdByUserId])
   @@index([updatedByUserId])
-  @@index([deletedByUserId])
-  @@index([deletedAt, createdAt])
   @@map("settings")
 }
 

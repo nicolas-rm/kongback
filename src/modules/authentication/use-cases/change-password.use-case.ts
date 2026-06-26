@@ -18,7 +18,9 @@ export class ChangePasswordUseCase {
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.currentPassword);
         if (!validPassword) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidCurrentPassword, 'Contrasena actual invalida');
 
-        await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(dto.newPassword));
+        const result = await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(dto.newPassword));
+        if (result.count === 0) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
+
         await this.repository.revokeUserSessions(user.id);
 
         return { passwordChanged: true };

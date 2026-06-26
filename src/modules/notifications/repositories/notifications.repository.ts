@@ -7,22 +7,27 @@ export class NotificationsRepository {
     constructor(protected readonly prisma: PrismaService) {}
 
     createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
-        return this.prisma.notification.create({
-            data: {
-                userId,
-                title: data.title,
-                message: data.message,
-                detail: data.detail ?? null,
-                type: data.type ?? NotificationType.info,
-                link: data.link ?? null,
-            },
-            select: this.publicSelect(),
+        return this.prisma.$transaction(async (tx) => {
+            const user = await tx.user.findFirst({ where: { id: userId, status: 'active' }, select: { id: true } });
+            if (!user) return null;
+
+            return tx.notification.create({
+                data: {
+                    userId,
+                    title: data.title,
+                    message: data.message,
+                    detail: data.detail ?? null,
+                    type: data.type ?? NotificationType.info,
+                    link: data.link ?? null,
+                },
+                select: this.publicSelect(),
+            });
         });
     }
 
     countUnreadForUser(userId: string): Promise<number> {
         return this.prisma.notification.count({
-            where: { userId, isRead: false, deletedAt: null },
+            where: { userId, isRead: false },
         });
     }
 
@@ -41,17 +46,21 @@ export class NotificationsRepository {
     }
 
     markRead(id: string, userId: string) {
-        return this.prisma.notification.update({
-            where: { id },
-            data: { isRead: true, readAt: new Date() },
-            select: this.publicSelect(),
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.notification.updateMany({
+                where: { id, userId },
+                data: { isRead: true, readAt: new Date() },
+            });
+            if (result.count === 0) return null;
+
+            return tx.notification.findFirst({ where: { id, userId }, select: this.publicSelect() });
         });
     }
 
     markAllRead(userId: string) {
         const readAt = new Date();
         return this.prisma.notification.updateMany({
-            where: { userId, isRead: false, deletedAt: null },
+            where: { userId, isRead: false },
             data: { isRead: true, readAt },
         });
     }

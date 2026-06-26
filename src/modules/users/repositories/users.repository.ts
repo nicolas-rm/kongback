@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
-import { activeRecordWhere } from '@/utilities/prisma/soft-delete';
+import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
 
 @Injectable()
 export class UsersRepository {
@@ -30,31 +30,36 @@ export class UsersRepository {
 
     findById(id: string) {
         return this.prisma.user.findFirst({
-            where: activeRecordWhere({ id }),
+            where: { id },
             select: this.defaultSelect(),
         });
     }
 
-    update(id: string, data: Prisma.UserUncheckedUpdateInput) {
-        return this.prisma.user.update({
-            where: { id },
-            data,
-            select: this.defaultSelect(),
+    update(id: string, data: Prisma.UserUncheckedUpdateManyInput) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.user.updateMany({
+                where: { id },
+                data,
+            });
+            if (result.count === 0) return null;
+
+            return tx.user.findFirst({
+                where: { id },
+                select: this.defaultSelect(),
+            });
         });
     }
 
     updatePassword(id: string, passwordHash: string, mustChangePassword: boolean) {
-        return this.prisma.user.update({
+        return this.prisma.user.updateMany({
             where: { id },
             data: { passwordHash, mustChangePassword },
-            select: { id: true },
         });
     }
 
     resetTwoFactor(id: string) {
         return this.prisma.$transaction(async (tx) => {
-            await tx.twoFactorRecoveryCode.deleteMany({ where: { userId: id } });
-            await tx.user.update({
+            const result = await tx.user.updateMany({
                 where: { id },
                 data: {
                     twoFactorEnabled: false,
@@ -63,17 +68,16 @@ export class UsersRepository {
                     twoFactorPendingCreatedAt: null,
                     twoFactorConfirmedAt: null,
                 },
-                select: { id: true },
             });
+            if (result.count === 0) return null;
+
+            await tx.twoFactorRecoveryCode.deleteMany({ where: { userId: id } });
+            return { id };
         });
     }
 
-    softDelete(id: string) {
-        return this.prisma.user.update({
-            where: { id },
-            data: { deletedAt: new Date(), status: 'inactive' },
-            select: { id: true },
-        });
+    delete(id: string) {
+        return this.prisma.user.deleteMany({ where: { id } });
     }
 
     assignAccess(data: Prisma.UserAccessUncheckedCreateInput) {
@@ -83,19 +87,24 @@ export class UsersRepository {
         });
     }
 
+    countActiveRoles(ids: string[]): Promise<number> {
+        return this.prisma.role.count({ where: { id: { in: ids } } });
+    }
+
+    countActiveOrganizations(ids: string[]): Promise<number> {
+        return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
+    }
+
     replaceAccess(userId: string, data: Prisma.UserAccessUncheckedCreateInput[]) {
         return this.prisma.$transaction(async (tx) => {
-            await tx.userAccess.updateMany({
-                where: { userId, deletedAt: null },
-                data: { deletedAt: new Date() },
-            });
+            await tx.userAccess.deleteMany({ where: { userId } });
 
             if (data.length > 0) {
                 await tx.userAccess.createMany({ data });
             }
 
             return tx.userAccess.findMany({
-                where: { userId, deletedAt: null },
+                where: buildActiveUserAccessWhere({ userId }),
                 orderBy: { assignedAt: 'desc' },
                 select: this.accessSelect(),
             });
@@ -104,7 +113,7 @@ export class UsersRepository {
 
     listAccess(userId: string) {
         return this.prisma.userAccess.findMany({
-            where: { userId, deletedAt: null },
+            where: buildActiveUserAccessWhere({ userId }),
             orderBy: { assignedAt: 'desc' },
             select: this.accessSelect(),
         });
@@ -113,15 +122,8 @@ export class UsersRepository {
     findPermissionCodes(userId: string) {
         return this.prisma.rolePermission.findMany({
             where: {
-                permission: { deletedAt: null },
                 role: {
-                    deletedAt: null,
-                    accesses: {
-                        some: {
-                            userId,
-                            deletedAt: null,
-                        },
-                    },
+                    accesses: { some: buildActiveUserAccessWhere({ userId }) },
                 },
             },
             distinct: ['permissionId'],
@@ -141,17 +143,13 @@ export class UsersRepository {
 
     findCredentialRecipient(id: string) {
         return this.prisma.user.findFirst({
-            where: activeRecordWhere({ id }),
+            where: { id },
             select: { id: true, username: true, email: true, preferredLanguage: true },
         });
     }
 
     removeAccess(userId: string, id: string) {
-        return this.prisma.userAccess.update({
-            where: { id, userId },
-            data: { deletedAt: new Date() },
-            select: { id: true },
-        });
+        return this.prisma.userAccess.deleteMany({ where: { id, userId } });
     }
 
     private defaultSelect(): Prisma.UserSelect {

@@ -83,7 +83,6 @@ async function syncPermission(permission: (typeof PERMISSION_CATALOG)[number]): 
     const existing = await prisma.permission.findFirst({
         where: {
             code: permission.code,
-            deletedAt: null,
         },
         select: { id: true },
     });
@@ -112,7 +111,6 @@ function findActiveRoleByCode(code: string) {
     return prisma.role.findFirst({
         where: {
             code,
-            deletedAt: null,
         },
         select: { id: true },
     });
@@ -157,7 +155,6 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
     const existing = await prisma.user.findFirst({
         where: {
             username,
-            deletedAt: null,
         },
         select: { id: true },
     });
@@ -200,7 +197,6 @@ async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<
             organizationId: null,
             scopeKey: null,
             scopeId: null,
-            deletedAt: null,
         },
         select: { id: true },
     });

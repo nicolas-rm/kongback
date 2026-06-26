@@ -19,6 +19,8 @@ export class DocumentsService {
 
     async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null) {
         this.assertAllowedFile(file);
+        await this.assertOrganizationActive(dto.organizationId ?? null);
+
         const storedFile = await this.storage.saveFile(file);
 
         const document = await this.repository.create({
@@ -72,6 +74,8 @@ export class DocumentsService {
 
     async update(id: string, dto: UpdateDocumentDto, userId?: string | null) {
         const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null });
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+
         return DocumentResponse.from(document);
     }
 
@@ -87,7 +91,9 @@ export class DocumentsService {
         const document = await this.repository.findDownloadById(id);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
-        await this.repository.softDelete(id, userId);
+        const result = await this.repository.softDelete(id, userId);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+
         await this.storage.removeFile(document.storageKey);
         return { id, deleted: true };
     }
@@ -113,5 +119,12 @@ export class DocumentsService {
     private isUtf8Text(buffer: Buffer): boolean {
         if (buffer.includes(0)) return false;
         return Buffer.from(buffer.toString('utf8'), 'utf8').equals(buffer);
+    }
+
+    private async assertOrganizationActive(organizationId: string | null): Promise<void> {
+        if (!organizationId) return;
+
+        const activeOrganizations = await this.repository.countActiveOrganizations([organizationId]);
+        if (activeOrganizations !== 1) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
     }
 }

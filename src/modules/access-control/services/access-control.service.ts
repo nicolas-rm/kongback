@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { AssignRolePermissionsDto, CreatePermissionDto, CreateRoleDto, FindAccessControlDto, UpdatePermissionDto, UpdateRoleDto } from '@/modules/access-control/dto';
 import { AccessControlRepository } from '@/modules/access-control/repositories/access-control.repository';
@@ -30,7 +31,6 @@ export class AccessControlService {
 
     async findRoles(dto: FindAccessControlDto) {
         const where: Prisma.RoleWhereInput = {
-            deletedAt: null,
             ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findRoles(where, dto.skip, dto.actualLimit), this.repository.countRoles(where)]);
@@ -48,22 +48,31 @@ export class AccessControlService {
 
     async updateRole(id: string, dto: UpdateRoleDto) {
         const role = await this.repository.updateRole(id, dto);
+        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+
         return RoleResponse.from(role);
     }
 
     async deleteRole(id: string) {
-        await this.repository.softDeleteRole(id);
+        const result = await this.repository.deleteRole(id);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+
         return { id, deleted: true };
     }
 
     async assignRolePermissions(roleId: string, dto: AssignRolePermissionsDto) {
+        await this.assertPermissionsActive(dto.permissionIds);
+
         const role = await this.repository.syncRolePermissions(roleId, dto.permissionIds);
-        if (!role) return null;
+        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
 
         return RoleWithPermissionsResponse.from(role);
     }
 
     async findRolePermissions(roleId: string) {
+        const role = await this.repository.findRoleById(roleId);
+        if (!role) return null;
+
         const permissions = await this.repository.findRolePermissions(roleId);
         return permissions.map((entry) => PermissionResponse.from(entry.permission));
     }
@@ -75,7 +84,6 @@ export class AccessControlService {
 
     async findPermissions(dto: FindAccessControlDto) {
         const where: Prisma.PermissionWhereInput = {
-            deletedAt: null,
             ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findPermissions(where, dto.skip, dto.actualLimit), this.repository.countPermissions(where)]);
@@ -93,11 +101,23 @@ export class AccessControlService {
 
     async updatePermission(id: string, dto: UpdatePermissionDto) {
         const permission = await this.repository.updatePermission(id, dto);
+        if (!permission) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+
         return PermissionResponse.from(permission);
     }
 
     async deletePermission(id: string) {
-        await this.repository.softDeletePermission(id);
+        const result = await this.repository.deletePermission(id);
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+
         return { id, deleted: true };
+    }
+
+    private async assertPermissionsActive(permissionIds: string[]): Promise<void> {
+        const uniquePermissionIds = [...new Set(permissionIds)];
+        if (uniquePermissionIds.length === 0) return;
+
+        const activePermissions = await this.repository.countActivePermissions(uniquePermissionIds);
+        if (activePermissions !== uniquePermissionIds.length) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
     }
 }

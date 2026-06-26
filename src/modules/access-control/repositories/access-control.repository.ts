@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
-import { activeRecordWhere } from '@/utilities/prisma/soft-delete';
 
 @Injectable()
 export class AccessControlRepository {
@@ -20,11 +19,7 @@ export class AccessControlRepository {
     async findUserPermissionCodes(userId: string): Promise<string[]> {
         const rolePermissions = await this.prisma.rolePermission.findMany({
             where: {
-                permission: { deletedAt: null },
-                role: {
-                    deletedAt: null,
-                    accesses: { some: buildActiveUserAccessWhere({ userId }) },
-                },
+                role: { accesses: { some: buildActiveUserAccessWhere({ userId }) } },
             },
             select: { permission: { select: { code: true } } },
         });
@@ -45,19 +40,27 @@ export class AccessControlRepository {
     }
 
     findRoleById(id: string) {
-        return this.prisma.role.findFirst({ where: activeRecordWhere({ id }), select: this.roleSelect() });
+        return this.prisma.role.findFirst({ where: { id }, select: this.roleSelect() });
     }
 
-    updateRole(id: string, data: Prisma.RoleUncheckedUpdateInput) {
-        return this.prisma.role.update({ where: { id }, data, select: this.roleSelect() });
+    updateRole(id: string, data: Prisma.RoleUncheckedUpdateManyInput) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.role.updateMany({ where: { id }, data });
+            if (result.count === 0) return null;
+
+            return tx.role.findFirst({ where: { id }, select: this.roleSelect() });
+        });
     }
 
-    softDeleteRole(id: string) {
-        return this.prisma.role.update({ where: { id }, data: { deletedAt: new Date() }, select: { id: true } });
+    deleteRole(id: string) {
+        return this.prisma.role.deleteMany({ where: { id } });
     }
 
     syncRolePermissions(roleId: string, permissionIds: string[]) {
         return this.prisma.$transaction(async (tx) => {
+            const activeRole = await tx.role.findFirst({ where: { id: roleId }, select: { id: true } });
+            if (!activeRole) return null;
+
             await tx.rolePermission.deleteMany({ where: { roleId } });
             if (permissionIds.length > 0) {
                 await tx.rolePermission.createMany({
@@ -65,7 +68,7 @@ export class AccessControlRepository {
                     skipDuplicates: true,
                 });
             }
-            return tx.role.findUnique({
+            return tx.role.findFirst({
                 where: { id: roleId },
                 select: {
                     ...this.roleSelect(),
@@ -83,7 +86,6 @@ export class AccessControlRepository {
         return this.prisma.rolePermission.findMany({
             where: {
                 roleId,
-                permission: { deletedAt: null },
             },
             orderBy: { permission: { code: 'asc' } },
             select: {
@@ -96,6 +98,10 @@ export class AccessControlRepository {
         return this.prisma.permission.create({ data, select: this.permissionSelect() });
     }
 
+    countActivePermissions(ids: string[]): Promise<number> {
+        return this.prisma.permission.count({ where: { id: { in: ids } } });
+    }
+
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {
         return this.prisma.permission.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, select: this.permissionSelect() });
     }
@@ -105,15 +111,20 @@ export class AccessControlRepository {
     }
 
     findPermissionById(id: string) {
-        return this.prisma.permission.findFirst({ where: activeRecordWhere({ id }), select: this.permissionSelect() });
+        return this.prisma.permission.findFirst({ where: { id }, select: this.permissionSelect() });
     }
 
-    updatePermission(id: string, data: Prisma.PermissionUncheckedUpdateInput) {
-        return this.prisma.permission.update({ where: { id }, data, select: this.permissionSelect() });
+    updatePermission(id: string, data: Prisma.PermissionUncheckedUpdateManyInput) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.permission.updateMany({ where: { id }, data });
+            if (result.count === 0) return null;
+
+            return tx.permission.findFirst({ where: { id }, select: this.permissionSelect() });
+        });
     }
 
-    softDeletePermission(id: string) {
-        return this.prisma.permission.update({ where: { id }, data: { deletedAt: new Date() }, select: { id: true } });
+    deletePermission(id: string) {
+        return this.prisma.permission.deleteMany({ where: { id } });
     }
 
     private roleSelect(): Prisma.RoleSelect {
