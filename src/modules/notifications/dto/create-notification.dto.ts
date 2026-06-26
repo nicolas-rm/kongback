@@ -1,8 +1,8 @@
 import { NotificationType } from '@prisma/client';
-import { ValidatorEnum, ValidatorString } from '@/decorators';
+import { ValidatorEnum, ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class CreateNotificationDto {
-    @ValidatorString()
+    @ValidatorUUID()
     userId!: string;
 
     @ValidatorString()

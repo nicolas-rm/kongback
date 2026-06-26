@@ -1,17 +1,20 @@
-import type { INestApplication } from '@nestjs/common';
+import { Logger, type INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { I18nValidationPipe } from 'nestjs-i18n';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { csrfProtectionMiddleware } from '@/middlewares/csrf-protection.middleware';
 import { requestContextMiddleware } from '@/middlewares/request-context.middleware';
 import { securityHeadersMiddleware } from '@/middlewares/security-headers.middleware';
 
+const logger = new Logger('Bootstrap');
+
 export function registerProcessHandlers(): void {
     process.on('unhandledRejection', (reason: unknown) => {
-        console.error('[UnhandledRejection]', reason);
+        logger.error('[UnhandledRejection]', reason instanceof Error ? reason.stack : String(reason));
     });
 
     process.on('uncaughtException', (error: Error) => {
-        console.error('[UncaughtException]', error);
+        logger.error('[UncaughtException]', error.stack);
         setTimeout(() => process.exit(1), 100);
     });
 }
@@ -24,6 +27,7 @@ export function configureApp(app: INestApplication): void {
     app.use(securityHeadersMiddleware(isProduction));
     app.use(requestContextMiddleware);
     app.use(cookieParser());
+    app.use(csrfProtectionMiddleware({ allowedOrigins: [config.webUrl, ...config.security.allowedOrigins] }));
     app.enableCors({
         origin: allowedOrigins,
         credentials: true,

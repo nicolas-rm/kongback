@@ -1,10 +1,10 @@
-import { ValidatorString } from '@/decorators';
+import { ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class AssignUserAccessDto {
-    @ValidatorString()
+    @ValidatorUUID()
     roleId!: string;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
+    @ValidatorUUID({ optional: true, emptyTo: 'null' })
     organizationId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })

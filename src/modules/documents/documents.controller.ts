@@ -1,5 +1,4 @@
-import { Body, Controller, Delete, Get, Header, Param, Patch, Post, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { CurrentUser, Permissions } from '@/decorators';
@@ -8,7 +7,6 @@ import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/module
 import { DocumentsService } from '@/modules/documents/services/documents.service';
 import type { UploadedFile as AppUploadedFile } from '@/modules/documents/types/uploaded-file.type';
 
-@ApiTags('documents')
 @Controller('documents')
 export class DocumentsController {
     constructor(private readonly documentsService: DocumentsService) {}
@@ -29,28 +27,33 @@ export class DocumentsController {
     @Get(':id/download')
     @Permissions('documents.download')
     @Header('Content-Type', 'application/octet-stream')
-    async download(@Param('id') id: string, @Res() response: Response) {
+    async download(@Param('id', ParseUUIDPipe) id: string, @Res() response: Response) {
         const { document, stream } = await this.documentsService.download(id);
         response.setHeader('Content-Type', document.mimeType);
-        response.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+        response.setHeader('Content-Disposition', this.buildAttachmentDisposition(document.originalName));
         stream.pipe(response);
     }
 
     @Get(':id')
     @Permissions('documents.read-one')
-    findOne(@Param('id') id: string) {
+    findOne(@Param('id', ParseUUIDPipe) id: string) {
         return this.documentsService.findOne(id);
     }
 
     @Patch(':id')
     @Permissions('documents.update')
-    update(@Param('id') id: string, @Body() dto: UpdateDocumentDto, @CurrentUser() user: RequestUser) {
+    update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDocumentDto, @CurrentUser() user: RequestUser) {
         return this.documentsService.update(id, dto, user.id);
     }
 
     @Delete(':id')
     @Permissions('documents.delete')
-    remove(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
         return this.documentsService.remove(id, user.id);
+    }
+
+    private buildAttachmentDisposition(filename: string): string {
+        const fallback = filename.replace(/["\\\r\n]/g, '_');
+        return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
     }
 }

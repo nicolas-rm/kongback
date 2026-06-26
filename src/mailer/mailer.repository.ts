@@ -40,6 +40,7 @@ export class MailerRepository {
                 retryAfterSeconds: null,
                 errorMessage: null,
             },
+            select: { id: true },
         });
     }
 
@@ -50,6 +51,7 @@ export class MailerRepository {
                 status: EmailDispatchStatus.failed,
                 errorMessage: message.slice(0, 1000),
             },
+            select: { id: true },
         });
     }
 }

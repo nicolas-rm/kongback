@@ -7,6 +7,7 @@ import { AuthenticationRepository } from '@/modules/authentication/repositories/
 
 type JwtPayload = {
     sub: string;
+    sessionId?: string;
 };
 
 export type SocketAuthenticationUser = {
@@ -23,14 +24,28 @@ export class NotificationsSocketAuthenticationService {
     ) {}
 
     async authenticate(client: Socket): Promise<SocketAuthenticationUser> {
+        this.assertAllowedOrigin(client);
         const accessToken = this.getAccessToken(client);
         if (!accessToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
 
         const payload = await this.verifyAccessToken(accessToken);
+        if (payload.sessionId) {
+            const session = await this.authenticationRepository.findActiveSession(payload.sessionId);
+            if (!session || session.userId !== payload.sub) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+        }
+
         const user = await this.authenticationRepository.findActiveUserForRequest(payload.sub);
         if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
 
         return { id: user.id, username: user.username };
+    }
+
+    private assertAllowedOrigin(client: Socket): void {
+        const origin = this.normalizeOrigin(client.handshake.headers.origin);
+        if (!origin) return;
+
+        const allowedOrigins = new Set([this.config.webUrl, ...this.config.security.allowedOrigins].map((value) => this.normalizeOrigin(value)).filter((value): value is string => Boolean(value)));
+        if (!allowedOrigins.has(origin)) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
     }
 
     private async verifyAccessToken(accessToken: string): Promise<JwtPayload> {
@@ -57,5 +72,16 @@ export class NotificationsSocketAuthenticationService {
         );
 
         return cookies.access_token ?? null;
+    }
+
+    private normalizeOrigin(value: string | string[] | undefined): string | null {
+        const origin = Array.isArray(value) ? value[0] : value;
+        if (!origin) return null;
+
+        try {
+            return new URL(origin).origin;
+        } catch {
+            return null;
+        }
     }
 }

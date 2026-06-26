@@ -160,6 +160,7 @@ export class AuthenticationRepository {
         return this.prisma.user.update({
             where: { id: userId },
             data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+            select: { id: true },
         });
     }
 
@@ -167,6 +168,7 @@ export class AuthenticationRepository {
         return this.prisma.user.update({
             where: { id: userId },
             data: { failedLoginAttempts, lockedUntil },
+            select: { id: true },
         });
     }
 
@@ -204,6 +206,7 @@ export class AuthenticationRepository {
         return this.prisma.refreshToken.update({
             where: { id },
             data: { revokedAt },
+            select: { id: true },
         });
     }
 
@@ -281,6 +284,7 @@ export class AuthenticationRepository {
         return this.prisma.user.update({
             where: { id: userId },
             data: { passwordHash, mustChangePassword: false },
+            select: { id: true },
         });
     }
 
@@ -366,6 +370,7 @@ export class AuthenticationRepository {
         return this.prisma.passwordResetToken.update({
             where: { id },
             data: { usedAt },
+            select: { id: true },
         });
     }
 
@@ -391,6 +396,7 @@ export class AuthenticationRepository {
                 twoFactorPendingSecret: encryptedSecret,
                 twoFactorPendingCreatedAt: new Date(),
             },
+            select: { id: true },
         });
     }
 
@@ -401,6 +407,7 @@ export class AuthenticationRepository {
                 twoFactorPendingSecret: null,
                 twoFactorPendingCreatedAt: null,
             },
+            select: { id: true },
         });
     }
 
@@ -463,6 +470,7 @@ export class AuthenticationRepository {
                 twoFactorPendingCreatedAt: null,
                 twoFactorConfirmedAt: new Date(),
             },
+            select: { id: true },
         });
     }
 
@@ -478,6 +486,7 @@ export class AuthenticationRepository {
                     twoFactorPendingCreatedAt: null,
                     twoFactorConfirmedAt: null,
                 },
+                select: { id: true },
             });
         });
     }

@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '@/app.module';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { configureApp, registerProcessHandlers } from '@/configurations/main.config';
-import { configureSwagger } from '@/configurations/swagger.config';
 import { SpacedConsoleLogger } from '@/configurations/spaced-console.logger';
 
 async function bootstrap() {
@@ -11,7 +10,6 @@ async function bootstrap() {
     const config = app.get(AppConfigService);
 
     configureApp(app);
-    configureSwagger(app);
 
     await app.listen(config.port);
 }
