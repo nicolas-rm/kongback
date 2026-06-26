@@ -1,4 +1,4 @@
-import { ValidatorString } from '@/decorators';
+import { ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class CreateDocumentDto {
     @ValidatorString()
@@ -10,7 +10,7 @@ export class CreateDocumentDto {
     @ValidatorString({ optional: true, emptyTo: 'null' })
     category?: string | null;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
+    @ValidatorUUID({ optional: true, emptyTo: 'null' })
     organizationId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })

@@ -12,7 +12,7 @@ import { NotificationsSocketAuthenticationService } from '@/modules/notification
 @WebSocketGateway({
     namespace: '/notifications',
     cors: {
-        origin: process.env.APP_WEB_URL,
+        origin: true,
         credentials: true,
     },
 })

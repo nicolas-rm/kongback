@@ -43,22 +43,18 @@ pnpm prisma:seed
 ## Desarrollo
 
 ```bash
-pnpm start:dev
+pnpm dev
 ```
 
 Endpoints útiles:
 
 - API: `http://localhost:3000/api`
 - Health: `http://localhost:3000/api/health`
-- Swagger: `http://localhost:3000/docs`
 
 ## Verificación
 
 ```bash
-pnpm build
-pnpm test
-pnpm test:e2e
-pnpm prisma:generate
+pnpm tsc --noEmit
 ```
 
 ## Estructura

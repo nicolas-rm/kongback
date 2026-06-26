@@ -95,6 +95,23 @@ export class DocumentsService {
     private assertAllowedFile(file: UploadedFile): void {
         if (!file) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileRequired, 'Archivo requerido');
         if (file.size > this.config.documents.maxFileSizeMb * 1024 * 1024) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileTooLarge, 'Archivo demasiado grande');
-        if (!this.config.documents.allowedMimeTypes.includes(file.mimetype.toLowerCase())) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
+        const mimeType = file.mimetype.toLowerCase();
+        if (!this.config.documents.allowedMimeTypes.includes(mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
+        if (!this.matchesDeclaredMimeType(file.buffer, mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
+    }
+
+    private matchesDeclaredMimeType(buffer: Buffer, mimeType: string): boolean {
+        if (mimeType === 'application/pdf') return buffer.subarray(0, 5).equals(Buffer.from('%PDF-'));
+        if (mimeType === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+        if (mimeType === 'image/png') return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        if (mimeType === 'image/webp') return buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP';
+        if (mimeType === 'text/plain') return this.isUtf8Text(buffer);
+
+        return false;
+    }
+
+    private isUtf8Text(buffer: Buffer): boolean {
+        if (buffer.includes(0)) return false;
+        return Buffer.from(buffer.toString('utf8'), 'utf8').equals(buffer);
     }
 }

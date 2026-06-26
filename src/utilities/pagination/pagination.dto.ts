@@ -18,8 +18,7 @@ export class PaginationDto {
     }
 
     get actualLimit(): number | undefined {
-        if (this.all) return undefined;
-        return this.limit ?? 10;
+        return this.limit ?? (this.all ? 100 : 10);
     }
 
     get skip(): number {

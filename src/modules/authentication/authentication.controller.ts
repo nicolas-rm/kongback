@@ -1,5 +1,4 @@
-import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser, Public, RefreshToken, RequestConfig, SessionContextData, SkipMustChangePassword } from '@/decorators';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
@@ -20,7 +19,6 @@ import {
     VerifyTwoFactorLoginDto,
 } from '@/modules/authentication/dto';
 
-@ApiTags('authentication')
 @Controller('authentication')
 export class AuthenticationController {
     constructor(
@@ -107,7 +105,7 @@ export class AuthenticationController {
     @Delete('sessions/:sessionId')
     @RequestConfig({ statusCode: HttpStatus.OK })
     @SkipMustChangePassword()
-    async revokeSession(@CurrentUser() user: RequestUser, @Param('sessionId') sessionId: string, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
+    async revokeSession(@CurrentUser() user: RequestUser, @Param('sessionId', ParseUUIDPipe) sessionId: string, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
         const result = await this.authenticationService.revokeSession(user.id, sessionId, refreshToken);
         if (result.revokedCurrent) this.authenticationCookiesService.clearAuthenticationCookies(response);
         return result;

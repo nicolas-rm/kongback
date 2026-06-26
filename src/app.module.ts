@@ -10,6 +10,7 @@ import { AppService } from './app.service';
 import appConfig from '@/configurations/app.config';
 import { validate } from '@/configurations/env.validation';
 import { AppConfigModule } from '@/configurations/app-config.module';
+import { AppConfigService } from '@/configurations/app-config.service';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { CryptoModule } from '@/crypto/crypto.module';
 import { AppMailerModule } from '@/mailer/mailer.module';
@@ -36,16 +37,20 @@ const I18N_PATH = resolveI18nPath();
             validate,
             cache: true,
         }),
-        I18nModule.forRoot({
-            fallbackLanguage: 'es',
-            loader: I18nJsonLoader,
-            loaderOptions: {
-                path: I18N_PATH,
-                watch: process.env.NODE_ENV !== 'production',
-            },
-            resolvers: [new AcceptLanguageResolver({ matchType: 'strict-loose' })],
-        }),
         AppConfigModule,
+        I18nModule.forRootAsync({
+            imports: [AppConfigModule],
+            inject: [AppConfigService],
+            useFactory: (config: AppConfigService) => ({
+                fallbackLanguage: 'es',
+                loader: I18nJsonLoader,
+                loaderOptions: {
+                    path: I18N_PATH,
+                    watch: config.nodeEnv !== 'production',
+                },
+                resolvers: [new AcceptLanguageResolver({ matchType: 'strict-loose' })],
+            }),
+        }),
         ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
         PrismaModule,
         CryptoModule,
