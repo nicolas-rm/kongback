@@ -504,7 +504,6 @@ model Company {
     name         String
     tradeName    String?
     status       Status       @default(active)
-    phone        String?
     addressId    String?      @unique
     createdAt    DateTime     @default(now())
     updatedAt    DateTime     @updatedAt
