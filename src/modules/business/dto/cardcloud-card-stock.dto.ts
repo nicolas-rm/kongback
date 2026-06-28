@@ -12,13 +12,7 @@ export class CreateCardcloudCardStockDto {
     maskedPan?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
-    brand?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
     clientId?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    clabe?: string | null;
 
     @ValidatorNumber({ optional: true, type: 'float', min: 0 })
     balance?: number;
@@ -38,13 +32,7 @@ export class UpdateCardcloudCardStockDto {
     maskedPan?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
-    brand?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
     clientId?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    clabe?: string | null;
 
     @ValidatorNumber({ optional: true, type: 'float', min: 0 })
     balance?: number;

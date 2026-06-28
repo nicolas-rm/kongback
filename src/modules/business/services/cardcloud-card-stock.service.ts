@@ -20,9 +20,7 @@ export class CardcloudCardStockService {
             externalId: dto.externalId,
             assignedCardId: dto.assignedCardId ?? null,
             maskedPan: dto.maskedPan ?? null,
-            brand: dto.brand ?? null,
             clientId: dto.clientId ?? null,
-            clabe: dto.clabe ?? null,
             balance: dto.balance ?? null,
             providerStatus: dto.providerStatus ?? Status.active,
             syncedAt: dto.syncedAt ?? null,
@@ -33,7 +31,7 @@ export class CardcloudCardStockService {
         const where: Prisma.CardcloudCardStockWhereInput = {
             assignedCardId: dto.assignedCardId,
             providerStatus: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.CardcloudCardStockWhereInput>(dto.search, ['externalId', 'maskedPan', 'brand', 'clientId', 'clabe']) } : {}),
+            ...(dto.search ? { OR: textSearch<Prisma.CardcloudCardStockWhereInput>(dto.search, ['externalId', 'maskedPan', 'clientId']) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -51,9 +49,7 @@ export class CardcloudCardStockService {
         const stock = await this.repository.update(id, {
             assignedCardId: dto.assignedCardId,
             maskedPan: dto.maskedPan,
-            brand: dto.brand,
             clientId: dto.clientId,
-            clabe: dto.clabe,
             balance: dto.balance,
             providerStatus: dto.providerStatus,
             syncedAt: dto.syncedAt,

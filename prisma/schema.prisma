@@ -679,12 +679,9 @@ model CardcloudCardStock {
     externalId     String    @unique @map("card_external_id")
     assignedCardId String?   @unique
     maskedPan      String?
-    brand          String?
     clientId       String?
-    clabe          String?
     balance        Decimal?  @db.Decimal(14, 2)
     providerStatus Status    @default(active) @map("cardcloud_status")
-    metadata       Json?
     syncedAt       DateTime?
     createdAt      DateTime  @default(now())
     updatedAt      DateTime  @updatedAt
