@@ -42,7 +42,7 @@ export class FindCardsDto extends FindStatusRecordsDto {
     driverId?: string;
 
     @ValidatorUUID({ optional: true })
-    fuelId?: string;
+    designFuelId?: string;
 
     @ValidatorEnum(CardAssignmentMode, { optional: true })
     assignmentMode?: CardAssignmentMode;

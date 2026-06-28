@@ -12,7 +12,7 @@ export class CreateCardDto {
     driverId?: string | null;
 
     @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    fuelId?: string | null;
+    designFuelId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
     externalId?: string | null;
@@ -35,7 +35,7 @@ export class UpdateCardDto {
     driverId?: string | null;
 
     @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    fuelId?: string | null;
+    designFuelId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
     externalId?: string | null;
