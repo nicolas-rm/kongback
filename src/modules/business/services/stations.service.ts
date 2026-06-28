@@ -21,12 +21,8 @@ export class StationsService {
                 subCompanyId: dto.subCompanyId,
                 stationNumber: dto.stationNumber,
                 name: dto.name,
-                legalName: dto.legalName ?? null,
-                taxId: dto.taxId ?? null,
-                sic: dto.sic ?? null,
                 lat: dto.lat ?? null,
                 lon: dto.lon ?? null,
-                commissionPercent: dto.commissionPercent ?? null,
                 status: dto.status ?? Status.active,
             },
             toAddressData(dto.address)
@@ -37,7 +33,7 @@ export class StationsService {
         const where: Prisma.StationWhereInput = {
             subCompanyId: dto.subCompanyId,
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name', 'legalName', 'taxId', 'sic']) } : {}),
+            ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name']) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -55,12 +51,8 @@ export class StationsService {
             {
                 stationNumber: dto.stationNumber,
                 name: dto.name,
-                legalName: dto.legalName,
-                taxId: dto.taxId,
-                sic: dto.sic,
                 lat: dto.lat,
                 lon: dto.lon,
-                commissionPercent: dto.commissionPercent,
                 status: dto.status,
             },
             toAddressData(dto.address)
