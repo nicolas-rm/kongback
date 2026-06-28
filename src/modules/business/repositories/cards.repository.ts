@@ -44,7 +44,7 @@ export class CardsRepository {
             subCompanyId: true,
             vehicleId: true,
             driverId: true,
-            fuelId: true,
+            designFuelId: true,
             externalId: true,
             assignmentMode: true,
             status: true,

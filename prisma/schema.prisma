@@ -16,7 +16,6 @@ enum CardAssignmentMode {
     unassigned
     driver
     vehicle
-    locked
 }
 
 enum NotificationType {
@@ -573,7 +572,7 @@ model Fuel {
     status       Status        @default(active)
     createdAt    DateTime      @default(now())
     updatedAt    DateTime      @updatedAt
-    cards        Card[]
+    designCards  Card[]
     stationFuels StationFuel[]
     vehicles     Vehicle[]
 
@@ -614,22 +613,22 @@ model Card {
     subCompanyId   String
     vehicleId      String?             @unique
     driverId       String?
-    fuelId         String?
+    designFuelId   String?
     externalId     String?             @unique @map("card_external_id")
     assignmentMode CardAssignmentMode  @default(unassigned)
     status         Status              @default(active)
     assignedAt     DateTime?
     createdAt      DateTime            @default(now())
     updatedAt      DateTime            @updatedAt
+    designFuel      Fuel?               @relation(fields: [designFuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
     driver         Driver?             @relation(fields: [driverId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    fuel           Fuel?               @relation(fields: [fuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
     stock          CardcloudCardStock?
     subCompany     SubCompany          @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     vehicle        Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
     @@index([subCompanyId])
     @@index([driverId])
-    @@index([fuelId])
+    @@index([designFuelId])
     @@index([assignmentMode])
     @@index([status])
     @@map("cards")

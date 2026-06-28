@@ -20,14 +20,14 @@ export class CardsService {
             { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids) },
             { ids: [dto.driverId], count: (ids) => this.relations.countActiveDrivers(ids) },
             { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids) },
-            { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
+            { ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
         return this.repository.create({
             subCompanyId: dto.subCompanyId,
             vehicleId: dto.vehicleId ?? null,
             driverId: dto.driverId ?? null,
-            fuelId: dto.fuelId ?? null,
+            designFuelId: dto.designFuelId ?? null,
             externalId: dto.externalId ?? null,
             assignmentMode,
             status: dto.status ?? Status.active,
@@ -40,7 +40,7 @@ export class CardsService {
             subCompanyId: dto.subCompanyId,
             vehicleId: dto.vehicleId,
             driverId: dto.driverId,
-            fuelId: dto.fuelId,
+            designFuelId: dto.designFuelId,
             assignmentMode: dto.assignmentMode,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardWhereInput>(dto.search, ['externalId']) } : {}),
@@ -67,13 +67,13 @@ export class CardsService {
         await assertActive([
             { ids: [dto.driverId], count: (ids) => this.relations.countActiveDrivers(ids) },
             { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids) },
-            { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
+            { ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
         const data: Prisma.CardUncheckedUpdateInput = {
             vehicleId: dto.vehicleId,
             driverId: dto.driverId,
-            fuelId: dto.fuelId,
+            designFuelId: dto.designFuelId,
             externalId: dto.externalId,
             assignmentMode: dto.assignmentMode ?? (dto.driverId !== undefined || dto.vehicleId !== undefined ? assignmentMode : undefined),
             status: dto.status,
