@@ -27,3 +27,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS settings_organization_key_active_unique
     ON settings ("organizationId", key)
     WHERE scope = 'organization'
         AND "organizationId" IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS sub_companies_default_per_company_unique
+    ON sub_companies ("companyId")
+    WHERE "isDefault" = true;
