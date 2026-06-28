@@ -23,7 +23,6 @@ export class StationFuelsService {
             stationId: dto.stationId,
             fuelId: dto.fuelId,
             status: dto.status ?? Status.active,
-            price: dto.price ?? null,
         });
     }
 
@@ -46,7 +45,6 @@ export class StationFuelsService {
     async update(id: string, dto: UpdateStationFuelDto) {
         const stationFuel = await this.repository.update(id, {
             status: dto.status,
-            price: dto.price,
         });
         if (!stationFuel) throw notFound();
         return stationFuel;
