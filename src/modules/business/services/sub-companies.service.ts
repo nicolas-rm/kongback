@@ -22,7 +22,6 @@ export class SubCompaniesService {
                 externalId: dto.externalId ?? null,
                 name: dto.name,
                 status: dto.status ?? Status.active,
-                phone: dto.phone ?? null,
                 isDefault: dto.isDefault ?? false,
             },
             toAddressData(dto.address)
@@ -53,7 +52,6 @@ export class SubCompaniesService {
                 externalId: dto.externalId,
                 name: dto.name,
                 status: dto.status,
-                phone: dto.phone,
                 isDefault: dto.isDefault,
             },
             toAddressData(dto.address)

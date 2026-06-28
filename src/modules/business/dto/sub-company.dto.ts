@@ -20,9 +20,6 @@ export class CreateSubCompanyDto {
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    phone?: string | null;
-
     @ValidatorBoolean({ optional: true })
     isDefault?: boolean;
 
@@ -44,9 +41,6 @@ export class UpdateSubCompanyDto {
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    phone?: string | null;
 
     @ValidatorBoolean({ optional: true })
     isDefault?: boolean;

@@ -57,7 +57,6 @@ export class SubCompaniesRepository {
             externalId: true,
             name: true,
             status: true,
-            phone: true,
             isDefault: true,
             address: { select: this.addresses.select() },
         };

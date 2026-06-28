@@ -522,7 +522,6 @@ model SubCompany {
     externalId String?   @unique @map("external_id")
     name       String
     status     Status    @default(active)
-    phone      String?
     addressId  String?   @unique
     isDefault  Boolean   @default(false)
     createdAt  DateTime  @default(now())
