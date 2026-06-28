@@ -640,13 +640,9 @@ model Station {
     subCompanyId      String
     stationNumber     String
     name              String
-    legalName         String?
-    taxId             String?
-    sic               String?
     addressId         String?       @unique
     lat               Decimal?      @db.Decimal(10, 7)
     lon               Decimal?      @db.Decimal(10, 7)
-    commissionPercent Decimal?      @db.Decimal(5, 2)
     status            Status        @default(active)
     createdAt         DateTime      @default(now())
     updatedAt         DateTime      @updatedAt
@@ -656,7 +652,6 @@ model Station {
 
     @@unique([subCompanyId, stationNumber])
     @@index([subCompanyId])
-    @@index([taxId])
     @@index([name])
     @@index([status])
     @@map("stations")

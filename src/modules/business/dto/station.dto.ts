@@ -14,23 +14,11 @@ export class CreateStationDto {
     @ValidatorString()
     name!: string;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    legalName?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null', toUpperCase: true })
-    taxId?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    sic?: string | null;
-
     @ValidatorNumber({ optional: true, type: 'float', min: -90, max: 90 })
     lat?: number;
 
     @ValidatorNumber({ optional: true, type: 'float', min: -180, max: 180 })
     lon?: number;
-
-    @ValidatorNumber({ optional: true, type: 'float', min: 0 })
-    commissionPercent?: number;
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
@@ -48,23 +36,11 @@ export class UpdateStationDto {
     @ValidatorString({ optional: true })
     name?: string;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    legalName?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null', toUpperCase: true })
-    taxId?: string | null;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    sic?: string | null;
-
     @ValidatorNumber({ optional: true, type: 'float', min: -90, max: 90 })
     lat?: number;
 
     @ValidatorNumber({ optional: true, type: 'float', min: -180, max: 180 })
     lon?: number;
-
-    @ValidatorNumber({ optional: true, type: 'float', min: 0 })
-    commissionPercent?: number;
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;

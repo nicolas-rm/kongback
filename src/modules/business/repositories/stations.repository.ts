@@ -55,12 +55,8 @@ export class StationsRepository {
             subCompanyId: true,
             stationNumber: true,
             name: true,
-            legalName: true,
-            taxId: true,
-            sic: true,
             lat: true,
             lon: true,
-            commissionPercent: true,
             status: true,
             address: { select: this.addresses.select() },
         };
