@@ -1,5 +1,6 @@
 import { AccessControlModule } from '@/modules/access-control/access-control.module';
 import { AuthenticationModule } from '@/modules/authentication/authentication.module';
+import { BusinessModule } from '@/modules/business/business.module';
 import { DocumentsModule } from '@/modules/documents/documents.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { IntegrationsModule } from '@/modules/integrations/integrations.module';
@@ -15,6 +16,7 @@ export const APP_MODULES = [
     AuthenticationModule,
     UsersModule,
     AccessControlModule,
+    BusinessModule,
     OrganizationsModule,
     SessionsModule,
     DocumentsModule,
@@ -27,6 +29,7 @@ export const APP_MODULES = [
 export {
     AccessControlModule,
     AuthenticationModule,
+    BusinessModule,
     DocumentsModule,
     HealthModule,
     IntegrationsModule,
