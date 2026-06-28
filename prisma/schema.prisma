@@ -592,9 +592,6 @@ model Vehicle {
     year               Int?
     odometerControl    Boolean    @default(false)
     odometerInitial    Int?
-    odometerMaxPerLoad Int?
-    odometerVariation  Int?
-    avgPerformance     Decimal?   @db.Decimal(10, 2)
     status             Status     @default(active)
     createdAt          DateTime   @default(now())
     updatedAt          DateTime   @updatedAt
