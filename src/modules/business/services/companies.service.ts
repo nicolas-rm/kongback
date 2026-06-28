@@ -17,7 +17,6 @@ export class CompaniesService {
                 name: dto.name,
                 tradeName: dto.tradeName ?? null,
                 status: dto.status ?? Status.active,
-                phone: dto.phone ?? null,
             },
             toAddressData(dto.address)
         );
@@ -47,7 +46,6 @@ export class CompaniesService {
                 name: dto.name,
                 tradeName: dto.tradeName,
                 status: dto.status,
-                phone: dto.phone,
             },
             toAddressData(dto.address)
         );

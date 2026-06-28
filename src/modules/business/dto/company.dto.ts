@@ -20,9 +20,6 @@ export class CreateCompanyDto {
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    phone?: string | null;
-
     @IsOptional()
     @ValidateNested()
     @Type(() => AddressDto)
@@ -44,9 +41,6 @@ export class UpdateCompanyDto {
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    phone?: string | null;
 
     @IsOptional()
     @ValidateNested()

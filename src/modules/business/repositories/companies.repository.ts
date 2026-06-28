@@ -57,7 +57,6 @@ export class CompaniesRepository {
             name: true,
             tradeName: true,
             status: true,
-            phone: true,
             address: { select: this.addresses.select() },
         };
     }
