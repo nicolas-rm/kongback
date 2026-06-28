@@ -1,5 +1,5 @@
 import { Status } from '@prisma/client';
-import { ValidatorEnum, ValidatorNumber, ValidatorUUID } from '@/decorators';
+import { ValidatorEnum, ValidatorUUID } from '@/decorators';
 
 export class CreateStationFuelDto {
     @ValidatorUUID()
@@ -10,15 +10,9 @@ export class CreateStationFuelDto {
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
-
-    @ValidatorNumber({ optional: true, type: 'float', min: 0 })
-    price?: number;
 }
 
 export class UpdateStationFuelDto {
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
-
-    @ValidatorNumber({ optional: true, type: 'float', min: 0 })
-    price?: number;
 }

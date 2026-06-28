@@ -44,7 +44,6 @@ export class StationFuelsRepository {
             stationId: true,
             fuelId: true,
             status: true,
-            price: true,
         };
     }
 }
