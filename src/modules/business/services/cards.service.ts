@@ -32,7 +32,6 @@ export class CardsService {
         return this.repository.create({
             subCompanyId: dto.subCompanyId,
             vehicleId: dto.vehicleId ?? null,
-            driverId: null,
             designFuelId: dto.designFuelId ?? null,
             externalId: dto.externalId ?? null,
             assignmentMode,
@@ -116,7 +115,6 @@ export class CardsService {
         const assignedAt = dto.assignedAt ?? current.assignedAt ?? new Date();
         const card = await this.repository.update(id, {
             vehicleId: dto.vehicleId,
-            driverId: null,
             assignmentMode: CardAssignmentMode.vehicle,
             assignedAt,
         });
@@ -131,7 +129,6 @@ export class CardsService {
 
         const card = await this.repository.update(id, {
             vehicleId: null,
-            driverId: null,
             assignmentMode: CardAssignmentMode.unassigned,
             assignedAt: null,
         });
