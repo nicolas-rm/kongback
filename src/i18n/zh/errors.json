@@ -34,8 +34,7 @@
         "notFound": "未找到通知"
     },
     "users": {
-        "notFound": "未找到用户",
-        "missingEmail": "该用户未配置邮箱"
+        "notFound": "未找到用户"
     },
     "validation": {
         "invalidData": "请求包含无效数据"

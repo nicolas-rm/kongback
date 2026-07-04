@@ -1,7 +1,7 @@
 type ProfileResponseData = {
     id: string;
     username: string;
-    email?: string | null;
+    email: string;
     fullName?: string | null;
     preferredLanguage?: string | null;
     mustChangePassword?: boolean;
@@ -14,7 +14,7 @@ export class ProfileResponse {
     constructor(
         public id: string,
         public username: string,
-        public email: string | null,
+        public email: string,
         public fullName: string | null,
         public preferredLanguage: string,
         public mustChangePassword: boolean,
@@ -27,7 +27,7 @@ export class ProfileResponse {
         return new ProfileResponse(
             data.id,
             data.username,
-            data.email ?? null,
+            data.email,
             data.fullName ?? null,
             data.preferredLanguage ?? 'es',
             data.mustChangePassword ?? false,
@@ -42,12 +42,12 @@ export class UpdateProfileResponse {
     constructor(
         public id: string,
         public username: string,
-        public email: string | null,
+        public email: string,
         public fullName: string,
         public preferredLanguage: string
     ) {}
 
-    static from(data: { id: string; username: string; email: string | null; fullName: string; preferredLanguage: string }): UpdateProfileResponse {
+    static from(data: { id: string; username: string; email: string; fullName: string; preferredLanguage: string }): UpdateProfileResponse {
         return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage);
     }
 }

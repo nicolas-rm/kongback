@@ -54,7 +54,7 @@ enum SettingScope {
 model User {
     id                              String                    @id @default(uuid())
     username                        String                    @unique
-    email                           String?                   @unique
+    email                           String                    @unique
     fullName                        String
     preferredLanguage               String                    @default("es")
     passwordHash                    String

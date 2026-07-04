@@ -148,6 +148,7 @@ async function syncRolePermissions(roleId: string): Promise<void> {
 
 async function seedAdminUser(roleId: string): Promise<UserSeed> {
     const username = getRequiredEnv('ADMIN_USERNAME');
+    const email = getRequiredEnv('ADMIN_EMAIL');
     const password = getRequiredEnv('ADMIN_PASSWORD');
     const fullName = getRequiredEnv('ADMIN_FULL_NAME');
     const passwordHash = await argon2.hash(password);
@@ -164,6 +165,7 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
             where: { id: existing.id },
             data: {
                 fullName,
+                email,
                 passwordHash,
                 status: Status.active,
             },
@@ -172,7 +174,7 @@ async function seedAdminUser(roleId: string): Promise<UserSeed> {
         : await prisma.user.create({
             data: {
                 username,
-                email: null,
+                email,
                 fullName,
                 passwordHash,
                 status: Status.active,

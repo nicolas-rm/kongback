@@ -25,7 +25,7 @@ export class RegisterUseCase {
             requiresEmailVerification: true,
         });
 
-        await this.sendVerification(user.id, user.email ?? dto.email, sessionContext);
+        await this.sendVerification(user.id, user.email, sessionContext);
         return { id: user.id, registered: true, emailVerificationRequired: true };
     }
 

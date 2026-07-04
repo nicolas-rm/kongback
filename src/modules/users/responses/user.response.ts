@@ -3,7 +3,7 @@ import { Status } from '@prisma/client';
 type UserResponseData = {
     id: string;
     username: string;
-    email: string | null;
+    email: string;
     fullName: string;
     preferredLanguage: string;
     status: Status;
@@ -16,7 +16,7 @@ export class UserResponse {
     constructor(
         public id: string,
         public username: string,
-        public email: string | null,
+        public email: string,
         public fullName: string,
         public preferredLanguage: string,
         public status: Status,

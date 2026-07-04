@@ -21,7 +21,7 @@ export class UsersService {
     async create(dto: CreateUserDto) {
         const user = await this.repository.create({
             username: dto.username,
-            email: dto.email ?? null,
+            email: dto.email,
             fullName: dto.fullName,
             passwordHash: await this.cryptoService.hashPassword(dto.password),
             status: dto.status ?? 'active',
@@ -144,7 +144,6 @@ export class UsersService {
     async resendCredentials(userId: string) {
         const user = await this.repository.findCredentialRecipient(userId);
         if (!user) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
-        if (!user.email) throw new I18nBadRequestException(I18N_KEYS.errors.users.missingEmail, 'El usuario no tiene correo configurado');
 
         const password = generateSecurePassword();
         const result = await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(password), true);

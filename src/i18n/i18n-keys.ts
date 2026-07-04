@@ -36,7 +36,6 @@ export const I18N_KEYS = {
         },
         users: {
             notFound: 'errors.users.notFound',
-            missingEmail: 'errors.users.missingEmail',
         },
         validation: {
             invalidData: 'errors.validation.invalidData',

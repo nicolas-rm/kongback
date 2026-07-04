@@ -1,7 +1,7 @@
 export type RequestUser = {
     id: string;
     username: string;
-    email?: string | null;
+    email: string;
     fullName?: string | null;
     preferredLanguage?: string | null;
     mustChangePassword?: boolean;

@@ -1,8 +1,8 @@
 import { ValidatorString } from '@/decorators';
 
 export class UpdateMyProfileDto {
-    @ValidatorString({ optional: true, toLowerCase: true, emptyTo: 'null' })
-    email?: string | null;
+    @ValidatorString({ optional: true, toLowerCase: true })
+    email?: string;
 
     @ValidatorString({ optional: true })
     fullName?: string;

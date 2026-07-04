@@ -5,8 +5,8 @@ export class CreateUserDto {
     @ValidatorString()
     username!: string;
 
-    @ValidatorString({ optional: true, toLowerCase: true })
-    email?: string;
+    @ValidatorString({ toLowerCase: true })
+    email!: string;
 
     @ValidatorString()
     fullName!: string;

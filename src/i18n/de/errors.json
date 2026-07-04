@@ -34,8 +34,7 @@
         "notFound": "Benachrichtigung nicht gefunden"
     },
     "users": {
-        "notFound": "Benutzer nicht gefunden",
-        "missingEmail": "Der Benutzer hat keine E-Mail konfiguriert"
+        "notFound": "Benutzer nicht gefunden"
     },
     "validation": {
         "invalidData": "Die Anfrage enthaelt ungueltige Daten"
