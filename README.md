@@ -27,6 +27,7 @@ Configura `.env` con:
 - `MAIL_FROM`
 - `ENCRYPTION_KEY`
 - `ADMIN_USERNAME`
+- `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `ADMIN_FULL_NAME`
 

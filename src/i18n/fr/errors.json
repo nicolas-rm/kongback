@@ -34,8 +34,7 @@
         "notFound": "Notification introuvable"
     },
     "users": {
-        "notFound": "Utilisateur introuvable",
-        "missingEmail": "L'utilisateur n'a pas d'e-mail configure"
+        "notFound": "Utilisateur introuvable"
     },
     "validation": {
         "invalidData": "La requete contient des donnees invalides"

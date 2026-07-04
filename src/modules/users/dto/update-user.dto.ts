@@ -5,8 +5,8 @@ export class UpdateUserDto {
     @ValidatorString({ optional: true })
     username?: string;
 
-    @ValidatorString({ optional: true, toLowerCase: true, emptyTo: 'null' })
-    email?: string | null;
+    @ValidatorString({ optional: true, toLowerCase: true })
+    email?: string;
 
     @ValidatorString({ optional: true })
     fullName?: string;

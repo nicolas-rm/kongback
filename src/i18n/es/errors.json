@@ -34,8 +34,7 @@
         "notFound": "Notificacion no encontrada"
     },
     "users": {
-        "notFound": "Usuario no encontrado",
-        "missingEmail": "El usuario no tiene correo configurado"
+        "notFound": "Usuario no encontrado"
     },
     "validation": {
         "invalidData": "La solicitud contiene datos invalidos"

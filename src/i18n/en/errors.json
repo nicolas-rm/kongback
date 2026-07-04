@@ -34,8 +34,7 @@
         "notFound": "Notification not found"
     },
     "users": {
-        "notFound": "User not found",
-        "missingEmail": "The user does not have an email configured"
+        "notFound": "User not found"
     },
     "validation": {
         "invalidData": "The request contains invalid data"

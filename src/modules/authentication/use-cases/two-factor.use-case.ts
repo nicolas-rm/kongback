@@ -35,7 +35,7 @@ export class TwoFactorUseCase {
             secret,
             otpAuthenticationUrl: buildTotpOtpAuthenticationUrl({
                 secret,
-                accountName: user.email ?? user.username,
+                accountName: user.email,
                 issuer: this.config.twoFactor.issuer,
                 digits: this.config.twoFactor.totpDigits,
                 periodSeconds: this.config.twoFactor.totpPeriodSeconds,

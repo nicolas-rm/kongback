@@ -281,7 +281,7 @@ export class AuthenticationRepository {
         });
     }
 
-    updateProfile(userId: string, data: { email?: string | null; fullName?: string; preferredLanguage?: string }) {
+    updateProfile(userId: string, data: { email?: string; fullName?: string; preferredLanguage?: string }) {
         return this.prisma.user.update({
             where: { id: userId },
             data,
