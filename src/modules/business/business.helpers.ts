@@ -1,4 +1,4 @@
-import { CardAssignmentMode, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AddressDto } from '@/modules/business/dto';
 
@@ -31,23 +31,14 @@ export async function assertActive(checks: Array<{ ids: Array<string | null | un
         if (ids.length === 0) continue;
 
         const activeRecords = await check.count(ids);
-        if (activeRecords !== ids.length) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        if (activeRecords !== ids.length) throw invalidRelation();
     }
-}
-
-export function resolveAssignmentMode(driverId: string | null, vehicleId: string | null): CardAssignmentMode {
-    if (vehicleId) return CardAssignmentMode.vehicle;
-    if (driverId) return CardAssignmentMode.driver;
-    return CardAssignmentMode.unassigned;
-}
-
-export function assertCardAssignment(assignmentMode: CardAssignmentMode, driverId: string | null, vehicleId: string | null): void {
-    if (driverId && vehicleId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidData, 'Asignacion de tarjeta invalida');
-    if (assignmentMode === CardAssignmentMode.driver && !driverId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidData, 'Asignacion de tarjeta invalida');
-    if (assignmentMode === CardAssignmentMode.vehicle && !vehicleId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidData, 'Asignacion de tarjeta invalida');
-    if (assignmentMode === CardAssignmentMode.unassigned && (driverId || vehicleId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidData, 'Asignacion de tarjeta invalida');
 }
 
 export function notFound() {
     return new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+}
+
+export function invalidRelation() {
+    return new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
 }

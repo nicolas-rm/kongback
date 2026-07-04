@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
-import { assertActive, notFound, textSearch } from '@/modules/business/business.helpers';
-import { CreateVehicleDto, FindVehiclesDto, UpdateVehicleDto } from '@/modules/business/dto';
+import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
+import { CreateVehicleDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
 
@@ -71,6 +71,18 @@ export class VehiclesService {
         });
         if (!vehicle) throw notFound();
         return vehicle;
+    }
+
+    async setDriver(id: string, dto: SetVehicleDriverDto) {
+        const current = await this.repository.findById(id);
+        if (!current) throw notFound();
+        if (current.status !== Status.active) throw invalidRelation();
+
+        await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId) }]);
+
+        const vehicle = await this.repository.update(id, { driverId: dto.driverId });
+        if (!vehicle) throw notFound();
+        return { id: vehicle.id, driverId: vehicle.driverId };
     }
 
     async deactivate(id: string) {

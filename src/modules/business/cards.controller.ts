@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { Permissions } from '@/decorators';
-import { CreateCardDto, FindCardsDto, UpdateCardDto } from '@/modules/business/dto';
+import { AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, UpdateCardDto } from '@/modules/business/dto';
 import { CardsService } from '@/modules/business/services/cards.service';
 
 @Controller('cards')
@@ -19,10 +19,28 @@ export class CardsController {
         return this.cardsService.findAll(dto);
     }
 
+    @Get('by-design-fuel/:designFuelId')
+    @Permissions('cards.design-fuel.read')
+    findByDesignFuel(@Param('designFuelId', ParseUUIDPipe) designFuelId: string, @Query() dto: FindStatusRecordsDto) {
+        return this.cardsService.findByDesignFuel(designFuelId, dto);
+    }
+
     @Get(':id')
     @Permissions('cards.read-one')
     findOne(@Param('id', ParseUUIDPipe) id: string) {
         return this.cardsService.findOne(id);
+    }
+
+    @Patch(':id/assign-vehicle')
+    @Permissions('cards.vehicle.assign')
+    assignVehicle(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignCardVehicleDto) {
+        return this.cardsService.assignVehicle(id, dto);
+    }
+
+    @Patch(':id/unassign')
+    @Permissions('cards.unassign')
+    unassign(@Param('id', ParseUUIDPipe) id: string) {
+        return this.cardsService.unassign(id);
     }
 
     @Patch(':id')
