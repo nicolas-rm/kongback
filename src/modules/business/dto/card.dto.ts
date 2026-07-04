@@ -1,4 +1,4 @@
-import { CardAssignmentMode, Status } from '@prisma/client';
+import { Status } from '@prisma/client';
 import { ValidatorDate, ValidatorEnum, ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class CreateCardDto {
@@ -9,16 +9,10 @@ export class CreateCardDto {
     vehicleId?: string | null;
 
     @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    driverId?: string | null;
-
-    @ValidatorUUID({ optional: true, emptyTo: 'null' })
     designFuelId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
     externalId?: string | null;
-
-    @ValidatorEnum(CardAssignmentMode, { optional: true })
-    assignmentMode?: CardAssignmentMode;
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
@@ -29,22 +23,18 @@ export class CreateCardDto {
 
 export class UpdateCardDto {
     @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    vehicleId?: string | null;
-
-    @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    driverId?: string | null;
-
-    @ValidatorUUID({ optional: true, emptyTo: 'null' })
     designFuelId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
     externalId?: string | null;
 
-    @ValidatorEnum(CardAssignmentMode, { optional: true })
-    assignmentMode?: CardAssignmentMode;
-
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
+}
+
+export class AssignCardVehicleDto {
+    @ValidatorUUID()
+    vehicleId!: string;
 
     @ValidatorDate({ optional: true, emptyTo: 'null', mode: 'date', toDate: true })
     assignedAt?: Date | null;

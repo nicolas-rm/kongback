@@ -43,7 +43,6 @@ export class CardsRepository {
             id: true,
             subCompanyId: true,
             vehicleId: true,
-            driverId: true,
             designFuelId: true,
             externalId: true,
             assignmentMode: true,

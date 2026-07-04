@@ -1,4 +1,5 @@
 import { Status } from '@prisma/client';
+import { IsDefined, ValidateIf } from 'class-validator';
 import { ValidatorBoolean, ValidatorEnum, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class CreateVehicleDto {
@@ -60,4 +61,11 @@ export class UpdateVehicleDto {
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;
+}
+
+export class SetVehicleDriverDto {
+    @IsDefined()
+    @ValidateIf((_object, value) => value !== null)
+    @ValidatorUUID({ emptyTo: 'null' })
+    driverId!: string | null;
 }

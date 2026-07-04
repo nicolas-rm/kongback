@@ -22,6 +22,10 @@ export class BusinessRelationsRepository {
         return this.prisma.driver.count({ where: { id: { in: ids }, status: Status.active } });
     }
 
+    countActiveDriversBySubCompany(ids: string[], subCompanyId: string): Promise<number> {
+        return this.prisma.driver.count({ where: { id: { in: ids }, subCompanyId, status: Status.active } });
+    }
+
     countActiveFuels(ids: string[]): Promise<number> {
         return this.prisma.fuel.count({ where: { id: { in: ids }, status: Status.active } });
     }

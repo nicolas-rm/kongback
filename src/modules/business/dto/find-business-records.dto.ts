@@ -39,12 +39,9 @@ export class FindCardsDto extends FindStatusRecordsDto {
     vehicleId?: string;
 
     @ValidatorUUID({ optional: true })
-    driverId?: string;
-
-    @ValidatorUUID({ optional: true })
     designFuelId?: string;
 
-    @ValidatorEnum(CardAssignmentMode, { optional: true })
+    @ValidatorEnum([CardAssignmentMode.unassigned, CardAssignmentMode.vehicle], { optional: true })
     assignmentMode?: CardAssignmentMode;
 }
 

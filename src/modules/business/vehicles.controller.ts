@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { Permissions } from '@/decorators';
-import { CreateVehicleDto, FindVehiclesDto, UpdateVehicleDto } from '@/modules/business/dto';
+import { CreateVehicleDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { VehiclesService } from '@/modules/business/services/vehicles.service';
 
 @Controller('vehicles')
@@ -23,6 +23,12 @@ export class VehiclesController {
     @Permissions('vehicles.read-one')
     findOne(@Param('id', ParseUUIDPipe) id: string) {
         return this.vehiclesService.findOne(id);
+    }
+
+    @Patch(':id/driver')
+    @Permissions('vehicles.driver.assign')
+    setDriver(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SetVehicleDriverDto) {
+        return this.vehiclesService.setDriver(id, dto);
     }
 
     @Patch(':id')
