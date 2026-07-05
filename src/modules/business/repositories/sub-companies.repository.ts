@@ -19,7 +19,7 @@ export class SubCompaniesRepository {
     }
 
     findMany(where: Prisma.SubCompanyWhereInput, skip: number, take?: number) {
-        return this.prisma.subCompany.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.select() });
+        return this.prisma.subCompany.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.listSelect() });
     }
 
     count(where: Prisma.SubCompanyWhereInput): Promise<number> {
@@ -59,6 +59,28 @@ export class SubCompaniesRepository {
             status: true,
             isDefault: true,
             address: { select: this.addresses.select() },
+            company: { select: this.companySummarySelect() },
+        };
+    }
+
+    private listSelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            companyId: true,
+            key: true,
+            externalId: true,
+            name: true,
+            status: true,
+            isDefault: true,
+            company: { select: this.companySummarySelect() },
+        };
+    }
+
+    private companySummarySelect(): Prisma.CompanySelect {
+        return {
+            id: true,
+            key: true,
+            name: true,
         };
     }
 }

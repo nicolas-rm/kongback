@@ -19,7 +19,7 @@ export class StationsRepository {
     }
 
     findMany(where: Prisma.StationWhereInput, skip: number, take?: number) {
-        return this.prisma.station.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.select() });
+        return this.prisma.station.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.listSelect() });
     }
 
     count(where: Prisma.StationWhereInput): Promise<number> {
@@ -59,6 +59,28 @@ export class StationsRepository {
             lon: true,
             status: true,
             address: { select: this.addresses.select() },
+            subCompany: { select: this.subCompanySummarySelect() },
+        };
+    }
+
+    private listSelect(): Prisma.StationSelect {
+        return {
+            id: true,
+            subCompanyId: true,
+            stationNumber: true,
+            name: true,
+            lat: true,
+            lon: true,
+            status: true,
+            subCompany: { select: this.subCompanySummarySelect() },
+        };
+    }
+
+    private subCompanySummarySelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            key: true,
+            name: true,
         };
     }
 }

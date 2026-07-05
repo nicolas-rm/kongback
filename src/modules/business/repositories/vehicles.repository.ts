@@ -51,6 +51,32 @@ export class VehiclesRepository {
             odometerControl: true,
             odometerInitial: true,
             status: true,
+            subCompany: { select: this.subCompanySummarySelect() },
+            fuel: { select: this.fuelSummarySelect() },
+            driver: { select: this.driverSummarySelect() },
+        };
+    }
+
+    private subCompanySummarySelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            key: true,
+            name: true,
+        };
+    }
+
+    private fuelSummarySelect(): Prisma.FuelSelect {
+        return {
+            id: true,
+            code: true,
+            name: true,
+        };
+    }
+
+    private driverSummarySelect(): Prisma.DriverSelect {
+        return {
+            id: true,
+            name: true,
         };
     }
 }

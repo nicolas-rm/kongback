@@ -48,6 +48,33 @@ export class CardsRepository {
             assignmentMode: true,
             status: true,
             assignedAt: true,
+            subCompany: { select: this.subCompanySummarySelect() },
+            vehicle: { select: this.vehicleSummarySelect() },
+            designFuel: { select: this.fuelSummarySelect() },
+        };
+    }
+
+    private subCompanySummarySelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            key: true,
+            name: true,
+        };
+    }
+
+    private vehicleSummarySelect(): Prisma.VehicleSelect {
+        return {
+            id: true,
+            plates: true,
+            economicNumber: true,
+        };
+    }
+
+    private fuelSummarySelect(): Prisma.FuelSelect {
+        return {
+            id: true,
+            code: true,
+            name: true,
         };
     }
 }

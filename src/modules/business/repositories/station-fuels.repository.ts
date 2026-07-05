@@ -44,6 +44,24 @@ export class StationFuelsRepository {
             stationId: true,
             fuelId: true,
             status: true,
+            station: { select: this.stationSummarySelect() },
+            fuel: { select: this.fuelSummarySelect() },
+        };
+    }
+
+    private stationSummarySelect(): Prisma.StationSelect {
+        return {
+            id: true,
+            stationNumber: true,
+            name: true,
+        };
+    }
+
+    private fuelSummarySelect(): Prisma.FuelSelect {
+        return {
+            id: true,
+            code: true,
+            name: true,
         };
     }
 }

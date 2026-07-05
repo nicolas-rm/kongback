@@ -19,7 +19,7 @@ export class DriversRepository {
     }
 
     findMany(where: Prisma.DriverWhereInput, skip: number, take?: number) {
-        return this.prisma.driver.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.select() });
+        return this.prisma.driver.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.listSelect() });
     }
 
     count(where: Prisma.DriverWhereInput): Promise<number> {
@@ -58,6 +58,37 @@ export class DriversRepository {
             externalReference: true,
             status: true,
             address: { select: this.addresses.select() },
+            subCompany: { select: this.subCompanySummarySelect() },
+            user: { select: this.userSummarySelect() },
+        };
+    }
+
+    private listSelect(): Prisma.DriverSelect {
+        return {
+            id: true,
+            subCompanyId: true,
+            userId: true,
+            name: true,
+            externalReference: true,
+            status: true,
+            subCompany: { select: this.subCompanySummarySelect() },
+            user: { select: this.userSummarySelect() },
+        };
+    }
+
+    private subCompanySummarySelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            key: true,
+            name: true,
+        };
+    }
+
+    private userSummarySelect(): Prisma.UserSelect {
+        return {
+            id: true,
+            username: true,
+            fullName: true,
         };
     }
 }
