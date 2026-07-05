@@ -1,0 +1,99 @@
+---
+title: Stations API
+description: Endpoints para gestionar estaciones.
+---
+
+## Base
+
+Base path: `/api/stations`
+
+Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+
+## Modelo
+
+```json
+{
+  "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+  "stationNumber": "ST-001",
+  "name": "Estacion Centro",
+  "lat": 25.6866,
+  "lon": -100.3161,
+  "status": "active",
+  "address": {
+    "street": "Main St",
+    "exteriorNumber": null,
+    "interiorNumber": null,
+    "neighborhood": null,
+    "municipality": null,
+    "city": "Monterrey",
+    "state": "Nuevo Leon",
+    "country": "MX",
+    "postalCode": "64000",
+    "references": null
+  }
+}
+```
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/stations` | `stations.create` | Crea una estacion. |
+| `GET` | `/api/stations` | `stations.read-list` | Lista estaciones. |
+| `GET` | `/api/stations/:id` | `stations.read-one` | Obtiene una estacion. |
+| `PATCH` | `/api/stations/:id` | `stations.update` | Actualiza una estacion. |
+| `DELETE` | `/api/stations/:id` | `stations.delete` | Desactiva una estacion. |
+
+## Listado
+
+Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`.
+
+`search` busca por `stationNumber` y `name`.
+
+## Crear
+
+```json
+{
+  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+  "stationNumber": "ST-001",
+  "name": "Estacion Centro",
+  "lat": 25.6866,
+  "lon": -100.3161,
+  "status": "active",
+  "address": {
+    "city": "Monterrey",
+    "state": "Nuevo Leon",
+    "country": "MX"
+  }
+}
+```
+
+Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar activo.
+
+Opcionales: `lat`, `lon`, `status`, `address`. `lat` acepta -90 a 90; `lon` acepta -180 a 180.
+
+## Actualizar
+
+`PATCH /api/stations/:id`
+
+Acepta `stationNumber`, `name`, `lat`, `lon`, `status` y `address`, todos opcionales.
+
+## Desactivar
+
+```json
+{
+  "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+  "status": "inactive"
+}
+```
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Relacion invalida, coordenadas fuera de rango o parametros invalidos. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Estacion no encontrada. |
+| `409` | Conflictos de unicidad segun constraints Prisma. |

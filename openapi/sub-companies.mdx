@@ -1,0 +1,99 @@
+---
+title: Sub Companies API
+description: Endpoints para gestionar sub-companias asociadas a companias.
+---
+
+## Base
+
+Base path: `/api/sub-companies`
+
+Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+
+## Modelo
+
+```json
+{
+  "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+  "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+  "key": "SUB001",
+  "externalId": "EXT-SUB-001",
+  "name": "Acme Norte",
+  "status": "active",
+  "isDefault": false,
+  "address": {
+    "street": "Main St",
+    "exteriorNumber": null,
+    "interiorNumber": null,
+    "neighborhood": null,
+    "municipality": null,
+    "city": "Monterrey",
+    "state": "Nuevo Leon",
+    "country": "MX",
+    "postalCode": "64000",
+    "references": null
+  }
+}
+```
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/sub-companies` | `sub-companies.create` | Crea una sub-compania. |
+| `GET` | `/api/sub-companies` | `sub-companies.read-list` | Lista sub-companias. |
+| `GET` | `/api/sub-companies/:id` | `sub-companies.read-one` | Obtiene una sub-compania. |
+| `PATCH` | `/api/sub-companies/:id` | `sub-companies.update` | Actualiza una sub-compania. |
+| `DELETE` | `/api/sub-companies/:id` | `sub-companies.delete` | Desactiva una sub-compania. |
+
+## Listado
+
+Query params: `page`, `limit`, `search`, `all`, `status`, `companyId`.
+
+`search` busca por `key`, `externalId` y `name`.
+
+## Crear
+
+```json
+{
+  "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+  "key": "SUB001",
+  "externalId": "EXT-SUB-001",
+  "name": "Acme Norte",
+  "status": "active",
+  "isDefault": false,
+  "address": {
+    "city": "Monterrey",
+    "state": "Nuevo Leon",
+    "country": "MX"
+  }
+}
+```
+
+Requeridos: `companyId`, `key`, `name`. `companyId` debe apuntar a una compania activa.
+
+Opcionales: `externalId`, `status`, `isDefault`, `address`.
+
+## Actualizar
+
+`PATCH /api/sub-companies/:id`
+
+Acepta `key`, `externalId`, `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`.
+
+## Desactivar
+
+```json
+{
+  "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+  "status": "inactive"
+}
+```
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Relacion invalida o parametros invalidos. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Sub-compania no encontrada. |
+| `409` | Conflictos de unicidad segun constraints Prisma. |

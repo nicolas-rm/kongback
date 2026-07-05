@@ -1,0 +1,411 @@
+---
+title: Users API
+description: Endpoints administrativos para gestionar usuarios, accesos, permisos, contrasenas, 2FA y reenvio de credenciales.
+---
+
+## Base
+
+Base path: `/api/users`
+
+Todos los endpoints requieren autenticacion y el permiso indicado en cada operacion. Las mutaciones aceptan JSON y las respuestas no exponen `passwordHash`, tokens, secretos 2FA ni recovery codes.
+
+## Modelos
+
+### User
+
+```json
+{
+  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "preferredLanguage": "es",
+  "status": "active",
+  "mustChangePassword": false,
+  "emailVerified": true,
+  "twoFactorEnabled": false
+}
+```
+
+| Campo | Tipo | Descripcion |
+| --- | --- | --- |
+| `id` | `string` | UUID v4 del usuario. |
+| `username` | `string` | Nombre de usuario unico. |
+| `email` | `string` | Email unico; se normaliza a minusculas en create/update. |
+| `fullName` | `string` | Nombre completo. |
+| `preferredLanguage` | `string` | Idioma preferido; por defecto `es`. |
+| `status` | `active \| inactive \| suspended` | Estado operativo del usuario. |
+| `mustChangePassword` | `boolean` | Indica si debe cambiar la contrasena en su siguiente flujo de autenticacion. |
+| `emailVerified` | `boolean` | Derivado de `emailVerifiedAt`. |
+| `twoFactorEnabled` | `boolean` | Indica si el usuario tiene 2FA activo. |
+
+### UserAccess
+
+```json
+{
+  "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+  "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+  "scopeKey": "companyId",
+  "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+  "role": {
+    "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+    "code": "company.admin",
+    "name": "Company admin"
+  }
+}
+```
+
+### Permission
+
+```json
+{
+  "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+  "code": "users.read-list",
+  "name": "Listar usuarios",
+  "description": "Permite consultar el listado de usuarios."
+}
+```
+
+### PaginatedUserResponse
+
+```json
+{
+  "data": [],
+  "meta": {
+    "total": 0,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/users` | `users.create` | Crea un usuario. |
+| `GET` | `/api/users` | `users.read-list` | Lista usuarios con paginacion y filtros. |
+| `GET` | `/api/users/:id` | `users.read-one` | Obtiene un usuario por ID. |
+| `PATCH` | `/api/users/:id` | `users.update` | Actualiza datos basicos del usuario. |
+| `DELETE` | `/api/users/:id` | `users.delete` | Elimina un usuario. |
+| `GET` | `/api/users/:id/access` | `users.access.read` | Lista accesos activos del usuario. |
+| `POST` | `/api/users/:id/access` | `users.access.assign` | Agrega un acceso al usuario. |
+| `PUT` | `/api/users/:id/access` | `users.access.assign` | Reemplaza todos los accesos del usuario. |
+| `DELETE` | `/api/users/:id/access/:accessId` | `users.access.assign` | Elimina un acceso puntual del usuario. |
+| `GET` | `/api/users/:id/permissions` | `users.permissions.read` | Lista permisos efectivos del usuario. |
+| `PATCH` | `/api/users/:id/password` | `users.password.update` | Cambia la contrasena del usuario. |
+| `PATCH` | `/api/users/:id/2fa/unlink` | `users.2fa.unlink` | Desvincula la configuracion 2FA del usuario. |
+| `POST` | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Regenera y envia credenciales de acceso. |
+
+## Crear usuario
+
+`POST /api/users`
+
+Requiere `users.create`.
+
+### Body
+
+```json
+{
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "password": "Secret123",
+  "status": "active",
+  "preferredLanguage": "es"
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `username` | `string` | Si | Se recorta y colapsa espacios. |
+| `email` | `string` | Si | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `fullName` | `string` | Si | Se recorta y colapsa espacios. |
+| `password` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+| `status` | `active \| inactive \| suspended` | No | Si se omite, usa `active`. |
+| `preferredLanguage` | `string` | No | Se normaliza a minusculas; si se omite, usa `es`. |
+
+### Response `201`
+
+Devuelve `User`.
+
+## Listar usuarios
+
+`GET /api/users`
+
+Requiere `users.read-list`.
+
+### Query params
+
+| Parametro | Tipo | Reglas | Descripcion |
+| --- | --- | --- | --- |
+| `page` | `number` | Entero >= 1 | Pagina solicitada; por defecto `1`. |
+| `limit` | `number` | Entero entre 1 y 100 | Registros por pagina; por defecto `10`. |
+| `search` | `string` | Opcional | Busca por `username`, `email` o `fullName`, sin distinguir mayusculas. |
+| `all` | `boolean` | Opcional | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+| `status` | `active \| inactive \| suspended` | Opcional | Filtra por estado. |
+
+### Example
+
+```http
+GET /api/users?page=1&limit=20&search=admin&status=active
+```
+
+### Response `200`
+
+Devuelve `PaginatedUserResponse`.
+
+## Obtener usuario
+
+`GET /api/users/:id`
+
+Requiere `users.read-one`.
+
+### Path params
+
+| Parametro | Tipo | Descripcion |
+| --- | --- | --- |
+| `id` | `uuid` | ID del usuario. |
+
+### Response `200`
+
+Devuelve `User`. Comportamiento actual: si el usuario no existe, devuelve `null`.
+
+## Actualizar usuario
+
+`PATCH /api/users/:id`
+
+Requiere `users.update`.
+
+### Body
+
+Todos los campos son opcionales.
+
+```json
+{
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "status": "active",
+  "mustChangePassword": false,
+  "preferredLanguage": "es"
+}
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `username` | `string` | Se recorta y colapsa espacios. |
+| `email` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `fullName` | `string` | Se recorta y colapsa espacios. |
+| `status` | `active \| inactive \| suspended` | Estado del usuario. |
+| `mustChangePassword` | `boolean` | Acepta booleano o string `true`, `false`, `1`, `0`. |
+| `preferredLanguage` | `string` | Se normaliza a minusculas. |
+
+### Response `200`
+
+Devuelve `User`.
+
+## Eliminar usuario
+
+`DELETE /api/users/:id`
+
+Requiere `users.delete`.
+
+### Response `200`
+
+```json
+{
+  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "deleted": true
+}
+```
+
+## Listar accesos
+
+`GET /api/users/:id/access`
+
+Requiere `users.access.read`.
+
+Devuelve los accesos activos del usuario. El usuario debe existir y estar en estado `active`.
+
+### Response `200`
+
+```json
+[
+  {
+    "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+    "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+    "scopeKey": "companyId",
+    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+    "role": {
+      "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+      "code": "company.admin",
+      "name": "Company admin"
+    }
+  }
+]
+```
+
+## Asignar acceso
+
+`POST /api/users/:id/access`
+
+Requiere `users.access.assign`.
+
+El usuario debe estar `active`. El rol debe existir. Si `organizationId` se envia, la organizacion debe existir y estar `active`.
+
+### Body
+
+```json
+{
+  "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+  "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+  "scopeKey": "companyId",
+  "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+}
+```
+
+| Campo | Tipo | Requerido | Descripcion |
+| --- | --- | --- | --- |
+| `roleId` | `uuid` | Si | Rol a asignar. |
+| `organizationId` | `uuid \| null` | No | Organizacion del acceso. String vacio se transforma a `null`. |
+| `scopeKey` | `string \| null` | No | Nombre del scope especifico. String vacio se transforma a `null`. |
+| `scopeId` | `string \| null` | No | ID del scope especifico. String vacio se transforma a `null`. |
+
+### Response `201`
+
+Devuelve la lista completa de accesos activos del usuario.
+
+## Reemplazar accesos
+
+`PUT /api/users/:id/access`
+
+Requiere `users.access.assign`.
+
+Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses` puede estar vacio para dejar al usuario sin accesos.
+
+### Body
+
+```json
+{
+  "accesses": [
+    {
+      "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+      "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+      "scopeKey": "companyId",
+      "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+    }
+  ]
+}
+```
+
+### Response `200`
+
+Devuelve `UserAccess[]`.
+
+## Eliminar acceso
+
+`DELETE /api/users/:id/access/:accessId`
+
+Requiere `users.access.assign`.
+
+### Path params
+
+| Parametro | Tipo | Descripcion |
+| --- | --- | --- |
+| `id` | `uuid` | ID del usuario. |
+| `accessId` | `uuid` | ID del acceso a eliminar. |
+
+### Response `200`
+
+```json
+{
+  "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+  "deleted": true
+}
+```
+
+## Listar permisos efectivos
+
+`GET /api/users/:id/permissions`
+
+Requiere `users.permissions.read`.
+
+Devuelve permisos efectivos calculados desde los roles asignados al usuario. Los permisos se devuelven sin duplicados y ordenados por `code`.
+
+### Response `200`
+
+Devuelve `Permission[]`.
+
+## Cambiar contrasena
+
+`PATCH /api/users/:id/password`
+
+Requiere `users.password.update`.
+
+### Body
+
+```json
+{
+  "password": "Secret123",
+  "mustChangePassword": true
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `password` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+| `mustChangePassword` | `boolean` | No | Si se omite, usa `false`. |
+
+### Response `200`
+
+```json
+{
+  "passwordChanged": true
+}
+```
+
+## Desvincular 2FA
+
+`PATCH /api/users/:id/2fa/unlink`
+
+Requiere `users.2fa.unlink`.
+
+Desactiva 2FA, limpia secretos pendientes/confirmados y elimina recovery codes del usuario.
+
+### Response `200`
+
+```json
+{
+  "twoFactorUnlinked": true
+}
+```
+
+## Reenviar credenciales
+
+`POST /api/users/:id/resend-credentials`
+
+Requiere `users.credentials.resend`.
+
+Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassword: true` y envia un correo de credenciales usando el idioma preferido del usuario.
+
+### Response `201`
+
+```json
+{
+  "credentialsSent": true
+}
+```
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Body, query o path params invalidos; relaciones invalidas al asignar accesos. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Usuario, acceso o relacion requerida no encontrada en operaciones que validan existencia. |
+| `409` | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global. |

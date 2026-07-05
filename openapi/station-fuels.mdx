@@ -1,0 +1,82 @@
+---
+title: Station Fuels API
+description: Endpoints para relacionar estaciones con combustibles disponibles.
+---
+
+## Base
+
+Base path: `/api/station-fuels`
+
+Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+
+## Modelo
+
+```json
+{
+  "id": "352ae0cd-6f6c-4f9a-8943-b5fc6a973b21",
+  "stationId": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+  "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+  "status": "active"
+}
+```
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/station-fuels` | `station-fuels.create` | Crea relacion estacion-combustible. |
+| `GET` | `/api/station-fuels` | `station-fuels.read-list` | Lista relaciones. |
+| `GET` | `/api/station-fuels/:id` | `station-fuels.read-one` | Obtiene una relacion. |
+| `PATCH` | `/api/station-fuels/:id` | `station-fuels.update` | Actualiza estado de la relacion. |
+| `DELETE` | `/api/station-fuels/:id` | `station-fuels.delete` | Desactiva una relacion. |
+
+## Listado
+
+Query params: `page`, `limit`, `all`, `status`, `stationId`, `fuelId`.
+
+Este listado no tiene busqueda textual propia.
+
+## Crear
+
+```json
+{
+  "stationId": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+  "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+  "status": "active"
+}
+```
+
+Requeridos: `stationId`, `fuelId`. Ambos deben estar activos.
+
+Opcional: `status`.
+
+## Actualizar
+
+`PATCH /api/station-fuels/:id`
+
+```json
+{
+  "status": "inactive"
+}
+```
+
+Solo permite actualizar `status`.
+
+## Desactivar
+
+```json
+{
+  "id": "352ae0cd-6f6c-4f9a-8943-b5fc6a973b21",
+  "status": "inactive"
+}
+```
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Relacion invalida o parametros invalidos. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Relacion estacion-combustible no encontrada. |
+| `409` | Conflictos de unicidad segun constraints Prisma. |

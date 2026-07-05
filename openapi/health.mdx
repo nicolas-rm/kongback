@@ -1,0 +1,42 @@
+---
+title: Health API
+description: Endpoint publico para verificar salud basica del backend y la base de datos.
+---
+
+## Base
+
+Base path: `/api/health`
+
+Este endpoint es publico.
+
+## Endpoint
+
+| Metodo | Ruta | Acceso | Descripcion |
+| --- | --- | --- | --- |
+| `GET` | `/api/health` | Publico | Verifica salud del backend y conexion a base de datos. |
+
+## Response `200`
+
+```json
+{
+  "status": "ok",
+  "checks": {
+    "database": {
+      "status": "ok"
+    }
+  }
+}
+```
+
+Si la base de datos falla, el response mantiene formato y devuelve:
+
+```json
+{
+  "status": "error",
+  "checks": {
+    "database": {
+      "status": "error"
+    }
+  }
+}
+```

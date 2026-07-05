@@ -1,0 +1,21 @@
+{
+  "title": "OpenAPI",
+  "pages": [
+    "authentication",
+    "users",
+    "roles",
+    "permissions",
+    "companies",
+    "sub-companies",
+    "drivers",
+    "vehicles",
+    "cards",
+    "fuels",
+    "stations",
+    "station-fuels",
+    "cardcloud-card-stock",
+    "documents",
+    "notifications",
+    "health"
+  ]
+}

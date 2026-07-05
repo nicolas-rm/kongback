@@ -1,0 +1,107 @@
+---
+title: Notifications API
+description: Endpoints para crear notificaciones y consultar las notificaciones del usuario actual.
+---
+
+## Base
+
+Base paths: `/api/notifications` y `/api/me/notifications`
+
+Todos los endpoints requieren autenticacion. Las notificaciones creadas por API se emiten tambien por Socket.IO mediante el gateway de notificaciones.
+
+## Modelo
+
+```json
+{
+  "id": "8ee753a1-2c47-408d-ae3e-46d07b5efb63",
+  "title": "Nueva alerta",
+  "message": "Tienes una notificacion pendiente.",
+  "detail": null,
+  "type": "info",
+  "link": "/dashboard",
+  "isRead": false,
+  "readAt": null,
+  "createdAt": "2026-07-04T12:00:00.000Z"
+}
+```
+
+`type`: `info`, `warning`, `success`, `error`.
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/notifications` | `notifications.create` | Crea notificacion para un usuario activo. |
+| `GET` | `/api/me/notifications` | `notifications.read-list` | Lista mis notificaciones. |
+| `GET` | `/api/me/notifications/unread-count` | `notifications.unread-count.read` | Cuenta mis notificaciones no leidas. |
+| `PATCH` | `/api/me/notifications/read-all` | `notifications.mark-read-all` | Marca todas mis notificaciones como leidas. |
+| `PATCH` | `/api/me/notifications/:id/read` | `notifications.mark-read` | Marca una notificacion mia como leida. |
+
+## Crear notificacion
+
+`POST /api/notifications`
+
+```json
+{
+  "userId": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "title": "Nueva alerta",
+  "message": "Tienes una notificacion pendiente.",
+  "detail": null,
+  "type": "info",
+  "link": "/dashboard"
+}
+```
+
+Requeridos: `userId`, `title`, `message`.
+
+Opcionales: `detail`, `type`, `link`. Si `type` se omite, usa `info`.
+
+## Listar mis notificaciones
+
+`GET /api/me/notifications`
+
+Query params: `page`, `limit`, `search`, `all`, `isRead`, `type`.
+
+`search` busca por `title` y `message`.
+
+```http
+GET /api/me/notifications?page=1&limit=20&isRead=false&type=warning
+```
+
+Response: resultado paginado de `Notification`.
+
+## Contar no leidas
+
+`GET /api/me/notifications/unread-count`
+
+```json
+{
+  "count": 3
+}
+```
+
+## Marcar todas como leidas
+
+`PATCH /api/me/notifications/read-all`
+
+```json
+{
+  "updatedCount": 3,
+  "readAt": "2026-07-04T12:00:00.000Z"
+}
+```
+
+## Marcar una como leida
+
+`PATCH /api/me/notifications/:id/read`
+
+Devuelve `Notification` actualizada.
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Body, query o path params invalidos. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Usuario o notificacion no encontrada. |

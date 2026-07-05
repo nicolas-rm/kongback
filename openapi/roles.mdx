@@ -1,0 +1,247 @@
+---
+title: Roles API
+description: Endpoints administrativos para gestionar roles y asignar permisos dentro del RBAC.
+---
+
+## Base
+
+Base path: `/api/roles`
+
+Todos los endpoints requieren autenticacion y el permiso indicado en cada operacion. Los roles agrupan permisos y luego pueden asignarse a usuarios desde los endpoints de `users`.
+
+## Modelos
+
+### Role
+
+```json
+{
+  "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+  "code": "company.admin",
+  "name": "Company admin",
+  "description": "Administra recursos de una compania."
+}
+```
+
+| Campo | Tipo | Descripcion |
+| --- | --- | --- |
+| `id` | `string` | UUID v4 del rol. |
+| `code` | `string` | Codigo unico del rol; se normaliza a minusculas en create/update. |
+| `name` | `string` | Nombre visible del rol. |
+| `description` | `string \| null` | Descripcion opcional. |
+
+### RoleWithPermissions
+
+```json
+{
+  "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+  "code": "company.admin",
+  "name": "Company admin",
+  "description": "Administra recursos de una compania.",
+  "permissions": [
+    {
+      "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+      "code": "users.read-list",
+      "name": "Listar usuarios",
+      "description": "Permite consultar el listado de usuarios."
+    }
+  ]
+}
+```
+
+### PaginatedRoleResponse
+
+```json
+{
+  "data": [],
+  "meta": {
+    "total": 0,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/roles` | `roles.create` | Crea un rol. |
+| `GET` | `/api/roles` | `roles.read-list` | Lista roles con paginacion y busqueda. |
+| `GET` | `/api/roles/:id` | `roles.read-one` | Obtiene un rol por ID. |
+| `PATCH` | `/api/roles/:id` | `roles.update` | Actualiza un rol. |
+| `DELETE` | `/api/roles/:id` | `roles.delete` | Elimina un rol. |
+| `PUT` | `/api/roles/:id/permissions` | `roles.permissions.assign` | Reemplaza todos los permisos del rol. |
+| `GET` | `/api/roles/:id/permissions` | `roles.permissions.read` | Lista permisos asignados al rol. |
+
+## Crear rol
+
+`POST /api/roles`
+
+Requiere `roles.create`.
+
+### Body
+
+```json
+{
+  "code": "company.admin",
+  "name": "Company admin",
+  "description": "Administra recursos de una compania."
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `code` | `string` | Si | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `name` | `string` | Si | Se recorta y colapsa espacios. |
+| `description` | `string \| null` | No | String vacio se transforma a `null`. |
+
+### Response `201`
+
+Devuelve `Role`.
+
+## Listar roles
+
+`GET /api/roles`
+
+Requiere `roles.read-list`.
+
+### Query params
+
+| Parametro | Tipo | Reglas | Descripcion |
+| --- | --- | --- | --- |
+| `page` | `number` | Entero >= 1 | Pagina solicitada; por defecto `1`. |
+| `limit` | `number` | Entero entre 1 y 100 | Registros por pagina; por defecto `10`. |
+| `search` | `string` | Opcional | Busca por `code` o `name`, sin distinguir mayusculas. |
+| `all` | `boolean` | Opcional | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+
+### Example
+
+```http
+GET /api/roles?page=1&limit=20&search=admin
+```
+
+### Response `200`
+
+Devuelve `PaginatedRoleResponse`.
+
+## Obtener rol
+
+`GET /api/roles/:id`
+
+Requiere `roles.read-one`.
+
+### Path params
+
+| Parametro | Tipo | Descripcion |
+| --- | --- | --- |
+| `id` | `uuid` | ID del rol. |
+
+### Response `200`
+
+Devuelve `Role`. Comportamiento actual: si el rol no existe, devuelve `null`.
+
+## Actualizar rol
+
+`PATCH /api/roles/:id`
+
+Requiere `roles.update`.
+
+### Body
+
+Todos los campos son opcionales.
+
+```json
+{
+  "code": "company.admin",
+  "name": "Company admin",
+  "description": "Administra recursos de una compania."
+}
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `code` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `name` | `string` | Se recorta y colapsa espacios. |
+| `description` | `string \| null` | String vacio se transforma a `null`. |
+
+### Response `200`
+
+Devuelve `Role`.
+
+## Eliminar rol
+
+`DELETE /api/roles/:id`
+
+Requiere `roles.delete`.
+
+### Response `200`
+
+```json
+{
+  "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+  "deleted": true
+}
+```
+
+## Reemplazar permisos del rol
+
+`PUT /api/roles/:id/permissions`
+
+Requiere `roles.permissions.assign`.
+
+Reemplaza todos los permisos del rol en una transaccion. El arreglo `permissionIds` puede estar vacio para dejar el rol sin permisos.
+
+### Body
+
+```json
+{
+  "permissionIds": [
+    "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+    "2e8b8783-eeba-4ef0-972f-1ab9c75519d0"
+  ]
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `permissionIds` | `uuid[]` | Si | Puede ser `[]`; cada elemento debe ser UUID v4. |
+
+### Response `200`
+
+Devuelve `RoleWithPermissions`.
+
+## Listar permisos del rol
+
+`GET /api/roles/:id/permissions`
+
+Requiere `roles.permissions.read`.
+
+Devuelve los permisos asignados al rol, ordenados por `code`.
+
+### Response `200`
+
+```json
+[
+  {
+    "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+    "code": "users.read-list",
+    "name": "Listar usuarios",
+    "description": "Permite consultar el listado de usuarios."
+  }
+]
+```
+
+Comportamiento actual: si el rol no existe, devuelve `null`.
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Body, query o path params invalidos; permisos inexistentes al reemplazar asignaciones. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Rol no encontrado en operaciones de update, delete o asignacion de permisos. |
+| `409` | Conflictos de unicidad como `code` duplicado, segun el filtro Prisma global. |

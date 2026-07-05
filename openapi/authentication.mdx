@@ -1,0 +1,581 @@
+---
+title: Authentication API
+description: Endpoints para autenticacion, perfil, sesiones, recuperacion de contrasena, verificacion de email y 2FA.
+---
+
+## Base
+
+Base path: `/api/authentication`
+
+La API soporta autenticacion con cookies HttpOnly y tambien acepta `Authorization: Bearer <accessToken>` para el access token. En login, verificacion 2FA y refresh, el backend devuelve tokens en el body y ademas setea cookies `access_token` y `refresh_token`.
+
+Para frontend web con cookies, usa requests con credenciales incluidas. Las mutaciones autenticadas con cookies requieren `Origin` o `Referer` permitido por la proteccion CSRF. Si se usa `Authorization: Bearer`, la proteccion CSRF no aplica.
+
+## Modelos
+
+### TokenResponse
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086"
+}
+```
+
+| Campo | Tipo | Descripcion |
+| --- | --- | --- |
+| `accessToken` | `string` | JWT usado para autenticar requests. Tambien se guarda en cookie `access_token`. |
+| `refreshToken` | `string` | JWT usado para renovar sesion. Tambien se guarda en cookie `refresh_token`. |
+| `sessionId` | `string` | UUID v4 de la sesion activa. |
+
+### TwoFactorChallengeResponse
+
+```json
+{
+  "requiresTwoFactor": true,
+  "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84"
+}
+```
+
+### Profile
+
+```json
+{
+  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "preferredLanguage": "es",
+  "mustChangePassword": false,
+  "isGlobalAdmin": true,
+  "organizationIds": [],
+  "permissions": ["users.read-list"]
+}
+```
+
+### Session
+
+```json
+{
+  "id": "79b84132-20cc-4bf9-a4f0-3de3be656086",
+  "deviceName": "Chrome macOS",
+  "userAgent": "Mozilla/5.0",
+  "ipAddress": "127.0.0.1",
+  "lastActivityAt": "2026-07-04T12:00:00.000Z",
+  "expiresAt": "2026-07-05T12:00:00.000Z",
+  "isCurrent": true
+}
+```
+
+## Headers utiles
+
+| Header | Uso |
+| --- | --- |
+| `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados. |
+| `Accept-Language` | Idioma para validaciones, errores y correos cuando aplica. |
+| `X-Device-Name` | Nombre del dispositivo guardado al crear sesion con login o login 2FA. |
+| `X-Forwarded-For` | IP de cliente usada para contexto de sesion si existe. |
+| `X-Request-Id` | ID de request opcional; el backend lo devuelve como response header. |
+
+## Endpoints
+
+| Metodo | Ruta | Acceso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/authentication/login` | Publico | Inicia sesion. |
+| `POST` | `/api/authentication/2fa/verify-login` | Publico | Completa login cuando el usuario tiene 2FA activo. |
+| `POST` | `/api/authentication/register` | Publico | Registra usuario y envia verificacion de email. |
+| `POST` | `/api/authentication/refresh` | Publico | Rota refresh token y emite nuevos tokens. |
+| `POST` | `/api/authentication/logout` | Autenticado | Cierra la sesion actual si hay refresh cookie; sin refresh cookie revoca sesiones del usuario. |
+| `POST` | `/api/authentication/logout-all` | Autenticado | Revoca todas las sesiones del usuario. |
+| `GET` | `/api/authentication/me` | Autenticado | Obtiene perfil actual. |
+| `PATCH` | `/api/authentication/me` | Autenticado | Actualiza perfil actual. |
+| `GET` | `/api/authentication/sessions` | Autenticado | Lista sesiones activas. |
+| `DELETE` | `/api/authentication/sessions/:sessionId` | Autenticado | Revoca una sesion. |
+| `PATCH` | `/api/authentication/password` | Autenticado | Cambia la contrasena propia y revoca sesiones. |
+| `POST` | `/api/authentication/password/reset/request` | Publico | Solicita correo de recuperacion. |
+| `POST` | `/api/authentication/password/reset` | Publico | Restablece contrasena con token. |
+| `POST` | `/api/authentication/email/verification/request` | Publico | Reenvia correo de verificacion. |
+| `POST` | `/api/authentication/email/verification/confirm` | Publico | Confirma email con token. |
+| `GET` | `/api/authentication/2fa/status` | Autenticado | Consulta estado 2FA. |
+| `POST` | `/api/authentication/2fa/setup` | Autenticado | Inicia configuracion 2FA. |
+| `POST` | `/api/authentication/2fa/enable` | Autenticado | Habilita 2FA con codigo TOTP. |
+| `POST` | `/api/authentication/2fa/disable` | Autenticado | Deshabilita 2FA con codigo TOTP. |
+| `POST` | `/api/authentication/2fa/recovery-codes/regenerate` | Autenticado | Regenera recovery codes. |
+| `DELETE` | `/api/authentication/2fa/reset` | Autenticado | Resetea 2FA del usuario actual. |
+
+## Login
+
+`POST /api/authentication/login`
+
+Publico. Rate limit: 5 requests por 60 segundos.
+
+### Body
+
+```json
+{
+  "username": "admin",
+  "password": "Secret123"
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `username` | `string` | Si | Se recorta y colapsa espacios. |
+| `password` | `string` | Si | Se recorta y colapsa espacios. |
+
+### Response `200`
+
+Si el usuario no tiene 2FA activo, devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`.
+
+Si el usuario tiene 2FA activo, limpia cookies existentes y devuelve `TwoFactorChallengeResponse`.
+
+## Verificar login 2FA
+
+`POST /api/authentication/2fa/verify-login`
+
+Publico. Rate limit: 5 requests por 60 segundos.
+
+### Body
+
+```json
+{
+  "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
+  "code": "123456"
+}
+```
+
+### Response `200`
+
+Devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`.
+
+## Registro
+
+`POST /api/authentication/register`
+
+Publico. Rate limit: 3 requests por 60 segundos.
+
+### Body
+
+```json
+{
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "password": "Secret123"
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `username` | `string` | Si | Se recorta y colapsa espacios. |
+| `email` | `string` | Si | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `fullName` | `string` | Si | Se recorta y colapsa espacios. |
+| `password` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+
+### Response `200`
+
+```json
+{
+  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "registered": true,
+  "emailVerificationRequired": true
+}
+```
+
+## Refresh
+
+`POST /api/authentication/refresh`
+
+Publico. Rate limit: 20 requests por 60 segundos.
+
+El refresh token puede enviarse en el body o venir desde la cookie `refresh_token`. El backend revoca el refresh token usado, actualiza actividad de sesion y emite nuevos tokens.
+
+### Body
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `refreshToken` | `string` | No | Opcional si existe cookie `refresh_token`. |
+
+### Response `200`
+
+Devuelve `TokenResponse` y actualiza cookies `access_token` y `refresh_token`.
+
+## Logout
+
+`POST /api/authentication/logout`
+
+Autenticado.
+
+Limpia cookies de autenticacion. Si el request trae cookie `refresh_token`, revoca la sesion asociada a ese refresh token. Si no trae refresh cookie, el comportamiento actual del servicio revoca todas las sesiones del usuario autenticado.
+
+### Response `200`
+
+```json
+{
+  "revokedSessions": 1
+}
+```
+
+## Logout all
+
+`POST /api/authentication/logout-all`
+
+Autenticado.
+
+Revoca todas las sesiones del usuario y limpia cookies.
+
+### Response `200`
+
+```json
+{
+  "revokedSessions": 3
+}
+```
+
+## Perfil actual
+
+`GET /api/authentication/me`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+### Response `200`
+
+Devuelve `Profile`.
+
+## Actualizar perfil
+
+`PATCH /api/authentication/me`
+
+Autenticado. Si `mustChangePassword` es `true`, este endpoint queda bloqueado por el guard global hasta cambiar la contrasena.
+
+### Body
+
+Todos los campos son opcionales.
+
+```json
+{
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "preferredLanguage": "es"
+}
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `email` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `fullName` | `string` | Se recorta y colapsa espacios. |
+| `preferredLanguage` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
+
+### Response `200`
+
+```json
+{
+  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+  "username": "admin",
+  "email": "admin@example.com",
+  "fullName": "Admin User",
+  "preferredLanguage": "es"
+}
+```
+
+## Listar sesiones
+
+`GET /api/authentication/sessions`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+### Response `200`
+
+Devuelve `Session[]`.
+
+## Revocar sesion
+
+`DELETE /api/authentication/sessions/:sessionId`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Si se revoca la sesion actual, el backend limpia cookies.
+
+### Path params
+
+| Parametro | Tipo | Descripcion |
+| --- | --- | --- |
+| `sessionId` | `uuid` | ID de la sesion a revocar. |
+
+### Response `200`
+
+```json
+{
+  "id": "79b84132-20cc-4bf9-a4f0-3de3be656086",
+  "revoked": true,
+  "revokedCurrent": false
+}
+```
+
+## Cambiar contrasena
+
+`PATCH /api/authentication/password`
+
+Autenticado. Rate limit: 5 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Al cambiar la contrasena, el backend revoca sesiones del usuario y limpia cookies. El frontend debe enviar al usuario a login al recibir respuesta exitosa.
+
+### Body
+
+```json
+{
+  "currentPassword": "Secret123",
+  "newPassword": "NewSecret123"
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `currentPassword` | `string` | Si | Contrasena actual. |
+| `newPassword` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+
+### Response `200`
+
+```json
+{
+  "passwordChanged": true
+}
+```
+
+## Solicitar recuperacion de contrasena
+
+`POST /api/authentication/password/reset/request`
+
+Publico. Rate limit: 3 requests por 60 segundos.
+
+Devuelve la misma respuesta aunque el email no exista para evitar enumeracion de usuarios.
+
+### Body
+
+```json
+{
+  "email": "admin@example.com"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "accepted": true
+}
+```
+
+## Restablecer contrasena
+
+`POST /api/authentication/password/reset`
+
+Publico. Rate limit: 5 requests por 60 segundos.
+
+Al restablecer la contrasena, el backend marca el token como usado y revoca sesiones del usuario.
+
+### Body
+
+```json
+{
+  "token": "3fcb70b4731ed8d15f1e124d936d7a6a",
+  "password": "NewSecret123"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "passwordReset": true
+}
+```
+
+## Solicitar verificacion de email
+
+`POST /api/authentication/email/verification/request`
+
+Publico. Rate limit: 3 requests por 60 segundos.
+
+Devuelve la misma respuesta aunque el email no exista.
+
+### Body
+
+```json
+{
+  "email": "admin@example.com"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "accepted": true
+}
+```
+
+## Confirmar verificacion de email
+
+`POST /api/authentication/email/verification/confirm`
+
+Publico. Rate limit: 5 requests por 60 segundos.
+
+### Body
+
+```json
+{
+  "token": "3fcb70b4731ed8d15f1e124d936d7a6a"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "emailVerified": true
+}
+```
+
+## Estado 2FA
+
+`GET /api/authentication/2fa/status`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+### Response `200`
+
+```json
+{
+  "enabled": false,
+  "pending": false
+}
+```
+
+## Iniciar setup 2FA
+
+`POST /api/authentication/2fa/setup`
+
+Autenticado. Rate limit: 3 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Genera un secreto TOTP pendiente y una URL `otpauth://` para QR.
+
+### Response `200`
+
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXP",
+  "otpAuthenticationUrl": "otpauth://totp/Kong:admin%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Kong"
+}
+```
+
+## Habilitar 2FA
+
+`POST /api/authentication/2fa/enable`
+
+Autenticado. Rate limit: 5 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Valida el codigo TOTP contra el secreto pendiente. Al habilitar 2FA, devuelve recovery codes en texto plano una sola vez.
+
+### Body
+
+```json
+{
+  "code": "123456"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "enabled": true,
+  "recoveryCodes": ["ABCD-EFGH", "IJKL-MNOP"]
+}
+```
+
+## Deshabilitar 2FA
+
+`POST /api/authentication/2fa/disable`
+
+Autenticado. Rate limit: 5 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+### Body
+
+```json
+{
+  "code": "123456"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "enabled": false
+}
+```
+
+## Regenerar recovery codes
+
+`POST /api/authentication/2fa/recovery-codes/regenerate`
+
+Autenticado. Rate limit: 3 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+### Body
+
+```json
+{
+  "code": "123456"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "recoveryCodes": ["ABCD-EFGH", "IJKL-MNOP"]
+}
+```
+
+## Resetear 2FA
+
+`DELETE /api/authentication/2fa/reset`
+
+Autenticado. Rate limit: 2 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Resetea secretos 2FA y recovery codes del usuario actual.
+
+### Response `200`
+
+```json
+{
+  "twoFactorReset": true
+}
+```
+
+## Flujo recomendado para frontend
+
+1. Llamar `POST /api/authentication/login`.
+2. Si responde `requiresTwoFactor: true`, pedir codigo TOTP y llamar `POST /api/authentication/2fa/verify-login`.
+3. Guardar estado de sesion desde cookies o desde `TokenResponse`, segun estrategia del cliente.
+4. Llamar `GET /api/authentication/me` para obtener `permissions`, `organizationIds` y `mustChangePassword`.
+5. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil y endpoints marcados como permitidos arriba.
+6. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Body invalido, token de reset/verificacion invalido, codigo 2FA invalido o configuracion 2FA expirada. |
+| `401` | Credenciales invalidas, access token ausente/invalido/expirado, refresh token invalido/expirado/reutilizado. |
+| `403` | CSRF rechazado o usuario con `mustChangePassword` intentando usar endpoints bloqueados. |
+| `409` | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global. |
+| `429` | Rate limit excedido en endpoints protegidos con throttling. |
