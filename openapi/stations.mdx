@@ -20,6 +20,11 @@ Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado 
   "lat": 25.6866,
   "lon": -100.3161,
   "status": "active",
+  "subCompany": {
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "key": "SUB001",
+    "name": "Acme Norte"
+  },
   "address": {
     "street": "Main St",
     "exteriorNumber": null,
@@ -34,6 +39,8 @@ Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado 
   }
 }
 ```
+
+En listados, `subCompany` se devuelve como summary y `address` no se devuelve. `address` si aparece en detalle, create y update.
 
 ## Endpoints
 
@@ -50,6 +57,8 @@ Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado 
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`.
 
 `search` busca por `stationNumber` y `name`.
+
+Para columnas visibles, usa `subCompany.name`; conserva `subCompanyId` para filtros y acciones.
 
 ## Crear
 

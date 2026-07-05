@@ -20,9 +20,16 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
   "clientId": "CLIENT-001",
   "balance": 1200.5,
   "providerStatus": "active",
-  "syncedAt": "2026-07-04T00:00:00.000Z"
+  "syncedAt": "2026-07-04T00:00:00.000Z",
+  "assignedCard": {
+    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "externalId": "CARD-001",
+    "assignmentMode": "vehicle"
+  }
 }
 ```
+
+`assignedCard` se devuelve como summary controlado cuando existe.
 
 ## Endpoints
 
@@ -39,6 +46,8 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 Query params: `page`, `limit`, `search`, `all`, `status`, `assignedCardId`.
 
 `status` filtra `providerStatus`. `search` busca por `externalId`, `maskedPan` y `clientId`.
+
+Para columnas visibles, usa `assignedCard.externalId`; conserva `assignedCardId` para filtros y acciones.
 
 ## Crear
 

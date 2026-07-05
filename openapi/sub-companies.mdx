@@ -20,6 +20,11 @@ Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El bor
   "name": "Acme Norte",
   "status": "active",
   "isDefault": false,
+  "company": {
+    "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "key": "COMPANY001",
+    "name": "Acme Logistics"
+  },
   "address": {
     "street": "Main St",
     "exteriorNumber": null,
@@ -34,6 +39,8 @@ Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El bor
   }
 }
 ```
+
+En listados, `company` se devuelve como summary y `address` no se devuelve. `address` si aparece en detalle, create y update.
 
 ## Endpoints
 
@@ -50,6 +57,8 @@ Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El bor
 Query params: `page`, `limit`, `search`, `all`, `status`, `companyId`.
 
 `search` busca por `key`, `externalId` y `name`.
+
+Para la columna Compania en front, usa `company.name` o `company.key + " · " + company.name`; no muestres `companyId` salvo en vistas tecnicas.
 
 ## Crear
 

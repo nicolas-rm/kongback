@@ -20,9 +20,26 @@ Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado des
   "externalId": "CARD-001",
   "assignmentMode": "vehicle",
   "status": "active",
-  "assignedAt": "2026-07-04T12:00:00.000Z"
+  "assignedAt": "2026-07-04T12:00:00.000Z",
+  "subCompany": {
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "key": "SUB001",
+    "name": "Acme Norte"
+  },
+  "vehicle": {
+    "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "plates": "ABC123",
+    "economicNumber": "VH-001"
+  },
+  "designFuel": {
+    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "code": "DIESEL",
+    "name": "Diesel"
+  }
 }
 ```
+
+Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` y `designFuel`.
 
 `assignmentMode`: `unassigned`, `vehicle`.
 
@@ -44,6 +61,8 @@ Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado des
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `vehicleId`, `designFuelId`, `assignmentMode`.
 
 `search` busca por `externalId`.
+
+Para columnas visibles, usa `vehicle.plates`, `vehicle.economicNumber`, `designFuel.name` y `subCompany.name`.
 
 ## Crear
 

@@ -23,9 +23,25 @@ Todos los endpoints requieren autenticacion y permisos `vehicles.*`. El borrado 
   "year": 2024,
   "odometerControl": true,
   "odometerInitial": 12500,
-  "status": "active"
+  "status": "active",
+  "subCompany": {
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "key": "SUB001",
+    "name": "Acme Norte"
+  },
+  "fuel": {
+    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "code": "DIESEL",
+    "name": "Diesel"
+  },
+  "driver": {
+    "id": "d77d1344-93d4-4dc2-923a-b241185692de",
+    "name": "Maria Garcia"
+  }
 }
 ```
+
+Las relaciones se devuelven como summaries controlados: `subCompany`, `fuel` y `driver`.
 
 ## Endpoints
 
@@ -43,6 +59,8 @@ Todos los endpoints requieren autenticacion y permisos `vehicles.*`. El borrado 
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `fuelId`, `driverId`.
 
 `search` busca por `plates`, `economicNumber` y `model`.
+
+Para columnas visibles, usa `fuel.name`, `driver.name` y `subCompany.name`; conserva los IDs para filtros y acciones.
 
 ## Crear
 

@@ -16,9 +16,21 @@ Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El bor
   "id": "352ae0cd-6f6c-4f9a-8943-b5fc6a973b21",
   "stationId": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
   "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "status": "active"
+  "status": "active",
+  "station": {
+    "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+    "stationNumber": "ST-001",
+    "name": "Estacion Centro"
+  },
+  "fuel": {
+    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "code": "DIESEL",
+    "name": "Diesel"
+  }
 }
 ```
+
+Las relaciones se devuelven como summaries controlados: `station` y `fuel`.
 
 ## Endpoints
 
@@ -35,6 +47,8 @@ Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El bor
 Query params: `page`, `limit`, `all`, `status`, `stationId`, `fuelId`.
 
 Este listado no tiene busqueda textual propia.
+
+Para columnas visibles, usa `station.name` y `fuel.name`; conserva IDs para filtros y acciones.
 
 ## Crear
 

@@ -48,6 +48,15 @@ export class CardcloudCardStockRepository {
             balance: true,
             providerStatus: true,
             syncedAt: true,
+            assignedCard: { select: this.cardSummarySelect() },
+        };
+    }
+
+    private cardSummarySelect(): Prisma.CardSelect {
+        return {
+            id: true,
+            externalId: true,
+            assignmentMode: true,
         };
     }
 }

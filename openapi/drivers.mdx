@@ -19,6 +19,16 @@ Todos los endpoints requieren autenticacion y permisos `drivers.*`. El borrado d
   "name": "Maria Garcia",
   "externalReference": "DRV-001",
   "status": "active",
+  "subCompany": {
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "key": "SUB001",
+    "name": "Acme Norte"
+  },
+  "user": {
+    "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "username": "maria.garcia",
+    "fullName": "Maria Garcia"
+  },
   "address": {
     "street": null,
     "exteriorNumber": null,
@@ -33,6 +43,8 @@ Todos los endpoints requieren autenticacion y permisos `drivers.*`. El borrado d
   }
 }
 ```
+
+En listados, `subCompany` y `user` se devuelven como summaries y `address` no se devuelve. `address` si aparece en detalle, create y update.
 
 ## Endpoints
 
@@ -49,6 +61,8 @@ Todos los endpoints requieren autenticacion y permisos `drivers.*`. El borrado d
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `userId`.
 
 `search` busca por `name` y `externalReference`.
+
+Para columnas relacionadas, usa `subCompany.name` y `user.fullName`; conserva `subCompanyId` y `userId` para acciones y formularios.
 
 ## Crear
 
