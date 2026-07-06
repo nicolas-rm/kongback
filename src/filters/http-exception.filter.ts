@@ -35,7 +35,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         const isHttpException = exception instanceof HttpException;
         const status = isHttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-        const details = isHttpException ? this.resolveHttpDetails(exception, status, host) : { message: translateI18n(host, I18N_KEYS.errors.internal.unprocessed, 'Solicitud no procesada, intente nuevamente mas tarde') };
+        const details = isHttpException
+            ? this.resolveHttpDetails(exception, status, host)
+            : { message: translateI18n(host, I18N_KEYS.errors.internal.unprocessed, 'Solicitud no procesada, intente nuevamente mas tarde') };
 
         if (status >= 500) {
             this.logger.error(`${status} ${details.message} path=${request.url} method=${request.method}`, exception instanceof Error ? exception.stack : undefined);

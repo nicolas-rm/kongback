@@ -63,16 +63,6 @@ import { VehiclesController } from '@/modules/business/vehicles.controller';
         StationFuelsService,
         CardcloudCardStockService,
     ],
-    exports: [
-        CompaniesService,
-        SubCompaniesService,
-        DriversService,
-        FuelsService,
-        VehiclesService,
-        CardsService,
-        StationsService,
-        StationFuelsService,
-        CardcloudCardStockService,
-    ],
+    exports: [CompaniesService, SubCompaniesService, DriversService, FuelsService, VehiclesService, CardsService, StationsService, StationFuelsService, CardcloudCardStockService],
 })
 export class BusinessModule {}

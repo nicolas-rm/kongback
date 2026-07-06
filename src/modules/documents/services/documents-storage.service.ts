@@ -57,7 +57,8 @@ export class DocumentsStorageService {
 
         const baseDirectory = this.getBaseDirectory();
         const absolutePath = path.resolve(baseDirectory, normalized);
-        if (absolutePath !== baseDirectory && !absolutePath.startsWith(`${baseDirectory}${path.sep}`)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
+        if (absolutePath !== baseDirectory && !absolutePath.startsWith(`${baseDirectory}${path.sep}`))
+            throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
 
         return absolutePath;
     }
