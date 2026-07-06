@@ -4,6 +4,9 @@ export class VerifyTwoFactorLoginDto {
     @ValidatorString()
     challengeToken!: string;
 
-    @ValidatorString()
-    code!: string;
+    @ValidatorString({ optional: true })
+    code?: string;
+
+    @ValidatorString({ optional: true })
+    recoveryCode?: string;
 }

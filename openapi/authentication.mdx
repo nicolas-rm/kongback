@@ -138,6 +138,8 @@ Publico. Rate limit: 5 requests por 60 segundos.
 
 ### Body
 
+Con codigo TOTP:
+
 ```json
 {
   "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
@@ -145,9 +147,24 @@ Publico. Rate limit: 5 requests por 60 segundos.
 }
 ```
 
+Con recovery code:
+
+```json
+{
+  "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
+  "recoveryCode": "ABCD-EFGH"
+}
+```
+
+| Campo | Tipo | Requerido | Reglas |
+| --- | --- | --- | --- |
+| `challengeToken` | `string` | Si | Token devuelto por `POST /api/authentication/login` cuando `requiresTwoFactor` es `true`. |
+| `code` | `string` | Condicional | Codigo TOTP. Requerido si no se envia `recoveryCode`. |
+| `recoveryCode` | `string` | Condicional | Recovery code de un solo uso. Requerido si no se envia `code`. Acepta formato con o sin guion. |
+
 ### Response `200`
 
-Devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`.
+Devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`. Si se usa `recoveryCode`, el backend lo marca como usado y no puede reutilizarse.
 
 ## Registro
 

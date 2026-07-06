@@ -85,7 +85,7 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 ## REST y API
 
 - Los endpoints deben usar DTO validation, responses tipadas y codigos HTTP correctos.
-- No agregues ni mantengas documentacion Swagger/OpenAPI por el momento. Si encuentras trabajo pendiente relacionado solo con Swagger/OpenAPI, omitelo o elimiminalo cuando estorbe al cambio.
+- Manten la documentacion OpenAPI en `openapi/` actualizada cuando cambien rutas, DTOs, responses, parametros, filtros, auth, permisos o codigos de error de endpoints REST.
 - Manten versioning, naming y rutas consistentes con los controllers existentes.
 - Usa paginacion, filtros y sorting estandarizados para listados.
 - No filtres datos sensibles solo en el frontend; serializa responses seguras desde backend.
@@ -139,6 +139,7 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 ## Criterios para cambios frecuentes
 
 - Nuevo endpoint REST: controller + DTOs + service/use-case + repository si persiste datos + response segura + auth/RBAC.
+- Cambio en endpoint REST existente: actualiza DTOs/responses y su archivo correspondiente en `openapi/`.
 - Nuevo modelo Prisma: schema + migration + indices/constraints + repository + seed si aplica.
 - Nueva regla de permisos: catalogo de permissions/roles + guard/decorator si aplica.
 - Nuevo email: template/servicio + rate limit si aplica + i18n + no exponer datos sensibles.

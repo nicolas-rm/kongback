@@ -2,6 +2,14 @@
 
 Este changelog agrupa los commits actuales en releases funcionales para que el proyecto tenga una narrativa clara de versionamiento.
 
+## En desarrollo
+
+### Agregado
+
+- Login 2FA con recovery codes: `POST /authentication/2fa/verify-login` acepta `code` TOTP o `recoveryCode`.
+- Consumo de recovery codes de un solo uso mediante `usedAt`.
+- Normalizacion de recovery codes para aceptar codigos con o sin guion.
+
 ## v0.6.0 - Base de autenticacion completa
 
 ### Agregado
