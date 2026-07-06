@@ -18,24 +18,32 @@ export class CardcloudCardStockRepository {
         return this.prisma.cardcloudCardStock.count({ where });
     }
 
-    findById(id: string, organizationId: string) {
-        return this.prisma.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
+    findById(id: string, organizationId: string, companyId?: string) {
+        return this.prisma.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
     }
 
-    update(id: string, organizationId: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput) {
+    update(id: string, organizationId: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: { id, organizationId }, data });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data });
             if (result.count === 0) return null;
             return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
         });
     }
 
-    deactivate(id: string, organizationId: string) {
+    deactivate(id: string, organizationId: string, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: { id, organizationId }, data: { providerStatus: Status.inactive } });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data: { providerStatus: Status.inactive } });
             if (result.count === 0) return null;
             return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
         });
+    }
+
+    private scopeWhere(id: string, organizationId: string, companyId?: string): Prisma.CardcloudCardStockWhereInput {
+        return {
+            id,
+            organizationId,
+            ...(companyId ? { assignedCard: { subCompany: { companyId } } } : {}),
+        };
     }
 
     private select(): Prisma.CardcloudCardStockSelect {

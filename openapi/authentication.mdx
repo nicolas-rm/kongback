@@ -92,6 +92,7 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados.                                                                     |
 | `X-Organization-Id`                   | UUID del workspace seleccionado. Requerido por endpoints tenant-scoped como companias, vehiculos, tarjetas, estaciones y documentos. |
+| `X-Company-Id`                        | UUID opcional de la compania seleccionada dentro del workspace. Si se envia, el backend valida que pertenezca a `X-Organization-Id`. |
 | `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                           |
 | `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                               |
 | `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                               |
@@ -617,8 +618,9 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 3. Guardar estado de sesion desde cookies o desde `TokenResponse`, segun estrategia del cliente.
 4. Llamar `GET /api/authentication/me` para obtener `permissions`, `organizationIds` y `mustChangePassword`.
 5. Llamar `GET /api/authentication/workspaces`, permitir que el usuario seleccione workspace y enviar su `id` como `X-Organization-Id` en endpoints tenant-scoped.
-6. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, workspaces y endpoints marcados como permitidos arriba.
-7. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
+6. Opcionalmente seleccionar compania dentro del workspace y enviar su `id` como `X-Company-Id` para trabajar solo con datos de esa compania.
+7. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, workspaces y endpoints marcados como permitidos arriba.
+8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
 
 ## Errores comunes
 

@@ -28,6 +28,10 @@ export class AccessControlService {
         return (await this.repository.countActiveOrganizations([organizationId])) === 1;
     }
 
+    async companyIsActiveInOrganization(companyId: string, organizationId: string): Promise<boolean> {
+        return (await this.repository.countActiveCompanies([companyId], organizationId)) === 1;
+    }
+
     async createRole(dto: CreateRoleDto) {
         const role = await this.repository.createRole(dto);
         return RoleResponse.from(role);

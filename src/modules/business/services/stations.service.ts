@@ -13,8 +13,8 @@ export class StationsService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateStationDto) {
-        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId) }]);
+    async create(organizationId: string, dto: CreateStationDto, companyId?: string) {
+        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId, companyId) }]);
 
         return this.repository.create(
             {
@@ -29,10 +29,10 @@ export class StationsService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindStationsDto) {
+    async findAll(organizationId: string, dto: FindStationsDto, companyId?: string) {
         const where: Prisma.StationWhereInput = {
             subCompanyId: dto.subCompanyId,
-            subCompany: { company: { organizationId } },
+            subCompany: { company: { organizationId, ...(companyId ? { id: companyId } : {}) } },
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name']) } : {}),
         };
@@ -40,13 +40,13 @@ export class StationsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string) {
-        const station = await this.repository.findById(id, organizationId);
+    async findOne(organizationId: string, id: string, companyId?: string) {
+        const station = await this.repository.findById(id, organizationId, companyId);
         if (!station) throw notFound();
         return station;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateStationDto) {
+    async update(organizationId: string, id: string, dto: UpdateStationDto, companyId?: string) {
         const station = await this.repository.update(
             id,
             organizationId,
@@ -57,14 +57,15 @@ export class StationsService {
                 lon: dto.lon,
                 status: dto.status,
             },
-            toAddressData(dto.address)
+            toAddressData(dto.address),
+            companyId
         );
         if (!station) throw notFound();
         return station;
     }
 
-    async deactivate(organizationId: string, id: string) {
-        const station = await this.repository.deactivate(id, organizationId);
+    async deactivate(organizationId: string, id: string, companyId?: string) {
+        const station = await this.repository.deactivate(id, organizationId, companyId);
         if (!station) throw notFound();
         return { id: station.id, status: station.status };
     }

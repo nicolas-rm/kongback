@@ -13,6 +13,8 @@ Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El bor
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `stationId` debe pertenecer a una estacion activa de esa organizacion.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y `stationId` y la relacion consultada deben pertenecer a esa compania.
+
 ## Modelo
 
 ```json
@@ -70,7 +72,7 @@ Response `200`: resultado paginado de `StationFuel`.
 }
 ```
 
-Requeridos: `stationId`, `fuelId`. `stationId` debe estar activo en el workspace seleccionado y `fuelId` debe estar activo.
+Requeridos: `stationId`, `fuelId`. `stationId` debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania. `fuelId` debe estar activo.
 
 Opcional: `status`.
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
-import { assertActive, notFound, textSearch } from '@/modules/business/business.helpers';
+import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
 import { CreateCardcloudCardStockDto, FindCardcloudCardStockDto, UpdateCardcloudCardStockDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { CardcloudCardStockRepository } from '@/modules/business/repositories/cardcloud-card-stock.repository';
@@ -13,8 +13,9 @@ export class CardcloudCardStockService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateCardcloudCardStockDto) {
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId) }]);
+    async create(organizationId: string, dto: CreateCardcloudCardStockDto, companyId?: string) {
+        if (companyId && !dto.assignedCardId) throw invalidRelation();
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId, companyId) }]);
 
         return this.repository.create({
             organizationId,
@@ -28,9 +29,10 @@ export class CardcloudCardStockService {
         });
     }
 
-    async findAll(organizationId: string, dto: FindCardcloudCardStockDto) {
+    async findAll(organizationId: string, dto: FindCardcloudCardStockDto, companyId?: string) {
         const where: Prisma.CardcloudCardStockWhereInput = {
             organizationId,
+            ...(companyId ? { assignedCard: { subCompany: { companyId } } } : {}),
             assignedCardId: dto.assignedCardId,
             providerStatus: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardcloudCardStockWhereInput>(dto.search, ['externalId', 'maskedPan', 'clientId']) } : {}),
@@ -39,29 +41,34 @@ export class CardcloudCardStockService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string) {
-        const stock = await this.repository.findById(id, organizationId);
+    async findOne(organizationId: string, id: string, companyId?: string) {
+        const stock = await this.repository.findById(id, organizationId, companyId);
         if (!stock) throw notFound();
         return stock;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateCardcloudCardStockDto) {
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId) }]);
+    async update(organizationId: string, id: string, dto: UpdateCardcloudCardStockDto, companyId?: string) {
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId, companyId) }]);
 
-        const stock = await this.repository.update(id, organizationId, {
-            assignedCardId: dto.assignedCardId,
-            maskedPan: dto.maskedPan,
-            clientId: dto.clientId,
-            balance: dto.balance,
-            providerStatus: dto.providerStatus,
-            syncedAt: dto.syncedAt,
-        });
+        const stock = await this.repository.update(
+            id,
+            organizationId,
+            {
+                assignedCardId: dto.assignedCardId,
+                maskedPan: dto.maskedPan,
+                clientId: dto.clientId,
+                balance: dto.balance,
+                providerStatus: dto.providerStatus,
+                syncedAt: dto.syncedAt,
+            },
+            companyId
+        );
         if (!stock) throw notFound();
         return stock;
     }
 
-    async deactivate(organizationId: string, id: string) {
-        const stock = await this.repository.deactivate(id, organizationId);
+    async deactivate(organizationId: string, id: string, companyId?: string) {
+        const stock = await this.repository.deactivate(id, organizationId, companyId);
         if (!stock) throw notFound();
         return { id: stock.id, status: stock.providerStatus };
     }

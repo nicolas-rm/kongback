@@ -13,6 +13,8 @@ Todos los endpoints requieren autenticacion y permisos `companies.*`. El borrado
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El backend valida que el usuario tenga acceso a esa organizacion y que este activa.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y las lecturas, actualizaciones y desactivaciones quedan limitadas a esa compania. `POST /api/companies` crea una nueva compania dentro del workspace y no usa este header como relacion.
+
 ## Modelo
 
 ```json

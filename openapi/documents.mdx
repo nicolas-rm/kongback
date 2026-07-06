@@ -13,6 +13,8 @@ Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` a
 
 Requiere header `X-Organization-Id: <organizationId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado al workspace seleccionado. `organizationId` en la respuesta corresponde a ese header y no se acepta en body ni query.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`; listar, obtener, descargar, actualizar y eliminar quedan limitados a documentos de esa compania o documentos cuyo `entityType`/`entityId` apunten a esa compania.
+
 ## Modelo
 
 ```json
@@ -76,7 +78,7 @@ MIME permitidos por defecto: `application/pdf`, `image/jpeg`, `image/png`, `imag
 
 Tamano maximo por defecto: `20 MB`.
 
-El backend valida que el contenido real coincida con el MIME declarado.
+El backend valida que el contenido real coincida con el MIME declarado. Si se envia `X-Company-Id`, `scopeKey` y `scopeId` pueden omitirse; si se envian, deben coincidir con `companyId` y el backend guarda el documento bajo esa compania.
 
 Response `201`: `Document`.
 

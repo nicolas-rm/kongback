@@ -13,6 +13,8 @@ Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado des
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId`, `vehicleId` y la tarjeta consultada deben pertenecer a esa organizacion.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y `subCompanyId`, `vehicleId` y la tarjeta consultada deben pertenecer a esa compania.
+
 ## Modelo
 
 ```json
@@ -99,7 +101,7 @@ Response `200`: resultado paginado de `Card` filtrado por `designFuelId`.
 }
 ```
 
-Requerido: `subCompanyId`. Debe estar activo en el workspace seleccionado.
+Requerido: `subCompanyId`. Debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania.
 
 Opcionales: `vehicleId`, `designFuelId`, `externalId`, `status`, `assignedAt`. Si se envia `vehicleId`, la tarjeta queda en `assignmentMode: vehicle`; si no, queda `unassigned`.
 
@@ -132,7 +134,7 @@ Response `200`: `Card` actualizada.
 }
 ```
 
-La tarjeta y el vehiculo deben estar activos, pertenecer a la misma sub-compania y respetar `designFuelId` si existe.
+La tarjeta y el vehiculo deben estar activos, pertenecer a la misma sub-compania y respetar `designFuelId` si existe. Si se envia `X-Company-Id`, ambos deben pertenecer a esa compania.
 
 Response:
 

@@ -106,6 +106,10 @@ export class AccessControlRepository {
         return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
     }
 
+    countActiveCompanies(ids: string[], organizationId: string): Promise<number> {
+        return this.prisma.company.count({ where: { id: { in: ids }, organizationId, status: 'active' } });
+    }
+
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {
         return this.prisma.permission.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, select: this.permissionSelect() });
     }

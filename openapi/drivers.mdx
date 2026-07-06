@@ -13,6 +13,8 @@ Todos los endpoints requieren autenticacion y permisos `drivers.*`. El borrado d
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId` debe pertenecer a una subcompania activa de esa organizacion.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y `subCompanyId`, el conductor consultado y sus relaciones deben pertenecer a esa compania.
+
 ## Modelo
 
 ```json
@@ -86,7 +88,7 @@ Response `200`: resultado paginado de `Driver` con `subCompany` y `user` summari
 }
 ```
 
-Requeridos: `subCompanyId`, `name`. `subCompanyId` debe estar activo en el workspace seleccionado.
+Requeridos: `subCompanyId`, `name`. `subCompanyId` debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania.
 
 Opcionales: `userId`, `externalReference`, `status`, `address`. Si `userId` se envia, debe ser un usuario activo.
 

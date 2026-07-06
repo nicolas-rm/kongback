@@ -18,24 +18,31 @@ export class StationFuelsRepository {
         return this.prisma.stationFuel.count({ where });
     }
 
-    findById(id: string, organizationId: string) {
-        return this.prisma.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
+    findById(id: string, organizationId: string, companyId?: string) {
+        return this.prisma.stationFuel.findFirst({ where: { id, station: { subCompany: { company: this.companyScope(organizationId, companyId) } } }, select: this.select() });
     }
 
-    update(id: string, organizationId: string, data: Prisma.StationFuelUncheckedUpdateInput) {
+    update(id: string, organizationId: string, data: Prisma.StationFuelUncheckedUpdateInput, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: { organizationId } } } }, data });
+            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: this.companyScope(organizationId, companyId) } } }, data });
             if (result.count === 0) return null;
-            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
+            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: this.companyScope(organizationId, companyId) } } }, select: this.select() });
         });
     }
 
-    deactivate(id: string, organizationId: string) {
+    deactivate(id: string, organizationId: string, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: { organizationId } } } }, data: { status: Status.inactive } });
+            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: this.companyScope(organizationId, companyId) } } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
+            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: this.companyScope(organizationId, companyId) } } }, select: this.select() });
         });
+    }
+
+    private companyScope(organizationId: string, companyId?: string): Prisma.CompanyWhereInput {
+        return {
+            organizationId,
+            ...(companyId ? { id: companyId } : {}),
+        };
     }
 
     private select(): Prisma.StationFuelSelect {
