@@ -3,11 +3,11 @@ import { randomBytes } from 'node:crypto';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
-import { LoginDto } from '@/modules/authentication/dto';
+import { LoginDto, VerifyTwoFactorLoginDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
-import { verifyTotpCode } from '@/utilities/authentication/totp.util';
+import { normalizeRecoveryCode, verifyTotpCode } from '@/utilities/authentication/totp.util';
 
 @Injectable()
 export class LoginUseCase {
@@ -68,8 +68,8 @@ export class LoginUseCase {
         await this.repository.updateFailedLoginState(userId, failedLoginAttempts, lockedUntil);
     }
 
-    async verifyTwoFactorLogin(challengeToken: string, code: string, sessionContext: SessionContext = {}) {
-        const challenge = await this.repository.findTwoFactorLoginChallenge(this.cryptoService.hashToken(challengeToken));
+    async verifyTwoFactorLogin(dto: VerifyTwoFactorLoginDto, sessionContext: SessionContext = {}) {
+        const challenge = await this.repository.findTwoFactorLoginChallenge(this.cryptoService.hashToken(dto.challengeToken));
         if (!challenge || !challenge.user.twoFactorEnabled || !challenge.user.twoFactorSecret || challenge.user.status !== 'active') {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
         }
@@ -78,14 +78,7 @@ export class LoginUseCase {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
         }
 
-        const secret = this.cryptoService.decrypt(challenge.user.twoFactorSecret);
-        const validCode =
-            Boolean(secret) &&
-            verifyTotpCode(secret!, code, {
-                digits: this.config.twoFactor.totpDigits,
-                periodSeconds: this.config.twoFactor.totpPeriodSeconds,
-                window: this.config.twoFactor.totpWindow,
-            });
+        const validCode = await this.verifySecondFactor(challenge.user.id, challenge.user.twoFactorSecret, dto);
 
         if (!validCode) {
             await this.repository.incrementTwoFactorChallengeAttempt(challenge.id);
@@ -101,5 +94,33 @@ export class LoginUseCase {
                 deviceName: sessionContext.deviceName,
             }
         );
+    }
+
+    private async verifySecondFactor(userId: string, encryptedSecret: string, dto: VerifyTwoFactorLoginDto): Promise<boolean> {
+        if (dto.recoveryCode) return this.consumeRecoveryCode(userId, dto.recoveryCode);
+        if (!dto.code) return false;
+
+        const secret = this.cryptoService.decrypt(encryptedSecret);
+        return (
+            Boolean(secret) &&
+            verifyTotpCode(secret!, dto.code, {
+                digits: this.config.twoFactor.totpDigits,
+                periodSeconds: this.config.twoFactor.totpPeriodSeconds,
+                window: this.config.twoFactor.totpWindow,
+            })
+        );
+    }
+
+    private async consumeRecoveryCode(userId: string, recoveryCode: string): Promise<boolean> {
+        const normalizedCode = normalizeRecoveryCode(recoveryCode);
+        if (!normalizedCode) return false;
+
+        const result = await this.repository.consumeTwoFactorRecoveryCode(userId, this.recoveryCodeHashCandidates(normalizedCode));
+        return result.count === 1;
+    }
+
+    private recoveryCodeHashCandidates(normalizedCode: string): string[] {
+        const formattedCode = normalizedCode.length > 4 ? `${normalizedCode.slice(0, 4)}-${normalizedCode.slice(4)}` : normalizedCode;
+        return [...new Set([normalizedCode, formattedCode].map((code) => this.cryptoService.hashToken(code)))];
     }
 }

@@ -4,7 +4,7 @@ import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nBadRequestException, I18nUnauthorizedException } from '@/i18n';
 import { TwoFactorCodeDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
-import { buildTotpOtpAuthenticationUrl, generateRecoveryCodes, generateTotpSecret, verifyTotpCode } from '@/utilities/authentication/totp.util';
+import { buildTotpOtpAuthenticationUrl, generateRecoveryCodes, generateTotpSecret, normalizeRecoveryCode, verifyTotpCode } from '@/utilities/authentication/totp.util';
 
 @Injectable()
 export class TwoFactorUseCase {
@@ -58,7 +58,7 @@ export class TwoFactorUseCase {
         await this.repository.enableTwoFactor(user.id, this.cryptoService.encrypt(secret));
         await this.repository.replaceRecoveryCodes(
             user.id,
-            recoveryCodes.map((code) => this.cryptoService.hashToken(code))
+            recoveryCodes.map((code) => this.cryptoService.hashToken(normalizeRecoveryCode(code)))
         );
 
         return { enabled: true, recoveryCodes };
@@ -85,7 +85,7 @@ export class TwoFactorUseCase {
         const recoveryCodes = generateRecoveryCodes(this.config.twoFactor.recoveryCodesCount);
         await this.repository.replaceRecoveryCodes(
             user.id,
-            recoveryCodes.map((code) => this.cryptoService.hashToken(code))
+            recoveryCodes.map((code) => this.cryptoService.hashToken(normalizeRecoveryCode(code)))
         );
 
         return { recoveryCodes };

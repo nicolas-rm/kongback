@@ -53,7 +53,7 @@ export class AuthenticationService {
     }
 
     verifyTwoFactorLogin(dto: VerifyTwoFactorLoginDto, sessionContext?: SessionContext) {
-        return this.loginUseCase.verifyTwoFactorLogin(dto.challengeToken, dto.code, sessionContext);
+        return this.loginUseCase.verifyTwoFactorLogin(dto, sessionContext);
     }
 
     register(dto: RegisterDto, sessionContext?: SessionContext) {

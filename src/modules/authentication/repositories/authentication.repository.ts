@@ -451,6 +451,13 @@ export class AuthenticationRepository {
         });
     }
 
+    consumeTwoFactorRecoveryCode(userId: string, codeHashes: string[], usedAt = new Date()) {
+        return this.prisma.twoFactorRecoveryCode.updateMany({
+            where: { userId, codeHash: { in: codeHashes }, usedAt: null },
+            data: { usedAt },
+        });
+    }
+
     enableTwoFactor(userId: string, encryptedSecret: string) {
         return this.prisma.user.update({
             where: { id: userId },
