@@ -1,0 +1,173 @@
+---
+title: Organizations API
+description: Endpoints para administrar organizaciones y sus miembros.
+---
+
+## Base
+
+Base path: `/api/organizations`
+
+Todos los endpoints requieren autenticacion y permisos `organizations.*`. El borrado desactiva la organizacion cambiando `status` a `inactive`.
+
+## Modelos
+
+### Organization
+
+```json
+{
+  "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+  "name": "Demo Organization",
+  "slug": "demo-organization",
+  "description": "Organizacion demo",
+  "status": "active"
+}
+```
+
+`status`: `active`, `inactive`, `suspended`.
+
+### OrganizationMember
+
+```json
+{
+  "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
+  "user": {
+    "id": "8d15017a-2069-43a5-b9aa-c926c8f98352",
+    "username": "demo.user",
+    "email": "demo.user@example.com",
+    "fullName": "Demo User",
+    "status": "active"
+  }
+}
+```
+
+Los miembros no asignan permisos por si mismos. Los roles y scopes se asignan desde `/api/users/:id/access`.
+
+## Endpoints
+
+| Metodo | Ruta | Permiso | Descripcion |
+| --- | --- | --- | --- |
+| `POST` | `/api/organizations` | `organizations.create` | Crea una organizacion. |
+| `GET` | `/api/organizations` | `organizations.read-list` | Lista organizaciones. |
+| `GET` | `/api/organizations/:id` | `organizations.read-one` | Obtiene una organizacion. |
+| `PATCH` | `/api/organizations/:id` | `organizations.update` | Actualiza una organizacion. |
+| `DELETE` | `/api/organizations/:id` | `organizations.delete` | Desactiva una organizacion. |
+| `GET` | `/api/organizations/:id/members` | `organizations.members.read` | Lista miembros de la organizacion. |
+| `POST` | `/api/organizations/:id/members` | `organizations.members.add` | Agrega un usuario activo como miembro. |
+| `DELETE` | `/api/organizations/:id/members/:membershipId` | `organizations.members.remove` | Remueve un miembro. |
+
+## Crear organizacion
+
+`POST /api/organizations`
+
+```json
+{
+  "name": "Demo Organization",
+  "slug": "demo-organization",
+  "description": "Organizacion demo",
+  "status": "active"
+}
+```
+
+Requeridos: `name`, `slug`. `slug` se normaliza a minusculas.
+
+Opcionales: `description`, `status`.
+
+Response `201`: `Organization`.
+
+## Listar organizaciones
+
+`GET /api/organizations`
+
+Query params: `page`, `limit`, `search`, `all`, `status`.
+
+`search` busca por `name`, `slug` y `description`.
+
+```http
+GET /api/organizations?page=1&limit=20&search=demo&status=active
+```
+
+Response `200`: resultado paginado de `Organization`.
+
+## Obtener organizacion
+
+`GET /api/organizations/:id`
+
+Path params: `id` UUID de la organizacion.
+
+Response `200`: `Organization`.
+
+## Actualizar organizacion
+
+`PATCH /api/organizations/:id`
+
+```json
+{
+  "name": "Demo Organization Updated",
+  "description": null,
+  "status": "active"
+}
+```
+
+Acepta `name`, `slug`, `description` y `status`, todos opcionales.
+
+Response `200`: `Organization` actualizada.
+
+## Desactivar organizacion
+
+`DELETE /api/organizations/:id`
+
+Response `200`:
+
+```json
+{
+  "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+  "status": "inactive"
+}
+```
+
+## Listar miembros
+
+`GET /api/organizations/:id/members`
+
+Path params: `id` UUID de la organizacion.
+
+Response `200`: `OrganizationMember[]`.
+
+## Agregar miembro
+
+`POST /api/organizations/:id/members`
+
+```json
+{
+  "userId": "8d15017a-2069-43a5-b9aa-c926c8f98352"
+}
+```
+
+La organizacion y el usuario deben estar `active`. Si el usuario ya es miembro, devuelve el miembro existente.
+
+Response `201`: `OrganizationMember`.
+
+## Remover miembro
+
+`DELETE /api/organizations/:id/members/:membershipId`
+
+Tambien elimina accesos del usuario dentro de esa organizacion.
+
+Response `200`:
+
+```json
+{
+  "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
+  "deleted": true
+}
+```
+
+## Errores comunes
+
+| Estado | Caso |
+| --- | --- |
+| `400` | Body, query, path params o relacion invalida. |
+| `401` | Request sin autenticacion valida. |
+| `403` | Usuario autenticado sin el permiso requerido. |
+| `404` | Organizacion o miembro no encontrado. |
+| `409` | Conflictos de unicidad segun constraints Prisma. |
