@@ -47,6 +47,20 @@ export class PrismaExceptionFilter implements ExceptionFilter {
         const target = exception.meta?.target;
         if (Array.isArray(target)) return target.map(String).join(', ');
         if (typeof target === 'string') return target;
+        const fieldsFromMessage = this.resolveUniqueFieldsFromMessage(exception.message);
+        if (fieldsFromMessage) return fieldsFromMessage;
         return translateI18n(host, I18N_KEYS.prisma.unknownField, 'desconocido');
+    }
+
+    private resolveUniqueFieldsFromMessage(message: string): string | null {
+        const match = /Unique constraint failed on the fields?: \(([^)]+)\)/.exec(message);
+        if (!match?.[1]) return null;
+
+        const fields = match[1]
+            .split(',')
+            .map((field) => field.trim().replace(/[`"\\]/g, ''))
+            .filter(Boolean);
+
+        return fields.length > 0 ? fields.join(', ') : null;
     }
 }
