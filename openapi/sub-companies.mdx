@@ -54,13 +54,19 @@ En listados, `company` se devuelve como summary y `address` no se devuelve. `add
 
 ## Listado
 
+`GET /api/sub-companies`
+
 Query params: `page`, `limit`, `search`, `all`, `status`, `companyId`.
 
 `search` busca por `key`, `externalId` y `name`.
 
 Para la columna Compania en front, usa `company.name` o `company.key + " · " + company.name`; no muestres `companyId` salvo en vistas tecnicas.
 
+Response `200`: resultado paginado de `SubCompany` con `company` summary y sin `address`.
+
 ## Crear
+
+`POST /api/sub-companies`
 
 ```json
 {
@@ -82,13 +88,29 @@ Requeridos: `companyId`, `key`, `name`. `companyId` debe apuntar a una compania 
 
 Opcionales: `externalId`, `status`, `isDefault`, `address`.
 
+Response `201`: `SubCompany` con `company` summary y `address`.
+
+## Obtener
+
+`GET /api/sub-companies/:id`
+
+Path params: `id` UUID de la sub-compania.
+
+Response `200`: `SubCompany` con `company` summary y `address`.
+
 ## Actualizar
 
 `PATCH /api/sub-companies/:id`
 
 Acepta `key`, `externalId`, `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`.
 
+Response `200`: `SubCompany` actualizada con `company` summary y `address`.
+
 ## Desactivar
+
+`DELETE /api/sub-companies/:id`
+
+Response `200`:
 
 ```json
 {

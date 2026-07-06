@@ -43,13 +43,19 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 
 ## Listado
 
+`GET /api/cardcloud-card-stock`
+
 Query params: `page`, `limit`, `search`, `all`, `status`, `assignedCardId`.
 
 `status` filtra `providerStatus`. `search` busca por `externalId`, `maskedPan` y `clientId`.
 
 Para columnas visibles, usa `assignedCard.externalId`; conserva `assignedCardId` para filtros y acciones.
 
+Response `200`: resultado paginado de `CardcloudCardStock`.
+
 ## Crear
+
+`POST /api/cardcloud-card-stock`
 
 ```json
 {
@@ -67,13 +73,29 @@ Requerido: `externalId`.
 
 Opcionales: `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`. Si `assignedCardId` se envia, debe apuntar a una tarjeta activa.
 
+Response `201`: `CardcloudCardStock`.
+
+## Obtener
+
+`GET /api/cardcloud-card-stock/:id`
+
+Path params: `id` UUID del registro Cardcloud.
+
+Response `200`: `CardcloudCardStock`.
+
 ## Actualizar
 
 `PATCH /api/cardcloud-card-stock/:id`
 
 Acepta `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`, todos opcionales.
 
+Response `200`: `CardcloudCardStock` actualizado.
+
 ## Desactivar
+
+`DELETE /api/cardcloud-card-stock/:id`
+
+Response `200`:
 
 ```json
 {

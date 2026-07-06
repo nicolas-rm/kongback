@@ -32,11 +32,17 @@ Todos los endpoints requieren autenticacion y permisos `fuels.*`. El borrado des
 
 ## Listado
 
+`GET /api/fuels`
+
 Query params: `page`, `limit`, `search`, `all`, `status`.
 
 `search` busca por `code` y `name`.
 
+Response `200`: resultado paginado de `Fuel`.
+
 ## Crear
+
+`POST /api/fuels`
 
 ```json
 {
@@ -50,13 +56,29 @@ Requeridos: `code`, `name`. `code` se normaliza a mayusculas.
 
 Opcional: `status`.
 
+Response `201`: `Fuel`.
+
+## Obtener
+
+`GET /api/fuels/:id`
+
+Path params: `id` UUID del combustible.
+
+Response `200`: `Fuel`.
+
 ## Actualizar
 
 `PATCH /api/fuels/:id`
 
 Acepta `code`, `name` y `status`, todos opcionales.
 
+Response `200`: `Fuel` actualizado.
+
 ## Desactivar
+
+`DELETE /api/fuels/:id`
+
+Response `200`:
 
 ```json
 {

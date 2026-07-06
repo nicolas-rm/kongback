@@ -58,13 +58,19 @@ En listados, `subCompany` y `user` se devuelven como summaries y `address` no se
 
 ## Listado
 
+`GET /api/drivers`
+
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `userId`.
 
 `search` busca por `name` y `externalReference`.
 
 Para columnas relacionadas, usa `subCompany.name` y `user.fullName`; conserva `subCompanyId` y `userId` para acciones y formularios.
 
+Response `200`: resultado paginado de `Driver` con `subCompany` y `user` summaries, sin `address`.
+
 ## Crear
+
+`POST /api/drivers`
 
 ```json
 {
@@ -80,13 +86,29 @@ Requeridos: `subCompanyId`, `name`. `subCompanyId` debe estar activo.
 
 Opcionales: `userId`, `externalReference`, `status`, `address`. Si `userId` se envia, debe ser un usuario activo.
 
+Response `201`: `Driver` con `subCompany`, `user` y `address`.
+
+## Obtener
+
+`GET /api/drivers/:id`
+
+Path params: `id` UUID del conductor.
+
+Response `200`: `Driver` con `subCompany`, `user` y `address`.
+
 ## Actualizar
 
 `PATCH /api/drivers/:id`
 
 Acepta `userId`, `name`, `externalReference`, `status` y `address`, todos opcionales. `userId` puede enviarse como `null` para desvincular.
 
+Response `200`: `Driver` actualizado con `subCompany`, `user` y `address`.
+
 ## Desactivar
+
+`DELETE /api/drivers/:id`
+
+Response `200`:
 
 ```json
 {

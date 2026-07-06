@@ -50,6 +50,8 @@ En listados, `address` no se devuelve para mantener el payload liviano. `address
 
 ## Listado
 
+`GET /api/companies`
+
 Query params: `page`, `limit`, `search`, `all`, `status`.
 
 `search` busca por `key`, `externalId`, `name` y `tradeName`.
@@ -58,7 +60,11 @@ Query params: `page`, `limit`, `search`, `all`, `status`.
 GET /api/companies?page=1&limit=20&search=acme&status=active
 ```
 
+Response `200`: resultado paginado de `Company` sin `address`.
+
 ## Crear
+
+`POST /api/companies`
 
 ```json
 {
@@ -81,15 +87,29 @@ Requeridos: `key`, `name`.
 
 Opcionales: `externalId`, `tradeName`, `status`, `address`. Strings vacios opcionales se transforman a `null`.
 
+Response `201`: `Company` con `address`.
+
+## Obtener
+
+`GET /api/companies/:id`
+
+Path params: `id` UUID de la compania.
+
+Response `200`: `Company` con `address`.
+
 ## Actualizar
 
 `PATCH /api/companies/:id`
 
 Acepta los mismos campos que crear, todos opcionales.
 
+Response `200`: `Company` actualizada con `address`.
+
 ## Desactivar
 
 `DELETE /api/companies/:id`
+
+Response `200`:
 
 ```json
 {

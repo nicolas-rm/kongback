@@ -58,13 +58,31 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 
 ## Listado
 
+`GET /api/cards`
+
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `vehicleId`, `designFuelId`, `assignmentMode`.
 
 `search` busca por `externalId`.
 
 Para columnas visibles, usa `vehicle.plates`, `vehicle.economicNumber`, `designFuel.name` y `subCompany.name`.
 
+Response `200`: resultado paginado de `Card`.
+
+## Listar por combustible de diseno
+
+`GET /api/cards/by-design-fuel/:designFuelId`
+
+Path params: `designFuelId` UUID del combustible.
+
+Query params: `page`, `limit`, `search`, `all`, `status`.
+
+Valida que el combustible exista y este activo. `search` busca por `externalId`.
+
+Response `200`: resultado paginado de `Card` filtrado por `designFuelId`.
+
 ## Crear
+
+`POST /api/cards`
 
 ```json
 {
@@ -81,11 +99,23 @@ Requerido: `subCompanyId`.
 
 Opcionales: `vehicleId`, `designFuelId`, `externalId`, `status`, `assignedAt`. Si se envia `vehicleId`, la tarjeta queda en `assignmentMode: vehicle`; si no, queda `unassigned`.
 
+Response `201`: `Card`.
+
+## Obtener
+
+`GET /api/cards/:id`
+
+Path params: `id` UUID de la tarjeta.
+
+Response `200`: `Card`.
+
 ## Actualizar
 
 `PATCH /api/cards/:id`
 
 Acepta `designFuelId`, `externalId` y `status`, todos opcionales. Si la tarjeta ya tiene vehiculo, el `designFuelId` debe coincidir con el combustible del vehiculo.
+
+Response `200`: `Card` actualizada.
 
 ## Asignar vehiculo
 
@@ -127,6 +157,10 @@ Response:
 ```
 
 ## Desactivar
+
+`DELETE /api/cards/:id`
+
+Response `200`:
 
 ```json
 {

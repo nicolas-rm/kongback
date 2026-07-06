@@ -44,13 +44,19 @@ Las relaciones se devuelven como summaries controlados: `station` y `fuel`.
 
 ## Listado
 
+`GET /api/station-fuels`
+
 Query params: `page`, `limit`, `all`, `status`, `stationId`, `fuelId`.
 
 Este listado no tiene busqueda textual propia.
 
 Para columnas visibles, usa `station.name` y `fuel.name`; conserva IDs para filtros y acciones.
 
+Response `200`: resultado paginado de `StationFuel`.
+
 ## Crear
+
+`POST /api/station-fuels`
 
 ```json
 {
@@ -64,6 +70,16 @@ Requeridos: `stationId`, `fuelId`. Ambos deben estar activos.
 
 Opcional: `status`.
 
+Response `201`: `StationFuel`.
+
+## Obtener
+
+`GET /api/station-fuels/:id`
+
+Path params: `id` UUID de la relacion estacion-combustible.
+
+Response `200`: `StationFuel`.
+
 ## Actualizar
 
 `PATCH /api/station-fuels/:id`
@@ -76,7 +92,13 @@ Opcional: `status`.
 
 Solo permite actualizar `status`.
 
+Response `200`: `StationFuel` actualizada.
+
 ## Desactivar
+
+`DELETE /api/station-fuels/:id`
+
+Response `200`:
 
 ```json
 {

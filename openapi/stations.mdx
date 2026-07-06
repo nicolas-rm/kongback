@@ -54,13 +54,19 @@ En listados, `subCompany` se devuelve como summary y `address` no se devuelve. `
 
 ## Listado
 
+`GET /api/stations`
+
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`.
 
 `search` busca por `stationNumber` y `name`.
 
 Para columnas visibles, usa `subCompany.name`; conserva `subCompanyId` para filtros y acciones.
 
+Response `200`: resultado paginado de `Station` con `subCompany` summary y sin `address`.
+
 ## Crear
+
+`POST /api/stations`
 
 ```json
 {
@@ -82,13 +88,29 @@ Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar a
 
 Opcionales: `lat`, `lon`, `status`, `address`. `lat` acepta -90 a 90; `lon` acepta -180 a 180.
 
+Response `201`: `Station` con `subCompany` summary y `address`.
+
+## Obtener
+
+`GET /api/stations/:id`
+
+Path params: `id` UUID de la estacion.
+
+Response `200`: `Station` con `subCompany` summary y `address`.
+
 ## Actualizar
 
 `PATCH /api/stations/:id`
 
 Acepta `stationNumber`, `name`, `lat`, `lon`, `status` y `address`, todos opcionales.
 
+Response `200`: `Station` actualizada con `subCompany` summary y `address`.
+
 ## Desactivar
+
+`DELETE /api/stations/:id`
+
+Response `200`:
 
 ```json
 {

@@ -41,9 +41,13 @@ Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` a
 
 ## Listado
 
+`GET /api/documents`
+
 Query params: `page`, `limit`, `search`, `all`, `category`, `organizationId`, `entityType`, `entityId`.
 
 `search` busca por `title`, `originalName` y `description`.
+
+Response `200`: resultado paginado de `Document`.
 
 ## Crear
 
@@ -71,6 +75,16 @@ Tamano maximo por defecto: `20 MB`.
 
 El backend valida que el contenido real coincida con el MIME declarado.
 
+Response `201`: `Document`.
+
+## Obtener metadata
+
+`GET /api/documents/:id`
+
+Path params: `id` UUID del documento.
+
+Response `200`: `Document`.
+
 ## Actualizar
 
 `PATCH /api/documents/:id`
@@ -85,6 +99,8 @@ El backend valida que el contenido real coincida con el MIME declarado.
 
 Solo permite actualizar `title`, `description` y `category`.
 
+Response `200`: `Document` actualizado.
+
 ## Descargar
 
 `GET /api/documents/:id/download`
@@ -97,6 +113,12 @@ Devuelve stream binario con:
 | `Content-Disposition` | `attachment` con nombre original. |
 
 ## Eliminar
+
+`DELETE /api/documents/:id`
+
+Path params: `id` UUID del documento.
+
+Response `200`:
 
 ```json
 {
