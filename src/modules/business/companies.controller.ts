@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentOrganizationId, Permissions, RequireOrganization } from '@/decorators';
+import { CurrentCompanyId, CurrentOrganizationId, Permissions, RequireOrganization } from '@/decorators';
 import { CreateCompanyDto, FindStatusRecordsDto, UpdateCompanyDto } from '@/modules/business/dto';
 import { CompaniesService } from '@/modules/business/services/companies.service';
 
@@ -16,25 +16,25 @@ export class CompaniesController {
 
     @Get()
     @Permissions('companies.read-list')
-    findAll(@CurrentOrganizationId() organizationId: string, @Query() dto: FindStatusRecordsDto) {
-        return this.companiesService.findAll(organizationId, dto);
+    findAll(@CurrentOrganizationId() organizationId: string, @CurrentCompanyId() companyId: string | undefined, @Query() dto: FindStatusRecordsDto) {
+        return this.companiesService.findAll(organizationId, dto, companyId);
     }
 
     @Get(':id')
     @Permissions('companies.read-one')
-    findOne(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
-        return this.companiesService.findOne(organizationId, id);
+    findOne(@CurrentOrganizationId() organizationId: string, @CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.companiesService.findOne(organizationId, id, companyId);
     }
 
     @Patch(':id')
     @Permissions('companies.update')
-    update(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCompanyDto) {
-        return this.companiesService.update(organizationId, id, dto);
+    update(@CurrentOrganizationId() organizationId: string, @CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCompanyDto) {
+        return this.companiesService.update(organizationId, id, dto, companyId);
     }
 
     @Delete(':id')
     @Permissions('companies.delete')
-    remove(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
-        return this.companiesService.deactivate(organizationId, id);
+    remove(@CurrentOrganizationId() organizationId: string, @CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.companiesService.deactivate(organizationId, id, companyId);
     }
 }

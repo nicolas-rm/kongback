@@ -23,9 +23,10 @@ export class CompaniesService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindStatusRecordsDto) {
+    async findAll(organizationId: string, dto: FindStatusRecordsDto, companyId?: string) {
         const where: Prisma.CompanyWhereInput = {
             organizationId,
+            ...(companyId ? { id: companyId } : {}),
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CompanyWhereInput>(dto.search, ['key', 'externalId', 'name', 'tradeName']) } : {}),
         };
@@ -33,13 +34,13 @@ export class CompaniesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string) {
-        const company = await this.repository.findById(id, organizationId);
+    async findOne(organizationId: string, id: string, companyId?: string) {
+        const company = await this.repository.findById(id, organizationId, companyId);
         if (!company) throw notFound();
         return company;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateCompanyDto) {
+    async update(organizationId: string, id: string, dto: UpdateCompanyDto, companyId?: string) {
         const company = await this.repository.update(
             id,
             organizationId,
@@ -50,14 +51,15 @@ export class CompaniesService {
                 tradeName: dto.tradeName,
                 status: dto.status,
             },
-            toAddressData(dto.address)
+            toAddressData(dto.address),
+            companyId
         );
         if (!company) throw notFound();
         return company;
     }
 
-    async deactivate(organizationId: string, id: string) {
-        const company = await this.repository.deactivate(id, organizationId);
+    async deactivate(organizationId: string, id: string, companyId?: string) {
+        const company = await this.repository.deactivate(id, organizationId, companyId);
         if (!company) throw notFound();
         return { id: company.id, status: company.status };
     }

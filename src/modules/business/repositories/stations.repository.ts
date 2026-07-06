@@ -26,27 +26,34 @@ export class StationsRepository {
         return this.prisma.station.count({ where });
     }
 
-    findById(id: string, organizationId: string) {
-        return this.prisma.station.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: this.select() });
+    findById(id: string, organizationId: string, companyId?: string) {
+        return this.prisma.station.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
     }
 
-    update(id: string, organizationId: string, data: Prisma.StationUncheckedUpdateInput, address?: AddressData) {
+    update(id: string, organizationId: string, data: Prisma.StationUncheckedUpdateInput, address?: AddressData, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const current = await tx.station.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: { id: true, addressId: true } });
+            const current = await tx.station.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: { id: true, addressId: true } });
             if (!current) return null;
 
             const addressId = await this.addresses.upsert(tx, current.addressId, address);
             await tx.station.update({ where: { id: current.id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
-            return tx.station.findFirst({ where: { id: current.id, subCompany: { company: { organizationId } } }, select: this.select() });
+            return tx.station.findFirst({ where: { id: current.id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
         });
     }
 
-    deactivate(id: string, organizationId: string) {
+    deactivate(id: string, organizationId: string, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.station.updateMany({ where: { id, subCompany: { company: { organizationId } } }, data: { status: Status.inactive } });
+            const result = await tx.station.updateMany({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.station.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: this.select() });
+            return tx.station.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
         });
+    }
+
+    private companyScope(organizationId: string, companyId?: string): Prisma.CompanyWhereInput {
+        return {
+            organizationId,
+            ...(companyId ? { id: companyId } : {}),
+        };
     }
 
     private select(): Prisma.StationSelect {

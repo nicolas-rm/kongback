@@ -62,6 +62,22 @@ export class PermissionsGuard implements CanActivate {
         }
 
         (request as OrganizationRequest).organizationId = organizationId;
+        await this.resolveCompanyId(request, organizationId);
         return organizationId;
+    }
+
+    private async resolveCompanyId(request: Request, organizationId: string): Promise<void> {
+        const companyId = request.get('x-company-id')?.trim();
+        if (!companyId) return;
+
+        if (!isUUID(companyId, '4')) {
+            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'X-Company-Id invalido');
+        }
+
+        if (!(await this.accessControl.companyIsActiveInOrganization(companyId, organizationId))) {
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.organizationDenied, 'Acceso denegado a esta compania');
+        }
+
+        (request as OrganizationRequest).companyId = companyId;
     }
 }

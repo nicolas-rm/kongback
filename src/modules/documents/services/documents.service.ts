@@ -17,9 +17,10 @@ export class DocumentsService {
         private readonly storage: DocumentsStorageService
     ) {}
 
-    async create(organizationId: string, dto: CreateDocumentDto, file: UploadedFile, userId?: string | null) {
+    async create(organizationId: string, dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, companyId?: string) {
         this.assertAllowedFile(file);
         await this.assertOrganizationActive(organizationId);
+        this.assertCompanyScope(dto.scopeKey, dto.scopeId, companyId);
 
         const storedFile = await this.storage.saveFile(file);
 
@@ -30,8 +31,8 @@ export class DocumentsService {
             organizationId,
             entityType: dto.entityType ?? null,
             entityId: dto.entityId ?? null,
-            scopeKey: dto.scopeKey ?? null,
-            scopeId: dto.scopeId ?? null,
+            scopeKey: companyId ? 'companyId' : (dto.scopeKey ?? null),
+            scopeId: companyId ?? dto.scopeId ?? null,
             originalName: file.originalname,
             mimeType: file.mimetype,
             uploadedByUserId: userId ?? null,
@@ -41,22 +42,33 @@ export class DocumentsService {
         return DocumentResponse.from(document);
     }
 
-    async findAll(organizationId: string, dto: FindDocumentsDto) {
+    async findAll(organizationId: string, dto: FindDocumentsDto, companyId?: string) {
+        const and: Prisma.DocumentWhereInput[] = [];
+        if (companyId) {
+            and.push({
+                OR: [
+                    { scopeKey: 'companyId', scopeId: companyId },
+                    { entityType: 'company', entityId: companyId },
+                ],
+            });
+        }
+        if (dto.search) {
+            and.push({
+                OR: [
+                    { title: { contains: dto.search, mode: 'insensitive' } },
+                    { originalName: { contains: dto.search, mode: 'insensitive' } },
+                    { description: { contains: dto.search, mode: 'insensitive' } },
+                ],
+            });
+        }
+
         const where: Prisma.DocumentWhereInput = {
             deletedAt: null,
             category: dto.category,
             organizationId,
             entityType: dto.entityType,
             entityId: dto.entityId,
-            ...(dto.search
-                ? {
-                      OR: [
-                          { title: { contains: dto.search, mode: 'insensitive' } },
-                          { originalName: { contains: dto.search, mode: 'insensitive' } },
-                          { description: { contains: dto.search, mode: 'insensitive' } },
-                      ],
-                  }
-                : {}),
+            ...(and.length ? { AND: and } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(
@@ -66,32 +78,32 @@ export class DocumentsService {
         );
     }
 
-    async findOne(organizationId: string, id: string) {
-        const document = await this.repository.findById(id, organizationId);
+    async findOne(organizationId: string, id: string, companyId?: string) {
+        const document = await this.repository.findById(id, organizationId, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
         return DocumentResponse.from(document);
     }
 
-    async update(organizationId: string, id: string, dto: UpdateDocumentDto, userId?: string | null) {
-        const document = await this.repository.update(id, organizationId, { ...dto, updatedByUserId: userId ?? null });
+    async update(organizationId: string, id: string, dto: UpdateDocumentDto, userId?: string | null, companyId?: string) {
+        const document = await this.repository.update(id, organizationId, { ...dto, updatedByUserId: userId ?? null }, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         return DocumentResponse.from(document);
     }
 
-    async download(organizationId: string, id: string) {
-        const document = await this.repository.findDownloadById(id, organizationId);
+    async download(organizationId: string, id: string, companyId?: string) {
+        const document = await this.repository.findDownloadById(id, organizationId, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
     }
 
-    async remove(organizationId: string, id: string, userId?: string | null) {
-        const document = await this.repository.findDownloadById(id, organizationId);
+    async remove(organizationId: string, id: string, userId?: string | null, companyId?: string) {
+        const document = await this.repository.findDownloadById(id, organizationId, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
-        const result = await this.repository.softDelete(id, organizationId, userId);
+        const result = await this.repository.softDelete(id, organizationId, userId, companyId);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.removeFile(document.storageKey);
@@ -126,5 +138,12 @@ export class DocumentsService {
 
         const activeOrganizations = await this.repository.countActiveOrganizations([organizationId]);
         if (activeOrganizations !== 1) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+    }
+
+    private assertCompanyScope(scopeKey?: string | null, scopeId?: string | null, companyId?: string): void {
+        if (!companyId) return;
+        if ((scopeKey && scopeKey !== 'companyId') || (scopeId && scopeId !== companyId)) {
+            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        }
     }
 }

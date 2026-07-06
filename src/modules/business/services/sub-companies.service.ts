@@ -13,8 +13,8 @@ export class SubCompaniesService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateSubCompanyDto) {
-        await assertActive([{ ids: [dto.companyId], count: (ids) => this.relations.countActiveCompanies(ids, organizationId) }]);
+    async create(organizationId: string, dto: CreateSubCompanyDto, companyId?: string) {
+        await assertActive([{ ids: [dto.companyId], count: (ids) => this.relations.countActiveCompanies(ids, organizationId, companyId) }]);
         return this.repository.create(
             {
                 companyId: dto.companyId,
@@ -28,10 +28,10 @@ export class SubCompaniesService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindSubCompaniesDto) {
+    async findAll(organizationId: string, dto: FindSubCompaniesDto, companyId?: string) {
         const where: Prisma.SubCompanyWhereInput = {
             companyId: dto.companyId,
-            company: { organizationId },
+            company: { organizationId, ...(companyId ? { id: companyId } : {}) },
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.SubCompanyWhereInput>(dto.search, ['key', 'externalId', 'name']) } : {}),
         };
@@ -39,13 +39,13 @@ export class SubCompaniesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string) {
-        const subCompany = await this.repository.findById(id, organizationId);
+    async findOne(organizationId: string, id: string, companyId?: string) {
+        const subCompany = await this.repository.findById(id, organizationId, companyId);
         if (!subCompany) throw notFound();
         return subCompany;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateSubCompanyDto) {
+    async update(organizationId: string, id: string, dto: UpdateSubCompanyDto, companyId?: string) {
         const subCompany = await this.repository.update(
             id,
             organizationId,
@@ -56,14 +56,15 @@ export class SubCompaniesService {
                 status: dto.status,
                 isDefault: dto.isDefault,
             },
-            toAddressData(dto.address)
+            toAddressData(dto.address),
+            companyId
         );
         if (!subCompany) throw notFound();
         return subCompany;
     }
 
-    async deactivate(organizationId: string, id: string) {
-        const subCompany = await this.repository.deactivate(id, organizationId);
+    async deactivate(organizationId: string, id: string, companyId?: string) {
+        const subCompany = await this.repository.deactivate(id, organizationId, companyId);
         if (!subCompany) throw notFound();
         return { id: subCompany.id, status: subCompany.status };
     }
