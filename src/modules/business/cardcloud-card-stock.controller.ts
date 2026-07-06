@@ -1,39 +1,40 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { Permissions } from '@/decorators';
+import { CurrentOrganizationId, Permissions, RequireOrganization } from '@/decorators';
 import { CreateCardcloudCardStockDto, FindCardcloudCardStockDto, UpdateCardcloudCardStockDto } from '@/modules/business/dto';
 import { CardcloudCardStockService } from '@/modules/business/services/cardcloud-card-stock.service';
 
+@RequireOrganization()
 @Controller('cardcloud-card-stock')
 export class CardcloudCardStockController {
     constructor(private readonly cardcloudCardStockService: CardcloudCardStockService) {}
 
     @Post()
     @Permissions('cardcloud-card-stock.create')
-    create(@Body() dto: CreateCardcloudCardStockDto) {
-        return this.cardcloudCardStockService.create(dto);
+    create(@CurrentOrganizationId() organizationId: string, @Body() dto: CreateCardcloudCardStockDto) {
+        return this.cardcloudCardStockService.create(organizationId, dto);
     }
 
     @Get()
     @Permissions('cardcloud-card-stock.read-list')
-    findAll(@Query() dto: FindCardcloudCardStockDto) {
-        return this.cardcloudCardStockService.findAll(dto);
+    findAll(@CurrentOrganizationId() organizationId: string, @Query() dto: FindCardcloudCardStockDto) {
+        return this.cardcloudCardStockService.findAll(organizationId, dto);
     }
 
     @Get(':id')
     @Permissions('cardcloud-card-stock.read-one')
-    findOne(@Param('id', ParseUUIDPipe) id: string) {
-        return this.cardcloudCardStockService.findOne(id);
+    findOne(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
+        return this.cardcloudCardStockService.findOne(organizationId, id);
     }
 
     @Patch(':id')
     @Permissions('cardcloud-card-stock.update')
-    update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCardcloudCardStockDto) {
-        return this.cardcloudCardStockService.update(id, dto);
+    update(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCardcloudCardStockDto) {
+        return this.cardcloudCardStockService.update(organizationId, id, dto);
     }
 
     @Delete(':id')
     @Permissions('cardcloud-card-stock.delete')
-    remove(@Param('id', ParseUUIDPipe) id: string) {
-        return this.cardcloudCardStockService.deactivate(id);
+    remove(@CurrentOrganizationId() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
+        return this.cardcloudCardStockService.deactivate(organizationId, id);
     }
 }

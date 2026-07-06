@@ -7,19 +7,19 @@ import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-us
 export class AccessControlRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async findUserRoleLabels(userId: string): Promise<string[]> {
+    async findUserRoleLabels(userId: string, organizationId?: string): Promise<string[]> {
         const accesses = await this.prisma.userAccess.findMany({
-            where: buildActiveUserAccessWhere({ userId }),
+            where: buildActiveUserAccessWhere({ userId }, organizationId),
             select: { role: { select: { code: true, name: true } } },
         });
 
         return accesses.flatMap((entry) => [entry.role.code, entry.role.name]);
     }
 
-    async findUserPermissionCodes(userId: string): Promise<string[]> {
+    async findUserPermissionCodes(userId: string, organizationId?: string): Promise<string[]> {
         const rolePermissions = await this.prisma.rolePermission.findMany({
             where: {
-                role: { accesses: { some: buildActiveUserAccessWhere({ userId }) } },
+                role: { accesses: { some: buildActiveUserAccessWhere({ userId }, organizationId) } },
             },
             select: { permission: { select: { code: true } } },
         });
@@ -100,6 +100,10 @@ export class AccessControlRepository {
 
     countActivePermissions(ids: string[]): Promise<number> {
         return this.prisma.permission.count({ where: { id: { in: ids } } });
+    }
+
+    countActiveOrganizations(ids: string[]): Promise<number> {
+        return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
     }
 
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {

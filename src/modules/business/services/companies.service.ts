@@ -9,9 +9,10 @@ import { CompaniesRepository } from '@/modules/business/repositories/companies.r
 export class CompaniesService {
     constructor(private readonly repository: CompaniesRepository) {}
 
-    async create(dto: CreateCompanyDto) {
+    async create(organizationId: string, dto: CreateCompanyDto) {
         return this.repository.create(
             {
+                organizationId,
                 key: dto.key,
                 externalId: dto.externalId ?? null,
                 name: dto.name,
@@ -22,8 +23,9 @@ export class CompaniesService {
         );
     }
 
-    async findAll(dto: FindStatusRecordsDto) {
+    async findAll(organizationId: string, dto: FindStatusRecordsDto) {
         const where: Prisma.CompanyWhereInput = {
+            organizationId,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CompanyWhereInput>(dto.search, ['key', 'externalId', 'name', 'tradeName']) } : {}),
         };
@@ -31,15 +33,16 @@ export class CompaniesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const company = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const company = await this.repository.findById(id, organizationId);
         if (!company) throw notFound();
         return company;
     }
 
-    async update(id: string, dto: UpdateCompanyDto) {
+    async update(organizationId: string, id: string, dto: UpdateCompanyDto) {
         const company = await this.repository.update(
             id,
+            organizationId,
             {
                 key: dto.key,
                 externalId: dto.externalId,
@@ -53,8 +56,8 @@ export class CompaniesService {
         return company;
     }
 
-    async deactivate(id: string) {
-        const company = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const company = await this.repository.deactivate(id, organizationId);
         if (!company) throw notFound();
         return { id: company.id, status: company.status };
     }

@@ -15,16 +15,16 @@ export class CardsService {
         private readonly vehicles: VehiclesRepository
     ) {}
 
-    async create(dto: CreateCardDto) {
+    async create(organizationId: string, dto: CreateCardDto) {
         const assignmentMode = dto.vehicleId ? CardAssignmentMode.vehicle : CardAssignmentMode.unassigned;
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids) },
-            { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId) },
+            { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, organizationId) },
             { ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
         if (dto.vehicleId) {
-            const vehicle = await this.vehicles.findById(dto.vehicleId);
+            const vehicle = await this.vehicles.findById(dto.vehicleId, organizationId);
             if (!vehicle || vehicle.subCompanyId !== dto.subCompanyId) throw invalidRelation();
             if (dto.designFuelId && vehicle.fuelId !== dto.designFuelId) throw invalidRelation();
         }
@@ -40,9 +40,10 @@ export class CardsService {
         });
     }
 
-    async findAll(dto: FindCardsDto) {
+    async findAll(organizationId: string, dto: FindCardsDto) {
         const where: Prisma.CardWhereInput = {
             subCompanyId: dto.subCompanyId,
+            subCompany: { company: { organizationId } },
             vehicleId: dto.vehicleId,
             designFuelId: dto.designFuelId,
             assignmentMode: dto.assignmentMode,
@@ -53,16 +54,17 @@ export class CardsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const card = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const card = await this.repository.findById(id, organizationId);
         if (!card) throw notFound();
         return card;
     }
 
-    async findByDesignFuel(designFuelId: string, dto: FindStatusRecordsDto) {
+    async findByDesignFuel(organizationId: string, designFuelId: string, dto: FindStatusRecordsDto) {
         await assertActive([{ ids: [designFuelId], count: (ids) => this.relations.countActiveFuels(ids) }]);
 
         const where: Prisma.CardWhereInput = {
+            subCompany: { company: { organizationId } },
             designFuelId,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardWhereInput>(dto.search, ['externalId']) } : {}),
@@ -71,16 +73,14 @@ export class CardsService {
         return paginate(data, total, dto);
     }
 
-    async update(id: string, dto: UpdateCardDto) {
-        const current = await this.repository.findById(id);
+    async update(organizationId: string, id: string, dto: UpdateCardDto) {
+        const current = await this.repository.findById(id, organizationId);
         if (!current) throw notFound();
 
-        await assertActive([
-            { ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) },
-        ]);
+        await assertActive([{ ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) }]);
 
         if (dto.designFuelId && current.vehicleId) {
-            const vehicle = await this.vehicles.findById(current.vehicleId);
+            const vehicle = await this.vehicles.findById(current.vehicleId, organizationId);
             if (!vehicle || vehicle.fuelId !== dto.designFuelId) throw invalidRelation();
         }
 
@@ -90,30 +90,30 @@ export class CardsService {
             status: dto.status,
         };
 
-        const card = await this.repository.update(id, data);
+        const card = await this.repository.update(id, organizationId, data);
         if (!card) throw notFound();
         return card;
     }
 
-    async deactivate(id: string) {
-        const card = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const card = await this.repository.deactivate(id, organizationId);
         if (!card) throw notFound();
         return { id: card.id, status: card.status };
     }
 
-    async assignVehicle(id: string, dto: AssignCardVehicleDto) {
-        const current = await this.repository.findById(id);
+    async assignVehicle(organizationId: string, id: string, dto: AssignCardVehicleDto) {
+        const current = await this.repository.findById(id, organizationId);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
-        await assertActive([{ ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids) }]);
+        await assertActive([{ ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, organizationId) }]);
 
-        const vehicle = await this.vehicles.findById(dto.vehicleId);
+        const vehicle = await this.vehicles.findById(dto.vehicleId, organizationId);
         if (!vehicle || vehicle.subCompanyId !== current.subCompanyId) throw invalidRelation();
         if (current.designFuelId && vehicle.fuelId !== current.designFuelId) throw invalidRelation();
 
         const assignedAt = dto.assignedAt ?? current.assignedAt ?? new Date();
-        const card = await this.repository.update(id, {
+        const card = await this.repository.update(id, organizationId, {
             vehicleId: dto.vehicleId,
             assignmentMode: CardAssignmentMode.vehicle,
             assignedAt,
@@ -122,12 +122,12 @@ export class CardsService {
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
     }
 
-    async unassign(id: string) {
-        const current = await this.repository.findById(id);
+    async unassign(organizationId: string, id: string) {
+        const current = await this.repository.findById(id, organizationId);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
-        const card = await this.repository.update(id, {
+        const card = await this.repository.update(id, organizationId, {
             vehicleId: null,
             assignmentMode: CardAssignmentMode.unassigned,
             assignedAt: null,

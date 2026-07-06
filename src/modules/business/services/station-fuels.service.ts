@@ -13,9 +13,9 @@ export class StationFuelsService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateStationFuelDto) {
+    async create(organizationId: string, dto: CreateStationFuelDto) {
         await assertActive([
-            { ids: [dto.stationId], count: (ids) => this.relations.countActiveStations(ids) },
+            { ids: [dto.stationId], count: (ids) => this.relations.countActiveStations(ids, organizationId) },
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
@@ -26,9 +26,10 @@ export class StationFuelsService {
         });
     }
 
-    async findAll(dto: FindStationFuelsDto) {
+    async findAll(organizationId: string, dto: FindStationFuelsDto) {
         const where: Prisma.StationFuelWhereInput = {
             stationId: dto.stationId,
+            station: { subCompany: { company: { organizationId } } },
             fuelId: dto.fuelId,
             status: dto.status,
         };
@@ -36,22 +37,22 @@ export class StationFuelsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const stationFuel = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const stationFuel = await this.repository.findById(id, organizationId);
         if (!stationFuel) throw notFound();
         return stationFuel;
     }
 
-    async update(id: string, dto: UpdateStationFuelDto) {
-        const stationFuel = await this.repository.update(id, {
+    async update(organizationId: string, id: string, dto: UpdateStationFuelDto) {
+        const stationFuel = await this.repository.update(id, organizationId, {
             status: dto.status,
         });
         if (!stationFuel) throw notFound();
         return stationFuel;
     }
 
-    async deactivate(id: string) {
-        const stationFuel = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const stationFuel = await this.repository.deactivate(id, organizationId);
         if (!stationFuel) throw notFound();
         return { id: stationFuel.id, status: stationFuel.status };
     }

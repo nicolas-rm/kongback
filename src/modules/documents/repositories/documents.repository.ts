@@ -23,13 +23,13 @@ export class DocumentsRepository {
         return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
     }
 
-    findById(id: string) {
-        return this.prisma.document.findFirst({ where: activeRecordWhere({ id }), select: this.publicSelect() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.document.findFirst({ where: activeRecordWhere({ id, organizationId }), select: this.publicSelect() });
     }
 
-    findDownloadById(id: string) {
+    findDownloadById(id: string, organizationId: string) {
         return this.prisma.document.findFirst({
-            where: activeRecordWhere({ id }),
+            where: activeRecordWhere({ id, organizationId }),
             select: {
                 id: true,
                 originalName: true,
@@ -39,18 +39,18 @@ export class DocumentsRepository {
         });
     }
 
-    update(id: string, data: Prisma.DocumentUncheckedUpdateManyInput) {
+    update(id: string, organizationId: string, data: Prisma.DocumentUncheckedUpdateManyInput) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.document.updateMany({ where: activeRecordWhere({ id }), data });
+            const result = await tx.document.updateMany({ where: activeRecordWhere({ id, organizationId }), data });
             if (result.count === 0) return null;
 
-            return tx.document.findFirst({ where: activeRecordWhere({ id }), select: this.publicSelect() });
+            return tx.document.findFirst({ where: activeRecordWhere({ id, organizationId }), select: this.publicSelect() });
         });
     }
 
-    softDelete(id: string, userId?: string | null) {
+    softDelete(id: string, organizationId: string, userId?: string | null) {
         return this.prisma.document.updateMany({
-            where: activeRecordWhere({ id }),
+            where: activeRecordWhere({ id, organizationId }),
             data: softDeleteData(userId ?? null),
         });
     }

@@ -26,26 +26,26 @@ export class SubCompaniesRepository {
         return this.prisma.subCompany.count({ where });
     }
 
-    findById(id: string) {
-        return this.prisma.subCompany.findUnique({ where: { id }, select: this.select() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.subCompany.findFirst({ where: { id, company: { organizationId } }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.SubCompanyUncheckedUpdateInput, address?: AddressData) {
+    update(id: string, organizationId: string, data: Prisma.SubCompanyUncheckedUpdateInput, address?: AddressData) {
         return this.prisma.$transaction(async (tx) => {
-            const current = await tx.subCompany.findUnique({ where: { id }, select: { addressId: true } });
+            const current = await tx.subCompany.findFirst({ where: { id, company: { organizationId } }, select: { id: true, addressId: true } });
             if (!current) return null;
 
             const addressId = await this.addresses.upsert(tx, current.addressId, address);
-            await tx.subCompany.update({ where: { id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
-            return tx.subCompany.findUnique({ where: { id }, select: this.select() });
+            await tx.subCompany.update({ where: { id: current.id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
+            return tx.subCompany.findFirst({ where: { id: current.id, company: { organizationId } }, select: this.select() });
         });
     }
 
-    deactivate(id: string) {
+    deactivate(id: string, organizationId: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.subCompany.updateMany({ where: { id }, data: { status: Status.inactive } });
+            const result = await tx.subCompany.updateMany({ where: { id, company: { organizationId } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.subCompany.findUnique({ where: { id }, select: this.select() });
+            return tx.subCompany.findFirst({ where: { id, company: { organizationId } }, select: this.select() });
         });
     }
 

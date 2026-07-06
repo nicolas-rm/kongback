@@ -18,23 +18,23 @@ export class StationFuelsRepository {
         return this.prisma.stationFuel.count({ where });
     }
 
-    findById(id: string) {
-        return this.prisma.stationFuel.findUnique({ where: { id }, select: this.select() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.StationFuelUncheckedUpdateInput) {
+    update(id: string, organizationId: string, data: Prisma.StationFuelUncheckedUpdateInput) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.stationFuel.updateMany({ where: { id }, data });
+            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: { organizationId } } } }, data });
             if (result.count === 0) return null;
-            return tx.stationFuel.findUnique({ where: { id }, select: this.select() });
+            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
         });
     }
 
-    deactivate(id: string) {
+    deactivate(id: string, organizationId: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.stationFuel.updateMany({ where: { id }, data: { status: Status.inactive } });
+            const result = await tx.stationFuel.updateMany({ where: { id, station: { subCompany: { company: { organizationId } } } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.stationFuel.findUnique({ where: { id }, select: this.select() });
+            return tx.stationFuel.findFirst({ where: { id, station: { subCompany: { company: { organizationId } } } }, select: this.select() });
         });
     }
 

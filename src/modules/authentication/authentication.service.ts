@@ -18,6 +18,7 @@ import {
     ChangePasswordUseCase,
     GetProfileUseCase,
     ListSessionsUseCase,
+    ListWorkspacesUseCase,
     LoginUseCase,
     LogoutUseCase,
     RefreshUseCase,
@@ -40,6 +41,7 @@ export class AuthenticationService {
         private readonly listSessionsUseCase: ListSessionsUseCase,
         private readonly revokeSessionUseCase: RevokeSessionUseCase,
         private readonly getProfileUseCase: GetProfileUseCase,
+        private readonly listWorkspacesUseCase: ListWorkspacesUseCase,
         private readonly updateMyProfileUseCase: UpdateMyProfileUseCase,
         private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
@@ -82,6 +84,10 @@ export class AuthenticationService {
 
     listSessions(userId: string, refreshToken?: string) {
         return this.listSessionsUseCase.execute(userId, refreshToken);
+    }
+
+    listWorkspaces(user: RequestUser) {
+        return this.listWorkspacesUseCase.execute(user);
     }
 
     revokeSession(userId: string, sessionId: string, refreshToken?: string) {

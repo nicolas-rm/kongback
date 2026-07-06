@@ -6,9 +6,6 @@ export class FindDocumentsDto extends PaginationDto {
     category?: string;
 
     @ValidatorString({ optional: true })
-    organizationId?: string;
-
-    @ValidatorString({ optional: true })
     entityType?: string;
 
     @ValidatorString({ optional: true })

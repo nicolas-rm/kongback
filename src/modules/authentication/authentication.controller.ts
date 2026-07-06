@@ -91,6 +91,12 @@ export class AuthenticationController {
         return this.authenticationService.getProfile(user);
     }
 
+    @Get('workspaces')
+    @SkipMustChangePassword()
+    workspaces(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.listWorkspaces(user);
+    }
+
     @Patch('me')
     updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMyProfileDto) {
         return this.authenticationService.updateProfile(user, dto);
@@ -105,7 +111,12 @@ export class AuthenticationController {
     @Delete('sessions/:sessionId')
     @RequestConfig({ statusCode: HttpStatus.OK })
     @SkipMustChangePassword()
-    async revokeSession(@CurrentUser() user: RequestUser, @Param('sessionId', ParseUUIDPipe) sessionId: string, @RefreshToken() refreshToken: string | undefined, @Res({ passthrough: true }) response: Response) {
+    async revokeSession(
+        @CurrentUser() user: RequestUser,
+        @Param('sessionId', ParseUUIDPipe) sessionId: string,
+        @RefreshToken() refreshToken: string | undefined,
+        @Res({ passthrough: true }) response: Response
+    ) {
         const result = await this.authenticationService.revokeSession(user.id, sessionId, refreshToken);
         if (result.revokedCurrent) this.authenticationCookiesService.clearAuthenticationCookies(response);
         return result;

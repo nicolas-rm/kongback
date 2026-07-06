@@ -53,11 +53,13 @@ type OrganizationSeed = {
 type CompanySeed = {
     id: string;
     key: string;
+    organizationId: string;
 };
 
 type SubCompanySeed = {
     id: string;
     key: string;
+    organizationId: string;
 };
 
 type DriverSeed = {
@@ -78,6 +80,7 @@ type VehicleSeed = {
 
 type CardSeed = {
     id: string;
+    organizationId: string;
 };
 
 type StationSeed = {
@@ -534,28 +537,46 @@ async function seedSettings(adminUserId: string, organizations: OrganizationSeed
     }
 }
 
-async function seedCompanies(): Promise<CompanySeed[]> {
+async function seedCompanies(organizations: OrganizationSeed[]): Promise<CompanySeed[]> {
     const companies: CompanySeed[] = [];
 
     for (const index of seedIndexes()) {
         const suffix = pad(index);
-        const company = await prisma.company.upsert({
-            where: { key: `DEMO-COMP-${suffix}` },
-            create: {
-                key: `DEMO-COMP-${suffix}`,
-                externalId: `DEMO-EXT-COMP-${suffix}`,
-                name: `Demo Company ${suffix}`,
-                tradeName: `Demo Trade ${suffix}`,
-                status: Status.active,
-            },
-            update: {
-                externalId: `DEMO-EXT-COMP-${suffix}`,
-                name: `Demo Company ${suffix}`,
-                tradeName: `Demo Trade ${suffix}`,
-                status: Status.active,
-            },
-            select: { id: true, key: true },
-        });
+        const organization = organizations[index - 1];
+        const key = `DEMO-COMP-${suffix}`;
+        const data = {
+            organizationId: organization.id,
+            externalId: `DEMO-EXT-COMP-${suffix}`,
+            name: `Demo Company ${suffix}`,
+            tradeName: `Demo Trade ${suffix}`,
+            status: Status.active,
+        };
+        const existing =
+            (await prisma.company.findFirst({
+                where: {
+                    organizationId: organization.id,
+                    key,
+                },
+                select: { id: true },
+            })) ??
+            (await prisma.company.findFirst({
+                where: { key },
+                select: { id: true },
+            }));
+
+        const company = existing
+            ? await prisma.company.update({
+                  where: { id: existing.id },
+                  data,
+                  select: { id: true, key: true, organizationId: true },
+              })
+            : await prisma.company.create({
+                  data: {
+                      ...data,
+                      key,
+                  },
+                  select: { id: true, key: true, organizationId: true },
+              });
 
         companies.push(company);
     }
@@ -593,7 +614,7 @@ async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySee
             select: { id: true, key: true },
         });
 
-        subCompanies.push(subCompany);
+        subCompanies.push({ ...subCompany, organizationId: company.organizationId });
     }
 
     return subCompanies;
@@ -734,7 +755,7 @@ async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]
             select: { id: true },
         });
 
-        cards.push(card);
+        cards.push({ ...card, organizationId: subCompany.organizationId });
     }
 
     return cards;
@@ -808,6 +829,7 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
         await prisma.cardcloudCardStock.upsert({
             where: { externalId: `DEMO-STOCK-${suffix}` },
             create: {
+                organizationId: card.organizationId,
                 externalId: `DEMO-STOCK-${suffix}`,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
@@ -817,6 +839,7 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
                 syncedAt: new Date(),
             },
             update: {
+                organizationId: card.organizationId,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
                 clientId: `DEMO-CLIENT-${suffix}`,
@@ -947,7 +970,7 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     await seedUserAccesses(users, demoRoles, organizations);
     await seedSettings(adminUser.id, organizations);
 
-    const companies = await seedCompanies();
+    const companies = await seedCompanies(organizations);
     const subCompanies = await seedSubCompanies(companies);
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);

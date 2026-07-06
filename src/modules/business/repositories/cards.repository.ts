@@ -18,23 +18,23 @@ export class CardsRepository {
         return this.prisma.card.count({ where });
     }
 
-    findById(id: string) {
-        return this.prisma.card.findUnique({ where: { id }, select: this.select() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.card.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.CardUncheckedUpdateInput) {
+    update(id: string, organizationId: string, data: Prisma.CardUncheckedUpdateInput) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.card.updateMany({ where: { id }, data });
+            const result = await tx.card.updateMany({ where: { id, subCompany: { company: { organizationId } } }, data });
             if (result.count === 0) return null;
-            return tx.card.findUnique({ where: { id }, select: this.select() });
+            return tx.card.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: this.select() });
         });
     }
 
-    deactivate(id: string) {
+    deactivate(id: string, organizationId: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.card.updateMany({ where: { id }, data: { status: Status.inactive } });
+            const result = await tx.card.updateMany({ where: { id, subCompany: { company: { organizationId } } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.card.findUnique({ where: { id }, select: this.select() });
+            return tx.card.findFirst({ where: { id, subCompany: { company: { organizationId } } }, select: this.select() });
         });
     }
 

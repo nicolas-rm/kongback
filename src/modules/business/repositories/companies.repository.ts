@@ -26,32 +26,33 @@ export class CompaniesRepository {
         return this.prisma.company.count({ where });
     }
 
-    findById(id: string) {
-        return this.prisma.company.findUnique({ where: { id }, select: this.select() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.company.findFirst({ where: { id, organizationId }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.CompanyUncheckedUpdateInput, address?: AddressData) {
+    update(id: string, organizationId: string, data: Prisma.CompanyUncheckedUpdateInput, address?: AddressData) {
         return this.prisma.$transaction(async (tx) => {
-            const current = await tx.company.findUnique({ where: { id }, select: { addressId: true } });
+            const current = await tx.company.findFirst({ where: { id, organizationId }, select: { id: true, addressId: true } });
             if (!current) return null;
 
             const addressId = await this.addresses.upsert(tx, current.addressId, address);
-            await tx.company.update({ where: { id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
-            return tx.company.findUnique({ where: { id }, select: this.select() });
+            await tx.company.update({ where: { id: current.id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
+            return tx.company.findFirst({ where: { id: current.id, organizationId }, select: this.select() });
         });
     }
 
-    deactivate(id: string) {
+    deactivate(id: string, organizationId: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.company.updateMany({ where: { id }, data: { status: Status.inactive } });
+            const result = await tx.company.updateMany({ where: { id, organizationId }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.company.findUnique({ where: { id }, select: this.select() });
+            return tx.company.findFirst({ where: { id, organizationId }, select: this.select() });
         });
     }
 
     private select(): Prisma.CompanySelect {
         return {
             id: true,
+            organizationId: true,
             key: true,
             externalId: true,
             name: true,
@@ -64,6 +65,7 @@ export class CompaniesRepository {
     private listSelect(): Prisma.CompanySelect {
         return {
             id: true,
+            organizationId: true,
             key: true,
             externalId: true,
             name: true,
