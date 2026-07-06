@@ -60,9 +60,10 @@ const I18N_PATH = resolveI18nPath();
     controllers: [AppController],
     providers: [
         AppService,
+        // Nest evaluates APP_FILTER providers in reverse registration order.
         {
             provide: APP_FILTER,
-            useClass: PrismaExceptionFilter,
+            useClass: HttpExceptionFilter,
         },
         {
             provide: APP_FILTER,
@@ -70,7 +71,7 @@ const I18N_PATH = resolveI18nPath();
         },
         {
             provide: APP_FILTER,
-            useClass: HttpExceptionFilter,
+            useClass: PrismaExceptionFilter,
         },
         {
             provide: APP_GUARD,
