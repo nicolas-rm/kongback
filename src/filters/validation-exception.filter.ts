@@ -16,17 +16,15 @@ export class ValidationExceptionFilter implements ExceptionFilter {
         const request = context.getRequest<Request>();
         const errors = exception instanceof RequestValidationException ? exception.errors : this.formatI18nValidationErrors(exception, host);
 
-        response
-            .status(HttpStatus.BAD_REQUEST)
-            .json(
-                buildErrorResponse({
-                    statusCode: HttpStatus.BAD_REQUEST,
-                    code: ERROR_CODES.VALIDATION_ERROR,
-                    message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'La solicitud contiene datos invalidos'),
-                    errors,
-                    path: request.url,
-                })
-            );
+        response.status(HttpStatus.BAD_REQUEST).json(
+            buildErrorResponse({
+                statusCode: HttpStatus.BAD_REQUEST,
+                code: ERROR_CODES.VALIDATION_ERROR,
+                message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'La solicitud contiene datos invalidos'),
+                errors,
+                path: request.url,
+            })
+        );
     }
 
     private formatI18nValidationErrors(exception: I18nValidationException, host: ArgumentsHost) {

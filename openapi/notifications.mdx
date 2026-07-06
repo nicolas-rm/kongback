@@ -13,15 +13,15 @@ Todos los endpoints requieren autenticacion. Las notificaciones creadas por API 
 
 ```json
 {
-  "id": "8ee753a1-2c47-408d-ae3e-46d07b5efb63",
-  "title": "Nueva alerta",
-  "message": "Tienes una notificacion pendiente.",
-  "detail": null,
-  "type": "info",
-  "link": "/dashboard",
-  "isRead": false,
-  "readAt": null,
-  "createdAt": "2026-07-04T12:00:00.000Z"
+    "id": "8ee753a1-2c47-408d-ae3e-46d07b5efb63",
+    "title": "Nueva alerta",
+    "message": "Tienes una notificacion pendiente.",
+    "detail": null,
+    "type": "info",
+    "link": "/dashboard",
+    "isRead": false,
+    "readAt": null,
+    "createdAt": "2026-07-04T12:00:00.000Z"
 }
 ```
 
@@ -29,13 +29,13 @@ Todos los endpoints requieren autenticacion. Las notificaciones creadas por API 
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/notifications` | `notifications.create` | Crea notificacion para un usuario activo. |
-| `GET` | `/api/me/notifications` | `notifications.read-list` | Lista mis notificaciones. |
-| `GET` | `/api/me/notifications/unread-count` | `notifications.unread-count.read` | Cuenta mis notificaciones no leidas. |
-| `PATCH` | `/api/me/notifications/read-all` | `notifications.mark-read-all` | Marca todas mis notificaciones como leidas. |
-| `PATCH` | `/api/me/notifications/:id/read` | `notifications.mark-read` | Marca una notificacion mia como leida. |
+| Metodo  | Ruta                                 | Permiso                           | Descripcion                                 |
+| ------- | ------------------------------------ | --------------------------------- | ------------------------------------------- |
+| `POST`  | `/api/notifications`                 | `notifications.create`            | Crea notificacion para un usuario activo.   |
+| `GET`   | `/api/me/notifications`              | `notifications.read-list`         | Lista mis notificaciones.                   |
+| `GET`   | `/api/me/notifications/unread-count` | `notifications.unread-count.read` | Cuenta mis notificaciones no leidas.        |
+| `PATCH` | `/api/me/notifications/read-all`     | `notifications.mark-read-all`     | Marca todas mis notificaciones como leidas. |
+| `PATCH` | `/api/me/notifications/:id/read`     | `notifications.mark-read`         | Marca una notificacion mia como leida.      |
 
 ## Crear notificacion
 
@@ -43,12 +43,12 @@ Todos los endpoints requieren autenticacion. Las notificaciones creadas por API 
 
 ```json
 {
-  "userId": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
-  "title": "Nueva alerta",
-  "message": "Tienes una notificacion pendiente.",
-  "detail": null,
-  "type": "info",
-  "link": "/dashboard"
+    "userId": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "title": "Nueva alerta",
+    "message": "Tienes una notificacion pendiente.",
+    "detail": null,
+    "type": "info",
+    "link": "/dashboard"
 }
 ```
 
@@ -76,7 +76,7 @@ Response: resultado paginado de `Notification`.
 
 ```json
 {
-  "count": 3
+    "count": 3
 }
 ```
 
@@ -86,8 +86,8 @@ Response: resultado paginado de `Notification`.
 
 ```json
 {
-  "updatedCount": 3,
-  "readAt": "2026-07-04T12:00:00.000Z"
+    "updatedCount": 3,
+    "readAt": "2026-07-04T12:00:00.000Z"
 }
 ```
 
@@ -99,9 +99,9 @@ Devuelve `Notification` actualizada.
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query o path params invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Usuario o notificacion no encontrada. |
+| Estado | Caso                                          |
+| ------ | --------------------------------------------- |
+| `400`  | Body, query o path params invalidos.          |
+| `401`  | Request sin autenticacion valida.             |
+| `403`  | Usuario autenticado sin el permiso requerido. |
+| `404`  | Usuario o notificacion no encontrada.         |

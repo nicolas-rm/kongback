@@ -13,22 +13,22 @@ Todos los endpoints requieren autenticacion y permisos `fuels.*`. El borrado des
 
 ```json
 {
-  "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "code": "DIESEL",
-  "name": "Diesel",
-  "status": "active"
+    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "code": "DIESEL",
+    "name": "Diesel",
+    "status": "active"
 }
 ```
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/fuels` | `fuels.create` | Crea un combustible. |
-| `GET` | `/api/fuels` | `fuels.read-list` | Lista combustibles. |
-| `GET` | `/api/fuels/:id` | `fuels.read-one` | Obtiene un combustible. |
-| `PATCH` | `/api/fuels/:id` | `fuels.update` | Actualiza un combustible. |
-| `DELETE` | `/api/fuels/:id` | `fuels.delete` | Desactiva un combustible. |
+| Metodo   | Ruta             | Permiso           | Descripcion               |
+| -------- | ---------------- | ----------------- | ------------------------- |
+| `POST`   | `/api/fuels`     | `fuels.create`    | Crea un combustible.      |
+| `GET`    | `/api/fuels`     | `fuels.read-list` | Lista combustibles.       |
+| `GET`    | `/api/fuels/:id` | `fuels.read-one`  | Obtiene un combustible.   |
+| `PATCH`  | `/api/fuels/:id` | `fuels.update`    | Actualiza un combustible. |
+| `DELETE` | `/api/fuels/:id` | `fuels.delete`    | Desactiva un combustible. |
 
 ## Listado
 
@@ -46,9 +46,9 @@ Response `200`: resultado paginado de `Fuel`.
 
 ```json
 {
-  "code": "diesel",
-  "name": "Diesel",
-  "status": "active"
+    "code": "diesel",
+    "name": "Diesel",
+    "status": "active"
 }
 ```
 
@@ -82,17 +82,17 @@ Response `200`:
 
 ```json
 {
-  "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "status": "inactive"
+    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query o path params invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Combustible no encontrado. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                             |
+| ------ | ------------------------------------------------ |
+| `400`  | Body, query o path params invalidos.             |
+| `401`  | Request sin autenticacion valida.                |
+| `403`  | Usuario autenticado sin el permiso requerido.    |
+| `404`  | Combustible no encontrado.                       |
+| `409`  | Conflictos de unicidad segun constraints Prisma. |

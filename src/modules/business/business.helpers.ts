@@ -2,7 +2,10 @@ import { Prisma } from '@prisma/client';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AddressDto } from '@/modules/business/dto';
 
-export type AddressData = Pick<Prisma.AddressUncheckedCreateInput, 'street' | 'exteriorNumber' | 'interiorNumber' | 'neighborhood' | 'municipality' | 'city' | 'state' | 'country' | 'postalCode' | 'references'>;
+export type AddressData = Pick<
+    Prisma.AddressUncheckedCreateInput,
+    'street' | 'exteriorNumber' | 'interiorNumber' | 'neighborhood' | 'municipality' | 'city' | 'state' | 'country' | 'postalCode' | 'references'
+>;
 export type ActiveCounter = (ids: string[]) => Promise<number>;
 
 export function textSearch<TWhere>(search: string, fields: string[]): TWhere[] {

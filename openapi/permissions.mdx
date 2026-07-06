@@ -15,45 +15,45 @@ Todos los endpoints requieren autenticacion y el permiso indicado en cada operac
 
 ```json
 {
-  "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
-  "code": "users.read-list",
-  "name": "Listar usuarios",
-  "description": "Permite consultar el listado de usuarios."
+    "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+    "code": "users.read-list",
+    "name": "Listar usuarios",
+    "description": "Permite consultar el listado de usuarios."
 }
 ```
 
-| Campo | Tipo | Descripcion |
-| --- | --- | --- |
-| `id` | `string` | UUID v4 del permiso. |
-| `code` | `string` | Codigo unico del permiso; se normaliza a minusculas en create/update. |
-| `name` | `string \| null` | Nombre visible opcional. |
-| `description` | `string \| null` | Descripcion opcional. |
+| Campo         | Tipo             | Descripcion                                                           |
+| ------------- | ---------------- | --------------------------------------------------------------------- |
+| `id`          | `string`         | UUID v4 del permiso.                                                  |
+| `code`        | `string`         | Codigo unico del permiso; se normaliza a minusculas en create/update. |
+| `name`        | `string \| null` | Nombre visible opcional.                                              |
+| `description` | `string \| null` | Descripcion opcional.                                                 |
 
 ### PaginatedPermissionResponse
 
 ```json
 {
-  "data": [],
-  "meta": {
-    "total": 0,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1,
-    "hasNext": false,
-    "hasPrev": false
-  }
+    "data": [],
+    "meta": {
+        "total": 0,
+        "page": 1,
+        "limit": 10,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
 }
 ```
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/permissions` | `permissions.create` | Crea un permiso. |
-| `GET` | `/api/permissions` | `permissions.read-list` | Lista permisos con paginacion y busqueda. |
-| `GET` | `/api/permissions/:id` | `permissions.read-one` | Obtiene un permiso por ID. |
-| `PATCH` | `/api/permissions/:id` | `permissions.update` | Actualiza un permiso. |
-| `DELETE` | `/api/permissions/:id` | `permissions.delete` | Elimina un permiso. |
+| Metodo   | Ruta                   | Permiso                 | Descripcion                               |
+| -------- | ---------------------- | ----------------------- | ----------------------------------------- |
+| `POST`   | `/api/permissions`     | `permissions.create`    | Crea un permiso.                          |
+| `GET`    | `/api/permissions`     | `permissions.read-list` | Lista permisos con paginacion y busqueda. |
+| `GET`    | `/api/permissions/:id` | `permissions.read-one`  | Obtiene un permiso por ID.                |
+| `PATCH`  | `/api/permissions/:id` | `permissions.update`    | Actualiza un permiso.                     |
+| `DELETE` | `/api/permissions/:id` | `permissions.delete`    | Elimina un permiso.                       |
 
 ## Crear permiso
 
@@ -65,17 +65,17 @@ Requiere `permissions.create`.
 
 ```json
 {
-  "code": "users.read-list",
-  "name": "Listar usuarios",
-  "description": "Permite consultar el listado de usuarios."
+    "code": "users.read-list",
+    "name": "Listar usuarios",
+    "description": "Permite consultar el listado de usuarios."
 }
 ```
 
-| Campo | Tipo | Requerido | Reglas |
-| --- | --- | --- | --- |
-| `code` | `string` | Si | Se recorta, colapsa espacios y normaliza a minusculas. |
-| `name` | `string \| null` | No | String vacio se transforma a `null`. |
-| `description` | `string \| null` | No | String vacio se transforma a `null`. |
+| Campo         | Tipo             | Requerido | Reglas                                                 |
+| ------------- | ---------------- | --------- | ------------------------------------------------------ |
+| `code`        | `string`         | Si        | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `name`        | `string \| null` | No        | String vacio se transforma a `null`.                   |
+| `description` | `string \| null` | No        | String vacio se transforma a `null`.                   |
 
 ### Response `201`
 
@@ -89,12 +89,12 @@ Requiere `permissions.read-list`.
 
 ### Query params
 
-| Parametro | Tipo | Reglas | Descripcion |
-| --- | --- | --- | --- |
-| `page` | `number` | Entero >= 1 | Pagina solicitada; por defecto `1`. |
-| `limit` | `number` | Entero entre 1 y 100 | Registros por pagina; por defecto `10`. |
-| `search` | `string` | Opcional | Busca por `code` o `name`, sin distinguir mayusculas. |
-| `all` | `boolean` | Opcional | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+| Parametro | Tipo      | Reglas               | Descripcion                                                                          |
+| --------- | --------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `page`    | `number`  | Entero >= 1          | Pagina solicitada; por defecto `1`.                                                  |
+| `limit`   | `number`  | Entero entre 1 y 100 | Registros por pagina; por defecto `10`.                                              |
+| `search`  | `string`  | Opcional             | Busca por `code` o `name`, sin distinguir mayusculas.                                |
+| `all`     | `boolean` | Opcional             | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
 
 ### Example
 
@@ -114,9 +114,9 @@ Requiere `permissions.read-one`.
 
 ### Path params
 
-| Parametro | Tipo | Descripcion |
-| --- | --- | --- |
-| `id` | `uuid` | ID del permiso. |
+| Parametro | Tipo   | Descripcion     |
+| --------- | ------ | --------------- |
+| `id`      | `uuid` | ID del permiso. |
 
 ### Response `200`
 
@@ -134,17 +134,17 @@ Todos los campos son opcionales.
 
 ```json
 {
-  "code": "users.read-list",
-  "name": "Listar usuarios",
-  "description": "Permite consultar el listado de usuarios."
+    "code": "users.read-list",
+    "name": "Listar usuarios",
+    "description": "Permite consultar el listado de usuarios."
 }
 ```
 
-| Campo | Tipo | Reglas |
-| --- | --- | --- |
-| `code` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
-| `name` | `string \| null` | String vacio se transforma a `null`. |
-| `description` | `string \| null` | String vacio se transforma a `null`. |
+| Campo         | Tipo             | Reglas                                                 |
+| ------------- | ---------------- | ------------------------------------------------------ |
+| `code`        | `string`         | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `name`        | `string \| null` | String vacio se transforma a `null`.                   |
+| `description` | `string \| null` | String vacio se transforma a `null`.                   |
 
 ### Response `200`
 
@@ -160,8 +160,8 @@ Requiere `permissions.delete`.
 
 ```json
 {
-  "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
-  "deleted": true
+    "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+    "deleted": true
 }
 ```
 
@@ -176,10 +176,10 @@ Los permisos no se asignan directamente a usuarios. El flujo actual es:
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query o path params invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Permiso no encontrado en operaciones de update o delete. |
-| `409` | Conflictos de unicidad como `code` duplicado, segun el filtro Prisma global. |
+| Estado | Caso                                                                         |
+| ------ | ---------------------------------------------------------------------------- |
+| `400`  | Body, query o path params invalidos.                                         |
+| `401`  | Request sin autenticacion valida.                                            |
+| `403`  | Usuario autenticado sin el permiso requerido.                                |
+| `404`  | Permiso no encontrado en operaciones de update o delete.                     |
+| `409`  | Conflictos de unicidad como `code` duplicado, segun el filtro Prisma global. |

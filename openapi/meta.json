@@ -1,22 +1,22 @@
 {
-  "title": "OpenAPI",
-  "pages": [
-    "authentication",
-    "organizations",
-    "users",
-    "roles",
-    "permissions",
-    "companies",
-    "sub-companies",
-    "drivers",
-    "vehicles",
-    "cards",
-    "fuels",
-    "stations",
-    "station-fuels",
-    "cardcloud-card-stock",
-    "documents",
-    "notifications",
-    "health"
-  ]
+    "title": "OpenAPI",
+    "pages": [
+        "authentication",
+        "organizations",
+        "users",
+        "roles",
+        "permissions",
+        "companies",
+        "sub-companies",
+        "drivers",
+        "vehicles",
+        "cards",
+        "fuels",
+        "stations",
+        "station-fuels",
+        "cardcloud-card-stock",
+        "documents",
+        "notifications",
+        "health"
+    ]
 }

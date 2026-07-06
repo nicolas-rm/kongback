@@ -15,43 +15,43 @@ Todos los endpoints requieren autenticacion y el permiso indicado en cada operac
 
 ```json
 {
-  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
-  "username": "admin",
-  "email": "admin@example.com",
-  "fullName": "Admin User",
-  "preferredLanguage": "es",
-  "status": "active",
-  "mustChangePassword": false,
-  "emailVerified": true,
-  "twoFactorEnabled": false
+    "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "username": "admin",
+    "email": "admin@example.com",
+    "fullName": "Admin User",
+    "preferredLanguage": "es",
+    "status": "active",
+    "mustChangePassword": false,
+    "emailVerified": true,
+    "twoFactorEnabled": false
 }
 ```
 
-| Campo | Tipo | Descripcion |
-| --- | --- | --- |
-| `id` | `string` | UUID v4 del usuario. |
-| `username` | `string` | Nombre de usuario unico. |
-| `email` | `string` | Email unico; se normaliza a minusculas en create/update. |
-| `fullName` | `string` | Nombre completo. |
-| `preferredLanguage` | `string` | Idioma preferido; por defecto `es`. |
-| `status` | `active \| inactive \| suspended` | Estado operativo del usuario. |
-| `mustChangePassword` | `boolean` | Indica si debe cambiar la contrasena en su siguiente flujo de autenticacion. |
-| `emailVerified` | `boolean` | Derivado de `emailVerifiedAt`. |
-| `twoFactorEnabled` | `boolean` | Indica si el usuario tiene 2FA activo. |
+| Campo                | Tipo                              | Descripcion                                                                  |
+| -------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| `id`                 | `string`                          | UUID v4 del usuario.                                                         |
+| `username`           | `string`                          | Nombre de usuario unico.                                                     |
+| `email`              | `string`                          | Email unico; se normaliza a minusculas en create/update.                     |
+| `fullName`           | `string`                          | Nombre completo.                                                             |
+| `preferredLanguage`  | `string`                          | Idioma preferido; por defecto `es`.                                          |
+| `status`             | `active \| inactive \| suspended` | Estado operativo del usuario.                                                |
+| `mustChangePassword` | `boolean`                         | Indica si debe cambiar la contrasena en su siguiente flujo de autenticacion. |
+| `emailVerified`      | `boolean`                         | Derivado de `emailVerifiedAt`.                                               |
+| `twoFactorEnabled`   | `boolean`                         | Indica si el usuario tiene 2FA activo.                                       |
 
 ### UserAccess
 
 ```json
 {
-  "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
-  "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-  "scopeKey": "companyId",
-  "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
-  "role": {
-    "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
-    "code": "company.admin",
-    "name": "Company admin"
-  }
+    "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+    "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+    "scopeKey": "companyId",
+    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+    "role": {
+        "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+        "code": "company.admin",
+        "name": "Company admin"
+    }
 }
 ```
 
@@ -59,10 +59,10 @@ Todos los endpoints requieren autenticacion y el permiso indicado en cada operac
 
 ```json
 {
-  "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
-  "code": "users.read-list",
-  "name": "Listar usuarios",
-  "description": "Permite consultar el listado de usuarios."
+    "id": "9ccbb5e9-5184-4125-9d9c-cb43e9df6f00",
+    "code": "users.read-list",
+    "name": "Listar usuarios",
+    "description": "Permite consultar el listado de usuarios."
 }
 ```
 
@@ -70,35 +70,35 @@ Todos los endpoints requieren autenticacion y el permiso indicado en cada operac
 
 ```json
 {
-  "data": [],
-  "meta": {
-    "total": 0,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1,
-    "hasNext": false,
-    "hasPrev": false
-  }
+    "data": [],
+    "meta": {
+        "total": 0,
+        "page": 1,
+        "limit": 10,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
 }
 ```
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/users` | `users.create` | Crea un usuario. |
-| `GET` | `/api/users` | `users.read-list` | Lista usuarios con paginacion y filtros. |
-| `GET` | `/api/users/:id` | `users.read-one` | Obtiene un usuario por ID. |
-| `PATCH` | `/api/users/:id` | `users.update` | Actualiza datos basicos del usuario. |
-| `DELETE` | `/api/users/:id` | `users.delete` | Elimina un usuario. |
-| `GET` | `/api/users/:id/access` | `users.access.read` | Lista accesos activos del usuario. |
-| `POST` | `/api/users/:id/access` | `users.access.assign` | Agrega un acceso al usuario. |
-| `PUT` | `/api/users/:id/access` | `users.access.assign` | Reemplaza todos los accesos del usuario. |
-| `DELETE` | `/api/users/:id/access/:accessId` | `users.access.assign` | Elimina un acceso puntual del usuario. |
-| `GET` | `/api/users/:id/permissions` | `users.permissions.read` | Lista permisos efectivos del usuario. |
-| `PATCH` | `/api/users/:id/password` | `users.password.update` | Cambia la contrasena del usuario. |
-| `PATCH` | `/api/users/:id/2fa/unlink` | `users.2fa.unlink` | Desvincula la configuracion 2FA del usuario. |
-| `POST` | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Regenera y envia credenciales de acceso. |
+| Metodo   | Ruta                                | Permiso                    | Descripcion                                  |
+| -------- | ----------------------------------- | -------------------------- | -------------------------------------------- |
+| `POST`   | `/api/users`                        | `users.create`             | Crea un usuario.                             |
+| `GET`    | `/api/users`                        | `users.read-list`          | Lista usuarios con paginacion y filtros.     |
+| `GET`    | `/api/users/:id`                    | `users.read-one`           | Obtiene un usuario por ID.                   |
+| `PATCH`  | `/api/users/:id`                    | `users.update`             | Actualiza datos basicos del usuario.         |
+| `DELETE` | `/api/users/:id`                    | `users.delete`             | Elimina un usuario.                          |
+| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Lista accesos activos del usuario.           |
+| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Agrega un acceso al usuario.                 |
+| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Reemplaza todos los accesos del usuario.     |
+| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Elimina un acceso puntual del usuario.       |
+| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Lista permisos efectivos del usuario.        |
+| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Cambia la contrasena del usuario.            |
+| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Desvincula la configuracion 2FA del usuario. |
+| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Regenera y envia credenciales de acceso.     |
 
 ## Crear usuario
 
@@ -110,23 +110,23 @@ Requiere `users.create`.
 
 ```json
 {
-  "username": "admin",
-  "email": "admin@example.com",
-  "fullName": "Admin User",
-  "password": "Secret123",
-  "status": "active",
-  "preferredLanguage": "es"
+    "username": "admin",
+    "email": "admin@example.com",
+    "fullName": "Admin User",
+    "password": "Secret123",
+    "status": "active",
+    "preferredLanguage": "es"
 }
 ```
 
-| Campo | Tipo | Requerido | Reglas |
-| --- | --- | --- | --- |
-| `username` | `string` | Si | Se recorta y colapsa espacios. |
-| `email` | `string` | Si | Se recorta, colapsa espacios y normaliza a minusculas. |
-| `fullName` | `string` | Si | Se recorta y colapsa espacios. |
-| `password` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
-| `status` | `active \| inactive \| suspended` | No | Si se omite, usa `active`. |
-| `preferredLanguage` | `string` | No | Se normaliza a minusculas; si se omite, usa `es`. |
+| Campo               | Tipo                              | Requerido | Reglas                                                         |
+| ------------------- | --------------------------------- | --------- | -------------------------------------------------------------- |
+| `username`          | `string`                          | Si        | Se recorta y colapsa espacios.                                 |
+| `email`             | `string`                          | Si        | Se recorta, colapsa espacios y normaliza a minusculas.         |
+| `fullName`          | `string`                          | Si        | Se recorta y colapsa espacios.                                 |
+| `password`          | `string`                          | Si        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+| `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                     |
+| `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.              |
 
 ### Response `201`
 
@@ -140,13 +140,13 @@ Requiere `users.read-list`.
 
 ### Query params
 
-| Parametro | Tipo | Reglas | Descripcion |
-| --- | --- | --- | --- |
-| `page` | `number` | Entero >= 1 | Pagina solicitada; por defecto `1`. |
-| `limit` | `number` | Entero entre 1 y 100 | Registros por pagina; por defecto `10`. |
-| `search` | `string` | Opcional | Busca por `username`, `email` o `fullName`, sin distinguir mayusculas. |
-| `all` | `boolean` | Opcional | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
-| `status` | `active \| inactive \| suspended` | Opcional | Filtra por estado. |
+| Parametro | Tipo                              | Reglas               | Descripcion                                                                          |
+| --------- | --------------------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `page`    | `number`                          | Entero >= 1          | Pagina solicitada; por defecto `1`.                                                  |
+| `limit`   | `number`                          | Entero entre 1 y 100 | Registros por pagina; por defecto `10`.                                              |
+| `search`  | `string`                          | Opcional             | Busca por `username`, `email` o `fullName`, sin distinguir mayusculas.               |
+| `all`     | `boolean`                         | Opcional             | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+| `status`  | `active \| inactive \| suspended` | Opcional             | Filtra por estado.                                                                   |
 
 ### Example
 
@@ -166,9 +166,9 @@ Requiere `users.read-one`.
 
 ### Path params
 
-| Parametro | Tipo | Descripcion |
-| --- | --- | --- |
-| `id` | `uuid` | ID del usuario. |
+| Parametro | Tipo   | Descripcion     |
+| --------- | ------ | --------------- |
+| `id`      | `uuid` | ID del usuario. |
 
 ### Response `200`
 
@@ -186,23 +186,23 @@ Todos los campos son opcionales.
 
 ```json
 {
-  "username": "admin",
-  "email": "admin@example.com",
-  "fullName": "Admin User",
-  "status": "active",
-  "mustChangePassword": false,
-  "preferredLanguage": "es"
+    "username": "admin",
+    "email": "admin@example.com",
+    "fullName": "Admin User",
+    "status": "active",
+    "mustChangePassword": false,
+    "preferredLanguage": "es"
 }
 ```
 
-| Campo | Tipo | Reglas |
-| --- | --- | --- |
-| `username` | `string` | Se recorta y colapsa espacios. |
-| `email` | `string` | Se recorta, colapsa espacios y normaliza a minusculas. |
-| `fullName` | `string` | Se recorta y colapsa espacios. |
-| `status` | `active \| inactive \| suspended` | Estado del usuario. |
-| `mustChangePassword` | `boolean` | Acepta booleano o string `true`, `false`, `1`, `0`. |
-| `preferredLanguage` | `string` | Se normaliza a minusculas. |
+| Campo                | Tipo                              | Reglas                                                 |
+| -------------------- | --------------------------------- | ------------------------------------------------------ |
+| `username`           | `string`                          | Se recorta y colapsa espacios.                         |
+| `email`              | `string`                          | Se recorta, colapsa espacios y normaliza a minusculas. |
+| `fullName`           | `string`                          | Se recorta y colapsa espacios.                         |
+| `status`             | `active \| inactive \| suspended` | Estado del usuario.                                    |
+| `mustChangePassword` | `boolean`                         | Acepta booleano o string `true`, `false`, `1`, `0`.    |
+| `preferredLanguage`  | `string`                          | Se normaliza a minusculas.                             |
 
 ### Response `200`
 
@@ -218,8 +218,8 @@ Requiere `users.delete`.
 
 ```json
 {
-  "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
-  "deleted": true
+    "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "deleted": true
 }
 ```
 
@@ -235,17 +235,17 @@ Devuelve los accesos activos del usuario. El usuario debe existir y estar en est
 
 ```json
 [
-  {
-    "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
-    "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-    "scopeKey": "companyId",
-    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
-    "role": {
-      "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
-      "code": "company.admin",
-      "name": "Company admin"
+    {
+        "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+        "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+        "scopeKey": "companyId",
+        "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+        "role": {
+            "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+            "code": "company.admin",
+            "name": "Company admin"
+        }
     }
-  }
 ]
 ```
 
@@ -261,19 +261,19 @@ El usuario debe estar `active`. El rol debe existir. Si `organizationId` se envi
 
 ```json
 {
-  "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
-  "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-  "scopeKey": "companyId",
-  "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+    "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+    "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+    "scopeKey": "companyId",
+    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
 }
 ```
 
-| Campo | Tipo | Requerido | Descripcion |
-| --- | --- | --- | --- |
-| `roleId` | `uuid` | Si | Rol a asignar. |
-| `organizationId` | `uuid \| null` | No | Organizacion del acceso. String vacio se transforma a `null`. |
-| `scopeKey` | `string \| null` | No | Nombre del scope especifico. String vacio se transforma a `null`. |
-| `scopeId` | `string \| null` | No | ID del scope especifico. String vacio se transforma a `null`. |
+| Campo            | Tipo             | Requerido | Descripcion                                                       |
+| ---------------- | ---------------- | --------- | ----------------------------------------------------------------- |
+| `roleId`         | `uuid`           | Si        | Rol a asignar.                                                    |
+| `organizationId` | `uuid \| null`   | No        | Organizacion del acceso. String vacio se transforma a `null`.     |
+| `scopeKey`       | `string \| null` | No        | Nombre del scope especifico. String vacio se transforma a `null`. |
+| `scopeId`        | `string \| null` | No        | ID del scope especifico. String vacio se transforma a `null`.     |
 
 ### Response `201`
 
@@ -291,14 +291,14 @@ Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses
 
 ```json
 {
-  "accesses": [
-    {
-      "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
-      "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-      "scopeKey": "companyId",
-      "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
-    }
-  ]
+    "accesses": [
+        {
+            "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+            "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+            "scopeKey": "companyId",
+            "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+        }
+    ]
 }
 ```
 
@@ -314,17 +314,17 @@ Requiere `users.access.assign`.
 
 ### Path params
 
-| Parametro | Tipo | Descripcion |
-| --- | --- | --- |
-| `id` | `uuid` | ID del usuario. |
+| Parametro  | Tipo   | Descripcion               |
+| ---------- | ------ | ------------------------- |
+| `id`       | `uuid` | ID del usuario.           |
 | `accessId` | `uuid` | ID del acceso a eliminar. |
 
 ### Response `200`
 
 ```json
 {
-  "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
-  "deleted": true
+    "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
+    "deleted": true
 }
 ```
 
@@ -350,21 +350,21 @@ Requiere `users.password.update`.
 
 ```json
 {
-  "password": "Secret123",
-  "mustChangePassword": true
+    "password": "Secret123",
+    "mustChangePassword": true
 }
 ```
 
-| Campo | Tipo | Requerido | Reglas |
-| --- | --- | --- | --- |
-| `password` | `string` | Si | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
-| `mustChangePassword` | `boolean` | No | Si se omite, usa `false`. |
+| Campo                | Tipo      | Requerido | Reglas                                                         |
+| -------------------- | --------- | --------- | -------------------------------------------------------------- |
+| `password`           | `string`  | Si        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
+| `mustChangePassword` | `boolean` | No        | Si se omite, usa `false`.                                      |
 
 ### Response `200`
 
 ```json
 {
-  "passwordChanged": true
+    "passwordChanged": true
 }
 ```
 
@@ -380,7 +380,7 @@ Desactiva 2FA, limpia secretos pendientes/confirmados y elimina recovery codes d
 
 ```json
 {
-  "twoFactorUnlinked": true
+    "twoFactorUnlinked": true
 }
 ```
 
@@ -396,16 +396,16 @@ Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassw
 
 ```json
 {
-  "credentialsSent": true
+    "credentialsSent": true
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query o path params invalidos; relaciones invalidas al asignar accesos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Usuario, acceso o relacion requerida no encontrada en operaciones que validan existencia. |
-| `409` | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global. |
+| Estado | Caso                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------- |
+| `400`  | Body, query o path params invalidos; relaciones invalidas al asignar accesos.               |
+| `401`  | Request sin autenticacion valida.                                                           |
+| `403`  | Usuario autenticado sin el permiso requerido.                                               |
+| `404`  | Usuario, acceso o relacion requerida no encontrada en operaciones que validan existencia.   |
+| `409`  | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global. |

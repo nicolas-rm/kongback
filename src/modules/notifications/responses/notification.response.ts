@@ -26,16 +26,6 @@ export class NotificationResponse {
     ) {}
 
     static from(data: NotificationResponseData): NotificationResponse {
-        return new NotificationResponse(
-            data.id,
-            data.title,
-            data.message,
-            data.detail,
-            data.type,
-            data.link,
-            data.isRead,
-            data.readAt,
-            data.createdAt
-        );
+        return new NotificationResponse(data.id, data.title, data.message, data.detail, data.type, data.link, data.isRead, data.readAt, data.createdAt);
     }
 }

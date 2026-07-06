@@ -23,7 +23,7 @@ export class UserResponse {
         public mustChangePassword: boolean,
         public emailVerified: boolean,
         public twoFactorEnabled: boolean
-    ) { }
+    ) {}
 
     static from(data: UserResponseData): UserResponse {
         return new UserResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, data.status, data.mustChangePassword, Boolean(data.emailVerifiedAt), data.twoFactorEnabled);

@@ -163,7 +163,10 @@ export class UsersService {
         const roleIds = [...new Set(accesses.map((access) => access.roleId))];
         const organizationIds = [...new Set(accesses.map((access) => access.organizationId).filter((id): id is string => Boolean(id)))];
 
-        const [activeRoles, activeOrganizations] = await Promise.all([this.repository.countActiveRoles(roleIds), organizationIds.length > 0 ? this.repository.countActiveOrganizations(organizationIds) : Promise.resolve(0)]);
+        const [activeRoles, activeOrganizations] = await Promise.all([
+            this.repository.countActiveRoles(roleIds),
+            organizationIds.length > 0 ? this.repository.countActiveOrganizations(organizationIds) : Promise.resolve(0),
+        ]);
         if (activeRoles !== roleIds.length || activeOrganizations !== organizationIds.length) {
             throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
         }

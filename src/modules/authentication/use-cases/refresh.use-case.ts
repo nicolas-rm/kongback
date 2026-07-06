@@ -15,7 +15,7 @@ export class RefreshUseCase {
         private readonly repository: AuthenticationRepository,
         private readonly cryptoService: CryptoService,
         private readonly authenticationTokensService: AuthenticationTokensService
-    ) { }
+    ) {}
 
     async execute(dto: RefreshTokenDto, sessionContext: SessionContext = {}) {
         if (!dto.refreshToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
@@ -28,7 +28,8 @@ export class RefreshUseCase {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.reusedRefreshToken, 'Refresh token reutilizado');
         }
 
-        if (storedToken.user.status !== Status.active || storedToken.session.revokedAt) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
+        if (storedToken.user.status !== Status.active || storedToken.session.revokedAt)
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
 
         const now = new Date();
         if (storedToken.expiresAt <= now || storedToken.idleExpiresAt <= now || storedToken.session.expiresAt <= now || storedToken.session.idleExpiresAt <= now) {

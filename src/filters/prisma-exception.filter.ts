@@ -34,12 +34,20 @@ export class PrismaExceptionFilter implements ExceptionFilter {
             if (exception.code === 'P2025') return this.buildPrismaError(host, HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
         }
 
-        if (exception instanceof Prisma.PrismaClientValidationError) return this.buildPrismaError(host, HttpStatus.BAD_REQUEST, ERROR_CODES.PRISMA_VALIDATION_ERROR, I18N_KEYS.prisma.invalidData, 'Datos no validos');
+        if (exception instanceof Prisma.PrismaClientValidationError)
+            return this.buildPrismaError(host, HttpStatus.BAD_REQUEST, ERROR_CODES.PRISMA_VALIDATION_ERROR, I18N_KEYS.prisma.invalidData, 'Datos no validos');
 
         return this.buildPrismaError(host, HttpStatus.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_SERVER_ERROR, I18N_KEYS.prisma.internalFailure, 'Falla interna del servidor');
     }
 
-    private buildPrismaError(host: ArgumentsHost, status: number, code: ErrorCode, key: I18nKey, fallback: string, args?: Record<string, unknown>): { status: number; code: ErrorCode; message: string } {
+    private buildPrismaError(
+        host: ArgumentsHost,
+        status: number,
+        code: ErrorCode,
+        key: I18nKey,
+        fallback: string,
+        args?: Record<string, unknown>
+    ): { status: number; code: ErrorCode; message: string } {
         return { status, code, message: translateI18n(host, key, fallback, args) };
     }
 
