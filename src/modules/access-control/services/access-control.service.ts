@@ -10,18 +10,22 @@ import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@
 export class AccessControlService {
     constructor(private readonly repository: AccessControlRepository) {}
 
-    async userHasAnyRole(userId: string, requiredRoles: string[]): Promise<boolean> {
+    async userHasAnyRole(userId: string, requiredRoles: string[], organizationId?: string): Promise<boolean> {
         if (requiredRoles.length === 0) return true;
 
-        const roles = new Set(await this.repository.findUserRoleLabels(userId));
+        const roles = new Set(await this.repository.findUserRoleLabels(userId, organizationId));
         return requiredRoles.some((role) => roles.has(role));
     }
 
-    async userHasAllPermissions(userId: string, requiredPermissions: string[]): Promise<boolean> {
+    async userHasAllPermissions(userId: string, requiredPermissions: string[], organizationId?: string): Promise<boolean> {
         if (requiredPermissions.length === 0) return true;
 
-        const permissions = new Set(await this.repository.findUserPermissionCodes(userId));
+        const permissions = new Set(await this.repository.findUserPermissionCodes(userId, organizationId));
         return requiredPermissions.every((permission) => permissions.has(permission));
+    }
+
+    async organizationIsActive(organizationId: string): Promise<boolean> {
+        return (await this.repository.countActiveOrganizations([organizationId])) === 1;
     }
 
     async createRole(dto: CreateRoleDto) {

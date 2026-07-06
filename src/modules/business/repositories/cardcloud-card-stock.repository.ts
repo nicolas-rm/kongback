@@ -18,29 +18,30 @@ export class CardcloudCardStockRepository {
         return this.prisma.cardcloudCardStock.count({ where });
     }
 
-    findById(id: string) {
-        return this.prisma.cardcloudCardStock.findUnique({ where: { id }, select: this.select() });
+    findById(id: string, organizationId: string) {
+        return this.prisma.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput) {
+    update(id: string, organizationId: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: { id }, data });
+            const result = await tx.cardcloudCardStock.updateMany({ where: { id, organizationId }, data });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findUnique({ where: { id }, select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
         });
     }
 
-    deactivate(id: string) {
+    deactivate(id: string, organizationId: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: { id }, data: { providerStatus: Status.inactive } });
+            const result = await tx.cardcloudCardStock.updateMany({ where: { id, organizationId }, data: { providerStatus: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findUnique({ where: { id }, select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
         });
     }
 
     private select(): Prisma.CardcloudCardStockSelect {
         return {
             id: true,
+            organizationId: true,
             externalId: true,
             assignedCardId: true,
             maskedPan: true,

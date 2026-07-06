@@ -145,6 +145,8 @@ model Organization {
     settings        Setting[]
     sessions        Session[]
     userAccesses    UserAccess[]
+    companies       Company[]
+    cardcloudStocks CardcloudCardStock[]
 
     @@index([status])
     @@index([name])
@@ -497,18 +499,23 @@ model Setting {
 }
 
 model Company {
-    id           String       @id @default(uuid())
-    key          String       @unique
-    externalId   String?      @unique @map("external_id")
-    name         String
-    tradeName    String?
-    status       Status       @default(active)
-    addressId    String?      @unique
-    createdAt    DateTime     @default(now())
-    updatedAt    DateTime     @updatedAt
-    address      Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    subCompanies SubCompany[]
+    id             String       @id @default(uuid())
+    organizationId String
+    key            String
+    externalId     String?      @map("external_id")
+    name           String
+    tradeName      String?
+    status         Status       @default(active)
+    addressId      String?      @unique
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    address        Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    subCompanies   SubCompany[]
 
+    @@unique([organizationId, key])
+    @@unique([organizationId, externalId])
+    @@index([organizationId])
     @@index([name])
     @@index([status])
     @@map("companies")
@@ -667,18 +674,21 @@ model StationFuel {
 }
 
 model CardcloudCardStock {
-    id             String    @id @default(uuid())
-    externalId     String    @unique @map("card_external_id")
-    assignedCardId String?   @unique
+    id             String       @id @default(uuid())
+    organizationId String
+    externalId     String       @unique @map("card_external_id")
+    assignedCardId String?      @unique
     maskedPan      String?
     clientId       String?
-    balance        Decimal?  @db.Decimal(14, 2)
-    providerStatus Status    @default(active) @map("cardcloud_status")
+    balance        Decimal?     @db.Decimal(14, 2)
+    providerStatus Status       @default(active) @map("cardcloud_status")
     syncedAt       DateTime?
-    createdAt      DateTime  @default(now())
-    updatedAt      DateTime  @updatedAt
-    assignedCard   Card?     @relation(fields: [assignedCardId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    assignedCard   Card?        @relation(fields: [assignedCardId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
+    @@index([organizationId])
     @@index([providerStatus, assignedCardId])
     @@map("cardcloud_card_stock")
 }

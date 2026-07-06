@@ -9,34 +9,38 @@ Base path: `/api/sub-companies`
 
 Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `companyId` debe pertenecer a una compania activa de esa organizacion.
+
 ## Modelo
 
 ```json
 {
-  "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "key": "SUB001",
-  "externalId": "EXT-SUB-001",
-  "name": "Acme Norte",
-  "status": "active",
-  "isDefault": false,
-  "company": {
-    "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-    "key": "COMPANY001",
-    "name": "Acme Logistics"
-  },
-  "address": {
-    "street": "Main St",
-    "exteriorNumber": null,
-    "interiorNumber": null,
-    "neighborhood": null,
-    "municipality": null,
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX",
-    "postalCode": "64000",
-    "references": null
-  }
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "key": "SUB001",
+    "externalId": "EXT-SUB-001",
+    "name": "Acme Norte",
+    "status": "active",
+    "isDefault": false,
+    "company": {
+        "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+        "key": "COMPANY001",
+        "name": "Acme Logistics"
+    },
+    "address": {
+        "street": "Main St",
+        "exteriorNumber": null,
+        "interiorNumber": null,
+        "neighborhood": null,
+        "municipality": null,
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX",
+        "postalCode": "64000",
+        "references": null
+    }
 }
 ```
 
@@ -44,13 +48,13 @@ En listados, `company` se devuelve como summary y `address` no se devuelve. `add
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/sub-companies` | `sub-companies.create` | Crea una sub-compania. |
-| `GET` | `/api/sub-companies` | `sub-companies.read-list` | Lista sub-companias. |
-| `GET` | `/api/sub-companies/:id` | `sub-companies.read-one` | Obtiene una sub-compania. |
-| `PATCH` | `/api/sub-companies/:id` | `sub-companies.update` | Actualiza una sub-compania. |
-| `DELETE` | `/api/sub-companies/:id` | `sub-companies.delete` | Desactiva una sub-compania. |
+| Metodo   | Ruta                     | Permiso                   | Descripcion                 |
+| -------- | ------------------------ | ------------------------- | --------------------------- |
+| `POST`   | `/api/sub-companies`     | `sub-companies.create`    | Crea una sub-compania.      |
+| `GET`    | `/api/sub-companies`     | `sub-companies.read-list` | Lista sub-companias.        |
+| `GET`    | `/api/sub-companies/:id` | `sub-companies.read-one`  | Obtiene una sub-compania.   |
+| `PATCH`  | `/api/sub-companies/:id` | `sub-companies.update`    | Actualiza una sub-compania. |
+| `DELETE` | `/api/sub-companies/:id` | `sub-companies.delete`    | Desactiva una sub-compania. |
 
 ## Listado
 
@@ -70,21 +74,21 @@ Response `200`: resultado paginado de `SubCompany` con `company` summary y sin `
 
 ```json
 {
-  "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "key": "SUB001",
-  "externalId": "EXT-SUB-001",
-  "name": "Acme Norte",
-  "status": "active",
-  "isDefault": false,
-  "address": {
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX"
-  }
+    "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "key": "SUB001",
+    "externalId": "EXT-SUB-001",
+    "name": "Acme Norte",
+    "status": "active",
+    "isDefault": false,
+    "address": {
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX"
+    }
 }
 ```
 
-Requeridos: `companyId`, `key`, `name`. `companyId` debe apuntar a una compania activa.
+Requeridos: `companyId`, `key`, `name`. `companyId` debe apuntar a una compania activa del workspace seleccionado.
 
 Opcionales: `externalId`, `status`, `isDefault`, `address`.
 
@@ -114,17 +118,17 @@ Response `200`:
 
 ```json
 {
-  "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "status": "inactive"
+    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Relacion invalida o parametros invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Sub-compania no encontrada. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                             |
+| ------ | ------------------------------------------------ |
+| `400`  | Relacion invalida o parametros invalidos.        |
+| `401`  | Request sin autenticacion valida.                |
+| `403`  | Usuario autenticado sin el permiso requerido.    |
+| `404`  | Sub-compania no encontrada.                      |
+| `409`  | Conflictos de unicidad segun constraints Prisma. |

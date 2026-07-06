@@ -13,8 +13,8 @@ export class StationsService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateStationDto) {
-        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids) }]);
+    async create(organizationId: string, dto: CreateStationDto) {
+        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId) }]);
 
         return this.repository.create(
             {
@@ -29,9 +29,10 @@ export class StationsService {
         );
     }
 
-    async findAll(dto: FindStationsDto) {
+    async findAll(organizationId: string, dto: FindStationsDto) {
         const where: Prisma.StationWhereInput = {
             subCompanyId: dto.subCompanyId,
+            subCompany: { company: { organizationId } },
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name']) } : {}),
         };
@@ -39,15 +40,16 @@ export class StationsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const station = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const station = await this.repository.findById(id, organizationId);
         if (!station) throw notFound();
         return station;
     }
 
-    async update(id: string, dto: UpdateStationDto) {
+    async update(organizationId: string, id: string, dto: UpdateStationDto) {
         const station = await this.repository.update(
             id,
+            organizationId,
             {
                 stationNumber: dto.stationNumber,
                 name: dto.name,
@@ -61,8 +63,8 @@ export class StationsService {
         return station;
     }
 
-    async deactivate(id: string) {
-        const station = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const station = await this.repository.deactivate(id, organizationId);
         if (!station) throw notFound();
         return { id: station.id, status: station.status };
     }

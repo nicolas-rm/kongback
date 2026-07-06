@@ -9,33 +9,37 @@ Base path: `/api/cards`
 
 Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId`, `vehicleId` y la tarjeta consultada deben pertenecer a esa organizacion.
+
 ## Modelo
 
 ```json
 {
-  "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "designFuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "externalId": "CARD-001",
-  "assignmentMode": "vehicle",
-  "status": "active",
-  "assignedAt": "2026-07-04T12:00:00.000Z",
-  "subCompany": {
-    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-    "key": "SUB001",
-    "name": "Acme Norte"
-  },
-  "vehicle": {
-    "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-    "plates": "ABC123",
-    "economicNumber": "VH-001"
-  },
-  "designFuel": {
-    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-    "code": "DIESEL",
-    "name": "Diesel"
-  }
+    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "designFuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "externalId": "CARD-001",
+    "assignmentMode": "vehicle",
+    "status": "active",
+    "assignedAt": "2026-07-04T12:00:00.000Z",
+    "subCompany": {
+        "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "key": "SUB001",
+        "name": "Acme Norte"
+    },
+    "vehicle": {
+        "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+        "plates": "ABC123",
+        "economicNumber": "VH-001"
+    },
+    "designFuel": {
+        "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+        "code": "DIESEL",
+        "name": "Diesel"
+    }
 }
 ```
 
@@ -45,16 +49,16 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/cards` | `cards.create` | Crea una tarjeta. |
-| `GET` | `/api/cards` | `cards.read-list` | Lista tarjetas. |
-| `GET` | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read` | Lista tarjetas por combustible de diseno. |
-| `GET` | `/api/cards/:id` | `cards.read-one` | Obtiene una tarjeta. |
-| `PATCH` | `/api/cards/:id/assign-vehicle` | `cards.vehicle.assign` | Asigna tarjeta a vehiculo. |
-| `PATCH` | `/api/cards/:id/unassign` | `cards.unassign` | Quita asignacion de tarjeta. |
-| `PATCH` | `/api/cards/:id` | `cards.update` | Actualiza una tarjeta. |
-| `DELETE` | `/api/cards/:id` | `cards.delete` | Desactiva una tarjeta. |
+| Metodo   | Ruta                                      | Permiso                  | Descripcion                               |
+| -------- | ----------------------------------------- | ------------------------ | ----------------------------------------- |
+| `POST`   | `/api/cards`                              | `cards.create`           | Crea una tarjeta.                         |
+| `GET`    | `/api/cards`                              | `cards.read-list`        | Lista tarjetas.                           |
+| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read` | Lista tarjetas por combustible de diseno. |
+| `GET`    | `/api/cards/:id`                          | `cards.read-one`         | Obtiene una tarjeta.                      |
+| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`   | Asigna tarjeta a vehiculo.                |
+| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`         | Quita asignacion de tarjeta.              |
+| `PATCH`  | `/api/cards/:id`                          | `cards.update`           | Actualiza una tarjeta.                    |
+| `DELETE` | `/api/cards/:id`                          | `cards.delete`           | Desactiva una tarjeta.                    |
 
 ## Listado
 
@@ -86,16 +90,16 @@ Response `200`: resultado paginado de `Card` filtrado por `designFuelId`.
 
 ```json
 {
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "designFuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "externalId": "CARD-001",
-  "status": "active",
-  "assignedAt": "2026-07-04"
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "designFuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "externalId": "CARD-001",
+    "status": "active",
+    "assignedAt": "2026-07-04"
 }
 ```
 
-Requerido: `subCompanyId`.
+Requerido: `subCompanyId`. Debe estar activo en el workspace seleccionado.
 
 Opcionales: `vehicleId`, `designFuelId`, `externalId`, `status`, `assignedAt`. Si se envia `vehicleId`, la tarjeta queda en `assignmentMode: vehicle`; si no, queda `unassigned`.
 
@@ -123,8 +127,8 @@ Response `200`: `Card` actualizada.
 
 ```json
 {
-  "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "assignedAt": "2026-07-04"
+    "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "assignedAt": "2026-07-04"
 }
 ```
 
@@ -134,10 +138,10 @@ Response:
 
 ```json
 {
-  "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "assignmentMode": "vehicle",
-  "assignedAt": "2026-07-04T00:00:00.000Z"
+    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "assignmentMode": "vehicle",
+    "assignedAt": "2026-07-04T00:00:00.000Z"
 }
 ```
 
@@ -149,10 +153,10 @@ Response:
 
 ```json
 {
-  "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "vehicleId": null,
-  "assignmentMode": "unassigned",
-  "assignedAt": null
+    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "vehicleId": null,
+    "assignmentMode": "unassigned",
+    "assignedAt": null
 }
 ```
 
@@ -164,17 +168,17 @@ Response `200`:
 
 ```json
 {
-  "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "status": "inactive"
+    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Relacion invalida, fecha invalida o parametros invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Tarjeta no encontrada. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                      |
+| ------ | --------------------------------------------------------- |
+| `400`  | Relacion invalida, fecha invalida o parametros invalidos. |
+| `401`  | Request sin autenticacion valida.                         |
+| `403`  | Usuario autenticado sin el permiso requerido.             |
+| `404`  | Tarjeta no encontrada.                                    |
+| `409`  | Conflictos de unicidad segun constraints Prisma.          |

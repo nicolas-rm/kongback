@@ -13,9 +13,9 @@ export class DriversService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateDriverDto) {
+    async create(organizationId: string, dto: CreateDriverDto) {
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId) },
             { ids: [dto.userId], count: (ids) => this.relations.countActiveUsers(ids) },
         ]);
         return this.repository.create(
@@ -30,9 +30,10 @@ export class DriversService {
         );
     }
 
-    async findAll(dto: FindDriversDto) {
+    async findAll(organizationId: string, dto: FindDriversDto) {
         const where: Prisma.DriverWhereInput = {
             subCompanyId: dto.subCompanyId,
+            subCompany: { company: { organizationId } },
             userId: dto.userId,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.DriverWhereInput>(dto.search, ['name', 'externalReference']) } : {}),
@@ -41,16 +42,17 @@ export class DriversService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const driver = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const driver = await this.repository.findById(id, organizationId);
         if (!driver) throw notFound();
         return driver;
     }
 
-    async update(id: string, dto: UpdateDriverDto) {
+    async update(organizationId: string, id: string, dto: UpdateDriverDto) {
         await assertActive([{ ids: [dto.userId], count: (ids) => this.relations.countActiveUsers(ids) }]);
         const driver = await this.repository.update(
             id,
+            organizationId,
             {
                 userId: dto.userId,
                 name: dto.name,
@@ -63,8 +65,8 @@ export class DriversService {
         return driver;
     }
 
-    async deactivate(id: string) {
-        const driver = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const driver = await this.repository.deactivate(id, organizationId);
         if (!driver) throw notFound();
         return { id: driver.id, status: driver.status };
     }

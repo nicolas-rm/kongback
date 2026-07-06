@@ -13,11 +13,11 @@ export class VehiclesService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateVehicleDto) {
+    async create(organizationId: string, dto: CreateVehicleDto) {
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId) },
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
-            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDrivers(ids) },
+            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, dto.subCompanyId, organizationId) },
         ]);
 
         return this.repository.create({
@@ -34,9 +34,10 @@ export class VehiclesService {
         });
     }
 
-    async findAll(dto: FindVehiclesDto) {
+    async findAll(organizationId: string, dto: FindVehiclesDto) {
         const where: Prisma.VehicleWhereInput = {
             subCompanyId: dto.subCompanyId,
+            subCompany: { company: { organizationId } },
             fuelId: dto.fuelId,
             driverId: dto.driverId,
             status: dto.status,
@@ -46,19 +47,22 @@ export class VehiclesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const vehicle = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const vehicle = await this.repository.findById(id, organizationId);
         if (!vehicle) throw notFound();
         return vehicle;
     }
 
-    async update(id: string, dto: UpdateVehicleDto) {
+    async update(organizationId: string, id: string, dto: UpdateVehicleDto) {
+        const current = dto.driverId ? await this.repository.findById(id, organizationId) : null;
+        if (dto.driverId && !current) throw notFound();
+
         await assertActive([
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
-            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDrivers(ids) },
+            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current?.subCompanyId ?? '', organizationId) },
         ]);
 
-        const vehicle = await this.repository.update(id, {
+        const vehicle = await this.repository.update(id, organizationId, {
             fuelId: dto.fuelId,
             driverId: dto.driverId,
             plates: dto.plates,
@@ -73,20 +77,20 @@ export class VehiclesService {
         return vehicle;
     }
 
-    async setDriver(id: string, dto: SetVehicleDriverDto) {
-        const current = await this.repository.findById(id);
+    async setDriver(organizationId: string, id: string, dto: SetVehicleDriverDto) {
+        const current = await this.repository.findById(id, organizationId);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
-        await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId) }]);
+        await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId, organizationId) }]);
 
-        const vehicle = await this.repository.update(id, { driverId: dto.driverId });
+        const vehicle = await this.repository.update(id, organizationId, { driverId: dto.driverId });
         if (!vehicle) throw notFound();
         return { id: vehicle.id, driverId: vehicle.driverId };
     }
 
-    async deactivate(id: string) {
-        const vehicle = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const vehicle = await this.repository.deactivate(id, organizationId);
         if (!vehicle) throw notFound();
         return { id: vehicle.id, status: vehicle.status };
     }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
+import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
 
 export type AuthenticatedUserRecord = Awaited<ReturnType<AuthenticationRepository['findActiveUserForRequest']>>;
 
@@ -263,6 +264,41 @@ export class AuthenticationRepository {
                 deviceName: true,
                 lastActivityAt: true,
                 expiresAt: true,
+            },
+        });
+    }
+
+    listActiveOrganizations() {
+        return this.prisma.organization.findMany({
+            where: { status: 'active' },
+            orderBy: { name: 'asc' },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+            },
+        });
+    }
+
+    listUserOrganizationAccesses(userId: string) {
+        return this.prisma.userAccess.findMany({
+            where: buildActiveUserAccessWhere({ userId, organizationId: { not: null } }),
+            orderBy: { assignedAt: 'asc' },
+            select: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+                role: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                    },
+                },
             },
         });
     }

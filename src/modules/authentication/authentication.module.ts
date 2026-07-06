@@ -26,6 +26,7 @@ import * as useCases from '@/modules/authentication/use-cases';
         useCases.RegisterUseCase,
         useCases.LogoutUseCase,
         useCases.ListSessionsUseCase,
+        useCases.ListWorkspacesUseCase,
         useCases.RevokeSessionUseCase,
         useCases.GetProfileUseCase,
         useCases.UpdateMyProfileUseCase,

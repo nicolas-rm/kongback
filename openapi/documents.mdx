@@ -9,41 +9,45 @@ Base path: `/api/documents`
 
 Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` aplica soft delete y tambien elimina el archivo del almacenamiento.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado al workspace seleccionado. `organizationId` en la respuesta corresponde a ese header y no se acepta en body ni query.
+
 ## Modelo
 
 ```json
 {
-  "id": "8304b951-7f41-4653-8ac5-0c3b7a86521d",
-  "title": "Contrato",
-  "description": "Contrato firmado",
-  "category": "contracts",
-  "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
-  "entityType": "company",
-  "entityId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "scopeKey": "companyId",
-  "scopeId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "originalName": "contrato.pdf",
-  "mimeType": "application/pdf",
-  "sizeBytes": 152430
+    "id": "8304b951-7f41-4653-8ac5-0c3b7a86521d",
+    "title": "Contrato",
+    "description": "Contrato firmado",
+    "category": "contracts",
+    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "entityType": "company",
+    "entityId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "scopeKey": "companyId",
+    "scopeId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "originalName": "contrato.pdf",
+    "mimeType": "application/pdf",
+    "sizeBytes": 152430
 }
 ```
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/documents` | `documents.create` | Sube y registra un documento. |
-| `GET` | `/api/documents` | `documents.read-list` | Lista documentos activos. |
-| `GET` | `/api/documents/:id/download` | `documents.download` | Descarga el archivo. |
-| `GET` | `/api/documents/:id` | `documents.read-one` | Obtiene metadata de un documento. |
-| `PATCH` | `/api/documents/:id` | `documents.update` | Actualiza metadata editable. |
-| `DELETE` | `/api/documents/:id` | `documents.delete` | Elimina logicamente el documento. |
+| Metodo   | Ruta                          | Permiso               | Descripcion                       |
+| -------- | ----------------------------- | --------------------- | --------------------------------- |
+| `POST`   | `/api/documents`              | `documents.create`    | Sube y registra un documento.     |
+| `GET`    | `/api/documents`              | `documents.read-list` | Lista documentos activos.         |
+| `GET`    | `/api/documents/:id/download` | `documents.download`  | Descarga el archivo.              |
+| `GET`    | `/api/documents/:id`          | `documents.read-one`  | Obtiene metadata de un documento. |
+| `PATCH`  | `/api/documents/:id`          | `documents.update`    | Actualiza metadata editable.      |
+| `DELETE` | `/api/documents/:id`          | `documents.delete`    | Elimina logicamente el documento. |
 
 ## Listado
 
 `GET /api/documents`
 
-Query params: `page`, `limit`, `search`, `all`, `category`, `organizationId`, `entityType`, `entityId`.
+Query params: `page`, `limit`, `search`, `all`, `category`, `entityType`, `entityId`.
 
 `search` busca por `title`, `originalName` y `description`.
 
@@ -57,17 +61,16 @@ Content-Type: `multipart/form-data`.
 
 Campos:
 
-| Campo | Tipo | Requerido | Descripcion |
-| --- | --- | --- | --- |
-| `file` | `file` | Si | Archivo a subir. |
-| `title` | `string` | Si | Titulo visible. |
-| `description` | `string \| null` | No | Descripcion opcional. |
-| `category` | `string \| null` | No | Categoria libre. |
-| `organizationId` | `uuid \| null` | No | Organizacion activa asociada. |
-| `entityType` | `string \| null` | No | Tipo de entidad relacionada. |
-| `entityId` | `string \| null` | No | ID de entidad relacionada. |
-| `scopeKey` | `string \| null` | No | Nombre de scope. |
-| `scopeId` | `string \| null` | No | ID de scope. |
+| Campo         | Tipo             | Requerido | Descripcion                  |
+| ------------- | ---------------- | --------- | ---------------------------- |
+| `file`        | `file`           | Si        | Archivo a subir.             |
+| `title`       | `string`         | Si        | Titulo visible.              |
+| `description` | `string \| null` | No        | Descripcion opcional.        |
+| `category`    | `string \| null` | No        | Categoria libre.             |
+| `entityType`  | `string \| null` | No        | Tipo de entidad relacionada. |
+| `entityId`    | `string \| null` | No        | ID de entidad relacionada.   |
+| `scopeKey`    | `string \| null` | No        | Nombre de scope.             |
+| `scopeId`     | `string \| null` | No        | ID de scope.                 |
 
 MIME permitidos por defecto: `application/pdf`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
@@ -91,9 +94,9 @@ Response `200`: `Document`.
 
 ```json
 {
-  "title": "Contrato actualizado",
-  "description": "Nueva descripcion",
-  "category": "contracts"
+    "title": "Contrato actualizado",
+    "description": "Nueva descripcion",
+    "category": "contracts"
 }
 ```
 
@@ -107,9 +110,9 @@ Response `200`: `Document` actualizado.
 
 Devuelve stream binario con:
 
-| Header | Valor |
-| --- | --- |
-| `Content-Type` | MIME real del documento. |
+| Header                | Valor                             |
+| --------------------- | --------------------------------- |
+| `Content-Type`        | MIME real del documento.          |
 | `Content-Disposition` | `attachment` con nombre original. |
 
 ## Eliminar
@@ -122,16 +125,16 @@ Response `200`:
 
 ```json
 {
-  "id": "8304b951-7f41-4653-8ac5-0c3b7a86521d",
-  "deleted": true
+    "id": "8304b951-7f41-4653-8ac5-0c3b7a86521d",
+    "deleted": true
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Archivo requerido, MIME no permitido, tamano excedido o relacion invalida. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Documento o archivo almacenado no encontrado. |
+| Estado | Caso                                                                       |
+| ------ | -------------------------------------------------------------------------- |
+| `400`  | Archivo requerido, MIME no permitido, tamano excedido o relacion invalida. |
+| `401`  | Request sin autenticacion valida.                                          |
+| `403`  | Usuario autenticado sin el permiso requerido.                              |
+| `404`  | Documento o archivo almacenado no encontrado.                              |

@@ -9,17 +9,19 @@ Base path: `/api/organizations`
 
 Todos los endpoints requieren autenticacion y permisos `organizations.*`. El borrado desactiva la organizacion cambiando `status` a `inactive`.
 
+En esta API, una organizacion representa el workspace/cliente tenant que el front puede seleccionar. Los datos operativos tenant-scoped usan `X-Organization-Id` para trabajar dentro de una organizacion activa.
+
 ## Modelos
 
 ### Organization
 
 ```json
 {
-  "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-  "name": "Demo Organization",
-  "slug": "demo-organization",
-  "description": "Organizacion demo",
-  "status": "active"
+    "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+    "name": "Demo Organization",
+    "slug": "demo-organization",
+    "description": "Organizacion demo",
+    "status": "active"
 }
 ```
 
@@ -29,14 +31,14 @@ Todos los endpoints requieren autenticacion y permisos `organizations.*`. El bor
 
 ```json
 {
-  "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
-  "user": {
-    "id": "8d15017a-2069-43a5-b9aa-c926c8f98352",
-    "username": "demo.user",
-    "email": "demo.user@example.com",
-    "fullName": "Demo User",
-    "status": "active"
-  }
+    "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
+    "user": {
+        "id": "8d15017a-2069-43a5-b9aa-c926c8f98352",
+        "username": "demo.user",
+        "email": "demo.user@example.com",
+        "fullName": "Demo User",
+        "status": "active"
+    }
 }
 ```
 
@@ -44,16 +46,16 @@ Los miembros no asignan permisos por si mismos. Los roles y scopes se asignan de
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/organizations` | `organizations.create` | Crea una organizacion. |
-| `GET` | `/api/organizations` | `organizations.read-list` | Lista organizaciones. |
-| `GET` | `/api/organizations/:id` | `organizations.read-one` | Obtiene una organizacion. |
-| `PATCH` | `/api/organizations/:id` | `organizations.update` | Actualiza una organizacion. |
-| `DELETE` | `/api/organizations/:id` | `organizations.delete` | Desactiva una organizacion. |
-| `GET` | `/api/organizations/:id/members` | `organizations.members.read` | Lista miembros de la organizacion. |
-| `POST` | `/api/organizations/:id/members` | `organizations.members.add` | Agrega un usuario activo como miembro. |
-| `DELETE` | `/api/organizations/:id/members/:membershipId` | `organizations.members.remove` | Remueve un miembro. |
+| Metodo   | Ruta                                           | Permiso                        | Descripcion                            |
+| -------- | ---------------------------------------------- | ------------------------------ | -------------------------------------- |
+| `POST`   | `/api/organizations`                           | `organizations.create`         | Crea una organizacion.                 |
+| `GET`    | `/api/organizations`                           | `organizations.read-list`      | Lista organizaciones.                  |
+| `GET`    | `/api/organizations/:id`                       | `organizations.read-one`       | Obtiene una organizacion.              |
+| `PATCH`  | `/api/organizations/:id`                       | `organizations.update`         | Actualiza una organizacion.            |
+| `DELETE` | `/api/organizations/:id`                       | `organizations.delete`         | Desactiva una organizacion.            |
+| `GET`    | `/api/organizations/:id/members`               | `organizations.members.read`   | Lista miembros de la organizacion.     |
+| `POST`   | `/api/organizations/:id/members`               | `organizations.members.add`    | Agrega un usuario activo como miembro. |
+| `DELETE` | `/api/organizations/:id/members/:membershipId` | `organizations.members.remove` | Remueve un miembro.                    |
 
 ## Crear organizacion
 
@@ -61,10 +63,10 @@ Los miembros no asignan permisos por si mismos. Los roles y scopes se asignan de
 
 ```json
 {
-  "name": "Demo Organization",
-  "slug": "demo-organization",
-  "description": "Organizacion demo",
-  "status": "active"
+    "name": "Demo Organization",
+    "slug": "demo-organization",
+    "description": "Organizacion demo",
+    "status": "active"
 }
 ```
 
@@ -102,9 +104,9 @@ Response `200`: `Organization`.
 
 ```json
 {
-  "name": "Demo Organization Updated",
-  "description": null,
-  "status": "active"
+    "name": "Demo Organization Updated",
+    "description": null,
+    "status": "active"
 }
 ```
 
@@ -120,8 +122,8 @@ Response `200`:
 
 ```json
 {
-  "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-  "status": "inactive"
+    "id": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
+    "status": "inactive"
 }
 ```
 
@@ -139,7 +141,7 @@ Response `200`: `OrganizationMember[]`.
 
 ```json
 {
-  "userId": "8d15017a-2069-43a5-b9aa-c926c8f98352"
+    "userId": "8d15017a-2069-43a5-b9aa-c926c8f98352"
 }
 ```
 
@@ -157,17 +159,17 @@ Response `200`:
 
 ```json
 {
-  "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
-  "deleted": true
+    "id": "f725ed88-fc3e-4f8f-aa22-f9946ebcbf07",
+    "deleted": true
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query, path params o relacion invalida. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Organizacion o miembro no encontrado. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                             |
+| ------ | ------------------------------------------------ |
+| `400`  | Body, query, path params o relacion invalida.    |
+| `401`  | Request sin autenticacion valida.                |
+| `403`  | Usuario autenticado sin el permiso requerido.    |
+| `404`  | Organizacion o miembro no encontrado.            |
+| `409`  | Conflictos de unicidad segun constraints Prisma. |

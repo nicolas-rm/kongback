@@ -9,35 +9,39 @@ Base path: `/api/vehicles`
 
 Todos los endpoints requieren autenticacion y permisos `vehicles.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId`, `driverId` y el vehiculo consultado deben pertenecer a esa organizacion.
+
 ## Modelo
 
 ```json
 {
-  "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "driverId": "d77d1344-93d4-4dc2-923a-b241185692de",
-  "plates": "ABC123",
-  "economicNumber": "VH-001",
-  "model": "Transit",
-  "year": 2024,
-  "odometerControl": true,
-  "odometerInitial": 12500,
-  "status": "active",
-  "subCompany": {
-    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-    "key": "SUB001",
-    "name": "Acme Norte"
-  },
-  "fuel": {
-    "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-    "code": "DIESEL",
-    "name": "Diesel"
-  },
-  "driver": {
-    "id": "d77d1344-93d4-4dc2-923a-b241185692de",
-    "name": "Maria Garcia"
-  }
+    "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "driverId": "d77d1344-93d4-4dc2-923a-b241185692de",
+    "plates": "ABC123",
+    "economicNumber": "VH-001",
+    "model": "Transit",
+    "year": 2024,
+    "odometerControl": true,
+    "odometerInitial": 12500,
+    "status": "active",
+    "subCompany": {
+        "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "key": "SUB001",
+        "name": "Acme Norte"
+    },
+    "fuel": {
+        "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+        "code": "DIESEL",
+        "name": "Diesel"
+    },
+    "driver": {
+        "id": "d77d1344-93d4-4dc2-923a-b241185692de",
+        "name": "Maria Garcia"
+    }
 }
 ```
 
@@ -45,14 +49,14 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `fuel` y `
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/vehicles` | `vehicles.create` | Crea un vehiculo. |
-| `GET` | `/api/vehicles` | `vehicles.read-list` | Lista vehiculos. |
-| `GET` | `/api/vehicles/:id` | `vehicles.read-one` | Obtiene un vehiculo. |
-| `PATCH` | `/api/vehicles/:id/driver` | `vehicles.driver.assign` | Asigna o quita conductor. |
-| `PATCH` | `/api/vehicles/:id` | `vehicles.update` | Actualiza un vehiculo. |
-| `DELETE` | `/api/vehicles/:id` | `vehicles.delete` | Desactiva un vehiculo. |
+| Metodo   | Ruta                       | Permiso                  | Descripcion               |
+| -------- | -------------------------- | ------------------------ | ------------------------- |
+| `POST`   | `/api/vehicles`            | `vehicles.create`        | Crea un vehiculo.         |
+| `GET`    | `/api/vehicles`            | `vehicles.read-list`     | Lista vehiculos.          |
+| `GET`    | `/api/vehicles/:id`        | `vehicles.read-one`      | Obtiene un vehiculo.      |
+| `PATCH`  | `/api/vehicles/:id/driver` | `vehicles.driver.assign` | Asigna o quita conductor. |
+| `PATCH`  | `/api/vehicles/:id`        | `vehicles.update`        | Actualiza un vehiculo.    |
+| `DELETE` | `/api/vehicles/:id`        | `vehicles.delete`        | Desactiva un vehiculo.    |
 
 ## Listado
 
@@ -72,20 +76,20 @@ Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driv
 
 ```json
 {
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
-  "driverId": "d77d1344-93d4-4dc2-923a-b241185692de",
-  "plates": "abc123",
-  "economicNumber": "VH-001",
-  "model": "Transit",
-  "year": 2024,
-  "odometerControl": true,
-  "odometerInitial": 12500,
-  "status": "active"
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "fuelId": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
+    "driverId": "d77d1344-93d4-4dc2-923a-b241185692de",
+    "plates": "abc123",
+    "economicNumber": "VH-001",
+    "model": "Transit",
+    "year": 2024,
+    "odometerControl": true,
+    "odometerInitial": 12500,
+    "status": "active"
 }
 ```
 
-Requeridos: `subCompanyId`, `fuelId`, `plates`. `plates` se normaliza a mayusculas.
+Requeridos: `subCompanyId`, `fuelId`, `plates`. `subCompanyId` debe estar activo en el workspace seleccionado. `plates` se normaliza a mayusculas.
 
 Opcionales: `driverId`, `economicNumber`, `model`, `year`, `odometerControl`, `odometerInitial`, `status`.
 
@@ -113,7 +117,7 @@ Response `200`: `Vehicle` actualizado.
 
 ```json
 {
-  "driverId": "d77d1344-93d4-4dc2-923a-b241185692de"
+    "driverId": "d77d1344-93d4-4dc2-923a-b241185692de"
 }
 ```
 
@@ -123,8 +127,8 @@ Response:
 
 ```json
 {
-  "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "driverId": "d77d1344-93d4-4dc2-923a-b241185692de"
+    "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "driverId": "d77d1344-93d4-4dc2-923a-b241185692de"
 }
 ```
 
@@ -136,17 +140,17 @@ Response `200`:
 
 ```json
 {
-  "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
-  "status": "inactive"
+    "id": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Relacion invalida, year fuera de rango o parametros invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Vehiculo no encontrado. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                           |
+| ------ | -------------------------------------------------------------- |
+| `400`  | Relacion invalida, year fuera de rango o parametros invalidos. |
+| `401`  | Request sin autenticacion valida.                              |
+| `403`  | Usuario autenticado sin el permiso requerido.                  |
+| `404`  | Vehiculo no encontrado.                                        |
+| `409`  | Conflictos de unicidad segun constraints Prisma.               |

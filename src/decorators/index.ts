@@ -1,5 +1,6 @@
 export * from './current-user.decorator';
 export * from './endpoint.decorator';
+export * from './organization-context.decorator';
 export * from './permissions.decorator';
 export * from './public.decorator';
 export * from './refresh-token.decorator';

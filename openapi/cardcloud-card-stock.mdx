@@ -9,23 +9,28 @@ Base path: `/api/cardcloud-card-stock`
 
 Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`. El borrado desactiva el registro cambiando `providerStatus` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El stock no asignado tambien queda asociado a esa organizacion.
+
 ## Modelo
 
 ```json
 {
-  "id": "413117ed-83f0-4d74-bf7b-1e26d3a9b9de",
-  "externalId": "CC-00001",
-  "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "maskedPan": "**** **** **** 1234",
-  "clientId": "CLIENT-001",
-  "balance": 1200.5,
-  "providerStatus": "active",
-  "syncedAt": "2026-07-04T00:00:00.000Z",
-  "assignedCard": {
-    "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-    "externalId": "CARD-001",
-    "assignmentMode": "vehicle"
-  }
+    "id": "413117ed-83f0-4d74-bf7b-1e26d3a9b9de",
+    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "externalId": "CC-00001",
+    "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "maskedPan": "**** **** **** 1234",
+    "clientId": "CLIENT-001",
+    "balance": 1200.5,
+    "providerStatus": "active",
+    "syncedAt": "2026-07-04T00:00:00.000Z",
+    "assignedCard": {
+        "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+        "externalId": "CARD-001",
+        "assignmentMode": "vehicle"
+    }
 }
 ```
 
@@ -33,13 +38,13 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/cardcloud-card-stock` | `cardcloud-card-stock.create` | Crea stock Cardcloud. |
-| `GET` | `/api/cardcloud-card-stock` | `cardcloud-card-stock.read-list` | Lista stock. |
-| `GET` | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.read-one` | Obtiene un registro. |
-| `PATCH` | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.update` | Actualiza un registro. |
-| `DELETE` | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.delete` | Desactiva un registro. |
+| Metodo   | Ruta                            | Permiso                          | Descripcion            |
+| -------- | ------------------------------- | -------------------------------- | ---------------------- |
+| `POST`   | `/api/cardcloud-card-stock`     | `cardcloud-card-stock.create`    | Crea stock Cardcloud.  |
+| `GET`    | `/api/cardcloud-card-stock`     | `cardcloud-card-stock.read-list` | Lista stock.           |
+| `GET`    | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.read-one`  | Obtiene un registro.   |
+| `PATCH`  | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.update`    | Actualiza un registro. |
+| `DELETE` | `/api/cardcloud-card-stock/:id` | `cardcloud-card-stock.delete`    | Desactiva un registro. |
 
 ## Listado
 
@@ -59,19 +64,19 @@ Response `200`: resultado paginado de `CardcloudCardStock`.
 
 ```json
 {
-  "externalId": "CC-00001",
-  "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
-  "maskedPan": "**** **** **** 1234",
-  "clientId": "CLIENT-001",
-  "balance": 1200.5,
-  "providerStatus": "active",
-  "syncedAt": "2026-07-04"
+    "externalId": "CC-00001",
+    "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+    "maskedPan": "**** **** **** 1234",
+    "clientId": "CLIENT-001",
+    "balance": 1200.5,
+    "providerStatus": "active",
+    "syncedAt": "2026-07-04"
 }
 ```
 
 Requerido: `externalId`.
 
-Opcionales: `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`. Si `assignedCardId` se envia, debe apuntar a una tarjeta activa.
+Opcionales: `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`. Si `assignedCardId` se envia, debe apuntar a una tarjeta activa del workspace seleccionado.
 
 Response `201`: `CardcloudCardStock`.
 
@@ -99,17 +104,17 @@ Response `200`:
 
 ```json
 {
-  "id": "413117ed-83f0-4d74-bf7b-1e26d3a9b9de",
-  "status": "inactive"
+    "id": "413117ed-83f0-4d74-bf7b-1e26d3a9b9de",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Relacion invalida, balance negativo, fecha invalida o parametros invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Registro Cardcloud no encontrado. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                                        |
+| ------ | --------------------------------------------------------------------------- |
+| `400`  | Relacion invalida, balance negativo, fecha invalida o parametros invalidos. |
+| `401`  | Request sin autenticacion valida.                                           |
+| `403`  | Usuario autenticado sin el permiso requerido.                               |
+| `404`  | Registro Cardcloud no encontrado.                                           |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                            |

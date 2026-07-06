@@ -9,34 +9,38 @@ Base path: `/api/stations`
 
 Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId` debe pertenecer a una subcompania activa de esa organizacion.
+
 ## Modelo
 
 ```json
 {
-  "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "stationNumber": "ST-001",
-  "name": "Estacion Centro",
-  "lat": 25.6866,
-  "lon": -100.3161,
-  "status": "active",
-  "subCompany": {
-    "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-    "key": "SUB001",
-    "name": "Acme Norte"
-  },
-  "address": {
-    "street": "Main St",
-    "exteriorNumber": null,
-    "interiorNumber": null,
-    "neighborhood": null,
-    "municipality": null,
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX",
-    "postalCode": "64000",
-    "references": null
-  }
+    "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "stationNumber": "ST-001",
+    "name": "Estacion Centro",
+    "lat": 25.6866,
+    "lon": -100.3161,
+    "status": "active",
+    "subCompany": {
+        "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "key": "SUB001",
+        "name": "Acme Norte"
+    },
+    "address": {
+        "street": "Main St",
+        "exteriorNumber": null,
+        "interiorNumber": null,
+        "neighborhood": null,
+        "municipality": null,
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX",
+        "postalCode": "64000",
+        "references": null
+    }
 }
 ```
 
@@ -44,13 +48,13 @@ En listados, `subCompany` se devuelve como summary y `address` no se devuelve. `
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/stations` | `stations.create` | Crea una estacion. |
-| `GET` | `/api/stations` | `stations.read-list` | Lista estaciones. |
-| `GET` | `/api/stations/:id` | `stations.read-one` | Obtiene una estacion. |
-| `PATCH` | `/api/stations/:id` | `stations.update` | Actualiza una estacion. |
-| `DELETE` | `/api/stations/:id` | `stations.delete` | Desactiva una estacion. |
+| Metodo   | Ruta                | Permiso              | Descripcion             |
+| -------- | ------------------- | -------------------- | ----------------------- |
+| `POST`   | `/api/stations`     | `stations.create`    | Crea una estacion.      |
+| `GET`    | `/api/stations`     | `stations.read-list` | Lista estaciones.       |
+| `GET`    | `/api/stations/:id` | `stations.read-one`  | Obtiene una estacion.   |
+| `PATCH`  | `/api/stations/:id` | `stations.update`    | Actualiza una estacion. |
+| `DELETE` | `/api/stations/:id` | `stations.delete`    | Desactiva una estacion. |
 
 ## Listado
 
@@ -70,21 +74,21 @@ Response `200`: resultado paginado de `Station` con `subCompany` summary y sin `
 
 ```json
 {
-  "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
-  "stationNumber": "ST-001",
-  "name": "Estacion Centro",
-  "lat": 25.6866,
-  "lon": -100.3161,
-  "status": "active",
-  "address": {
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX"
-  }
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "stationNumber": "ST-001",
+    "name": "Estacion Centro",
+    "lat": 25.6866,
+    "lon": -100.3161,
+    "status": "active",
+    "address": {
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX"
+    }
 }
 ```
 
-Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar activo.
+Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar activo en el workspace seleccionado.
 
 Opcionales: `lat`, `lon`, `status`, `address`. `lat` acepta -90 a 90; `lon` acepta -180 a 180.
 
@@ -114,17 +118,17 @@ Response `200`:
 
 ```json
 {
-  "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
-  "status": "inactive"
+    "id": "48c478d5-d9a6-4a8a-a98f-6cc0a3ea7d3f",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Relacion invalida, coordenadas fuera de rango o parametros invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Estacion no encontrada. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| `400`  | Relacion invalida, coordenadas fuera de rango o parametros invalidos. |
+| `401`  | Request sin autenticacion valida.                                     |
+| `403`  | Usuario autenticado sin el permiso requerido.                         |
+| `404`  | Estacion no encontrada.                                               |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                      |

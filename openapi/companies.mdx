@@ -9,28 +9,33 @@ Base path: `/api/companies`
 
 Todos los endpoints requieren autenticacion y permisos `companies.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+## Workspace
+
+Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El backend valida que el usuario tenga acceso a esa organizacion y que este activa.
+
 ## Modelo
 
 ```json
 {
-  "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "key": "COMPANY001",
-  "externalId": "EXT-001",
-  "name": "Acme Logistics",
-  "tradeName": "Acme",
-  "status": "active",
-  "address": {
-    "street": "Main St",
-    "exteriorNumber": "100",
-    "interiorNumber": null,
-    "neighborhood": "Centro",
-    "municipality": "Monterrey",
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX",
-    "postalCode": "64000",
-    "references": null
-  }
+    "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "key": "COMPANY001",
+    "externalId": "EXT-001",
+    "name": "Acme Logistics",
+    "tradeName": "Acme",
+    "status": "active",
+    "address": {
+        "street": "Main St",
+        "exteriorNumber": "100",
+        "interiorNumber": null,
+        "neighborhood": "Centro",
+        "municipality": "Monterrey",
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX",
+        "postalCode": "64000",
+        "references": null
+    }
 }
 ```
 
@@ -40,13 +45,13 @@ En listados, `address` no se devuelve para mantener el payload liviano. `address
 
 ## Endpoints
 
-| Metodo | Ruta | Permiso | Descripcion |
-| --- | --- | --- | --- |
-| `POST` | `/api/companies` | `companies.create` | Crea una compania. |
-| `GET` | `/api/companies` | `companies.read-list` | Lista companias. |
-| `GET` | `/api/companies/:id` | `companies.read-one` | Obtiene una compania. |
-| `PATCH` | `/api/companies/:id` | `companies.update` | Actualiza una compania. |
-| `DELETE` | `/api/companies/:id` | `companies.delete` | Desactiva una compania. |
+| Metodo   | Ruta                 | Permiso               | Descripcion             |
+| -------- | -------------------- | --------------------- | ----------------------- |
+| `POST`   | `/api/companies`     | `companies.create`    | Crea una compania.      |
+| `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.        |
+| `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.   |
+| `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania. |
+| `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania. |
 
 ## Listado
 
@@ -68,18 +73,18 @@ Response `200`: resultado paginado de `Company` sin `address`.
 
 ```json
 {
-  "key": "COMPANY001",
-  "externalId": "EXT-001",
-  "name": "Acme Logistics",
-  "tradeName": "Acme",
-  "status": "active",
-  "address": {
-    "street": "Main St",
-    "city": "Monterrey",
-    "state": "Nuevo Leon",
-    "country": "MX",
-    "postalCode": "64000"
-  }
+    "key": "COMPANY001",
+    "externalId": "EXT-001",
+    "name": "Acme Logistics",
+    "tradeName": "Acme",
+    "status": "active",
+    "address": {
+        "street": "Main St",
+        "city": "Monterrey",
+        "state": "Nuevo Leon",
+        "country": "MX",
+        "postalCode": "64000"
+    }
 }
 ```
 
@@ -113,17 +118,17 @@ Response `200`:
 
 ```json
 {
-  "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-  "status": "inactive"
+    "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "status": "inactive"
 }
 ```
 
 ## Errores comunes
 
-| Estado | Caso |
-| --- | --- |
-| `400` | Body, query o path params invalidos. |
-| `401` | Request sin autenticacion valida. |
-| `403` | Usuario autenticado sin el permiso requerido. |
-| `404` | Compania no encontrada. |
-| `409` | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                             |
+| ------ | ------------------------------------------------ |
+| `400`  | Body, query o path params invalidos.             |
+| `401`  | Request sin autenticacion valida.                |
+| `403`  | Usuario autenticado sin el permiso requerido.    |
+| `404`  | Compania no encontrada.                          |
+| `409`  | Conflictos de unicidad segun constraints Prisma. |

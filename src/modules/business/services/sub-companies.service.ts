@@ -13,8 +13,8 @@ export class SubCompaniesService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateSubCompanyDto) {
-        await assertActive([{ ids: [dto.companyId], count: (ids) => this.relations.countActiveCompanies(ids) }]);
+    async create(organizationId: string, dto: CreateSubCompanyDto) {
+        await assertActive([{ ids: [dto.companyId], count: (ids) => this.relations.countActiveCompanies(ids, organizationId) }]);
         return this.repository.create(
             {
                 companyId: dto.companyId,
@@ -28,9 +28,10 @@ export class SubCompaniesService {
         );
     }
 
-    async findAll(dto: FindSubCompaniesDto) {
+    async findAll(organizationId: string, dto: FindSubCompaniesDto) {
         const where: Prisma.SubCompanyWhereInput = {
             companyId: dto.companyId,
+            company: { organizationId },
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.SubCompanyWhereInput>(dto.search, ['key', 'externalId', 'name']) } : {}),
         };
@@ -38,15 +39,16 @@ export class SubCompaniesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string) {
-        const subCompany = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const subCompany = await this.repository.findById(id, organizationId);
         if (!subCompany) throw notFound();
         return subCompany;
     }
 
-    async update(id: string, dto: UpdateSubCompanyDto) {
+    async update(organizationId: string, id: string, dto: UpdateSubCompanyDto) {
         const subCompany = await this.repository.update(
             id,
+            organizationId,
             {
                 key: dto.key,
                 externalId: dto.externalId,
@@ -60,8 +62,8 @@ export class SubCompaniesService {
         return subCompany;
     }
 
-    async deactivate(id: string) {
-        const subCompany = await this.repository.deactivate(id);
+    async deactivate(organizationId: string, id: string) {
+        const subCompany = await this.repository.deactivate(id, organizationId);
         if (!subCompany) throw notFound();
         return { id: subCompany.id, status: subCompany.status };
     }

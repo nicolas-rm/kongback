@@ -17,9 +17,9 @@ export class DocumentsService {
         private readonly storage: DocumentsStorageService
     ) {}
 
-    async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null) {
+    async create(organizationId: string, dto: CreateDocumentDto, file: UploadedFile, userId?: string | null) {
         this.assertAllowedFile(file);
-        await this.assertOrganizationActive(dto.organizationId ?? null);
+        await this.assertOrganizationActive(organizationId);
 
         const storedFile = await this.storage.saveFile(file);
 
@@ -27,7 +27,7 @@ export class DocumentsService {
             title: dto.title,
             description: dto.description ?? null,
             category: dto.category ?? null,
-            organizationId: dto.organizationId ?? null,
+            organizationId,
             entityType: dto.entityType ?? null,
             entityId: dto.entityId ?? null,
             scopeKey: dto.scopeKey ?? null,
@@ -41,11 +41,11 @@ export class DocumentsService {
         return DocumentResponse.from(document);
     }
 
-    async findAll(dto: FindDocumentsDto) {
+    async findAll(organizationId: string, dto: FindDocumentsDto) {
         const where: Prisma.DocumentWhereInput = {
             deletedAt: null,
             category: dto.category,
-            organizationId: dto.organizationId,
+            organizationId,
             entityType: dto.entityType,
             entityId: dto.entityId,
             ...(dto.search
@@ -66,32 +66,32 @@ export class DocumentsService {
         );
     }
 
-    async findOne(id: string) {
-        const document = await this.repository.findById(id);
+    async findOne(organizationId: string, id: string) {
+        const document = await this.repository.findById(id, organizationId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
         return DocumentResponse.from(document);
     }
 
-    async update(id: string, dto: UpdateDocumentDto, userId?: string | null) {
-        const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null });
+    async update(organizationId: string, id: string, dto: UpdateDocumentDto, userId?: string | null) {
+        const document = await this.repository.update(id, organizationId, { ...dto, updatedByUserId: userId ?? null });
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         return DocumentResponse.from(document);
     }
 
-    async download(id: string) {
-        const document = await this.repository.findDownloadById(id);
+    async download(organizationId: string, id: string) {
+        const document = await this.repository.findDownloadById(id, organizationId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
     }
 
-    async remove(id: string, userId?: string | null) {
-        const document = await this.repository.findDownloadById(id);
+    async remove(organizationId: string, id: string, userId?: string | null) {
+        const document = await this.repository.findDownloadById(id, organizationId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
-        const result = await this.repository.softDelete(id, userId);
+        const result = await this.repository.softDelete(id, organizationId, userId);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.removeFile(document.storageKey);
