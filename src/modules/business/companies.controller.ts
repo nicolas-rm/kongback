@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUser, Permissions, RequireGlobalAccess } from '@/decorators';
+import { CurrentUser, Permissions, RequireSystemAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CreateCompanyDto, FindStatusRecordsDto, UpdateCompanyDto } from '@/modules/business/dto';
 import { CompaniesService } from '@/modules/business/services/companies.service';
@@ -10,7 +10,7 @@ export class CompaniesController {
 
     @Post()
     @Permissions('companies.create')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     create(@Body() dto: CreateCompanyDto) {
         return this.companiesService.create(dto);
     }
@@ -29,14 +29,14 @@ export class CompaniesController {
 
     @Patch(':id')
     @Permissions('companies.update')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCompanyDto) {
         return this.companiesService.update(id, dto);
     }
 
     @Delete(':id')
     @Permissions('companies.delete')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     remove(@Param('id', ParseUUIDPipe) id: string) {
         return this.companiesService.deactivate(id);
     }

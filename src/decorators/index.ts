@@ -1,6 +1,6 @@
 export * from './current-user.decorator';
 export * from './endpoint.decorator';
-export * from './global-access.decorator';
+export * from './system-access.decorator';
 export * from './company-context.decorator';
 export * from './permissions.decorator';
 export * from './public.decorator';

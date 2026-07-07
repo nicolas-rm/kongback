@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { Permissions, RequireGlobalAccess } from '@/decorators';
+import { Permissions, RequireSystemAccess } from '@/decorators';
 import { CreateFuelDto, FindStatusRecordsDto, UpdateFuelDto } from '@/modules/business/dto';
 import { FuelsService } from '@/modules/business/services/fuels.service';
 
@@ -9,7 +9,7 @@ export class FuelsController {
 
     @Post()
     @Permissions('fuels.create')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     create(@Body() dto: CreateFuelDto) {
         return this.fuelsService.create(dto);
     }
@@ -28,14 +28,14 @@ export class FuelsController {
 
     @Patch(':id')
     @Permissions('fuels.update')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateFuelDto) {
         return this.fuelsService.update(id, dto);
     }
 
     @Delete(':id')
     @Permissions('fuels.delete')
-    @RequireGlobalAccess()
+    @RequireSystemAccess()
     remove(@Param('id', ParseUUIDPipe) id: string) {
         return this.fuelsService.deactivate(id);
     }
