@@ -16,6 +16,7 @@ import {
 } from '@/modules/authentication/dto';
 import {
     ChangePasswordUseCase,
+    GetCapabilitiesUseCase,
     GetProfileUseCase,
     ListSessionsUseCase,
     ListWorkspacesUseCase,
@@ -40,6 +41,7 @@ export class AuthenticationService {
         private readonly logoutUseCase: LogoutUseCase,
         private readonly listSessionsUseCase: ListSessionsUseCase,
         private readonly revokeSessionUseCase: RevokeSessionUseCase,
+        private readonly getCapabilitiesUseCase: GetCapabilitiesUseCase,
         private readonly getProfileUseCase: GetProfileUseCase,
         private readonly listWorkspacesUseCase: ListWorkspacesUseCase,
         private readonly updateMyProfileUseCase: UpdateMyProfileUseCase,
@@ -88,6 +90,10 @@ export class AuthenticationService {
 
     listWorkspaces(user: RequestUser) {
         return this.listWorkspacesUseCase.execute(user);
+    }
+
+    getCapabilities(user: RequestUser, organizationId: string) {
+        return this.getCapabilitiesUseCase.execute(user, organizationId);
     }
 
     revokeSession(userId: string, sessionId: string, refreshToken?: string) {

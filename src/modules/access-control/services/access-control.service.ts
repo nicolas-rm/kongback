@@ -20,8 +20,13 @@ export class AccessControlService {
     async userHasAllPermissions(userId: string, requiredPermissions: string[], organizationId?: string): Promise<boolean> {
         if (requiredPermissions.length === 0) return true;
 
-        const permissions = new Set(await this.repository.findUserPermissionCodes(userId, organizationId));
+        const permissions = new Set(await this.listUserPermissionCodes(userId, organizationId));
         return requiredPermissions.every((permission) => permissions.has(permission));
+    }
+
+    async listUserPermissionCodes(userId: string, organizationId?: string): Promise<string[]> {
+        const permissions = await this.repository.findUserPermissionCodes(userId, organizationId);
+        return [...new Set(permissions)].sort((left, right) => left.localeCompare(right));
     }
 
     async organizationIsActive(organizationId: string): Promise<boolean> {

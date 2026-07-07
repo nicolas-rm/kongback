@@ -1,4 +1,5 @@
 export * from './change-password.use-case';
+export * from './get-capabilities.use-case';
 export * from './get-profile.use-case';
 export * from './list-sessions.use-case';
 export * from './list-workspaces.use-case';
