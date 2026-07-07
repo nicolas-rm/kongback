@@ -6,7 +6,7 @@ import * as path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { CardAssignmentMode, NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
 import { Pool } from 'pg';
-import { ALL_PERMISSION_CODES, PERMISSION_CATALOG } from './permission-catalog';
+import { ALL_PERMISSION_CODES, PERMISSION_CATALOG, type PermissionCode } from './permission-catalog';
 
 const prismaConnectionString = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
 
@@ -30,13 +30,21 @@ const prisma = new PrismaClient({
 const ADMIN_ROLE_CODE = 'admin';
 const ADMIN_ROLE_NAME = 'Administrador global';
 const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso completo a todos los permisos del sistema.';
-const DEMO_COUNT = 5;
+const DEMO_COUNT = 1;
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD?.trim() || 'Demo1234';
 const DOCUMENTS_STORAGE_DIR = process.env.DOCUMENTS_STORAGE_DIR?.trim() || path.join('uploads', 'documents');
 
 type RoleSeed = {
     id: string;
     code: string;
+};
+
+type DemoRoleDefinition = {
+    code: string;
+    name: string;
+    description: string;
+    prefixes: readonly string[];
+    extraPermissionCodes?: readonly PermissionCode[];
 };
 
 type UserSeed = {
@@ -281,36 +289,71 @@ async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<
 async function seedDemoRoles(): Promise<RoleSeed[]> {
     const roleDefinitions = [
         {
-            code: 'demo-operations-manager',
-            name: 'Demo Operations Manager',
-            description: 'Rol demo para companias, sub-companias, conductores y vehiculos.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.'],
+            code: 'demo-user-administrator',
+            name: 'Demo Administracion de usuarios',
+            description: 'Administra usuarios, accesos y consulta roles/permisos disponibles.',
+            prefixes: ['users.'],
+            extraPermissionCodes: ['roles.read-list', 'roles.read-one', 'permissions.read-list', 'permissions.read-one'],
         },
         {
-            code: 'demo-cards-manager',
-            name: 'Demo Cards Manager',
-            description: 'Rol demo para tarjetas y stock Cardcloud.',
+            code: 'demo-rbac-administrator',
+            name: 'Demo Administracion de roles y permisos',
+            description: 'Administra el catalogo de roles, permisos y asignaciones de permisos por rol.',
+            prefixes: ['roles.', 'permissions.'],
+        },
+        {
+            code: 'demo-company-manager',
+            name: 'Demo Administracion de companias',
+            description: 'Administra companias y subcompanias dentro del workspace.',
+            prefixes: ['companies.', 'sub-companies.'],
+        },
+        {
+            code: 'demo-driver-administrator',
+            name: 'Demo Administracion de choferes',
+            description: 'Administra choferes y consulta las relaciones necesarias para asignarlos correctamente.',
+            prefixes: ['drivers.'],
+            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one', 'users.read-list', 'users.read-one'],
+        },
+        {
+            code: 'demo-vehicle-administrator',
+            name: 'Demo Administracion de vehiculos',
+            description: 'Administra vehiculos, asignacion de choferes y catalogos necesarios para la flota.',
+            prefixes: ['vehicles.'],
+            extraPermissionCodes: ['drivers.read-list', 'drivers.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
+        },
+        {
+            code: 'demo-card-administrator',
+            name: 'Demo Administracion de tarjetas',
+            description: 'Administra tarjetas, asignaciones a vehiculos y stock Cardcloud.',
             prefixes: ['cards.', 'cardcloud-card-stock.'],
+            extraPermissionCodes: ['vehicles.read-list', 'vehicles.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
         },
         {
-            code: 'demo-stations-manager',
-            name: 'Demo Stations Manager',
-            description: 'Rol demo para combustibles, estaciones y combustibles por estacion.',
-            prefixes: ['fuels.', 'stations.', 'station-fuels.'],
+            code: 'demo-fuel-administrator',
+            name: 'Demo Administracion de combustibles',
+            description: 'Administra el catalogo de combustibles.',
+            prefixes: ['fuels.'],
         },
         {
-            code: 'demo-documents-manager',
-            name: 'Demo Documents Manager',
-            description: 'Rol demo para documentos y descargas.',
+            code: 'demo-station-administrator',
+            name: 'Demo Administracion de estaciones',
+            description: 'Administra estaciones y combustibles disponibles por estacion.',
+            prefixes: ['stations.', 'station-fuels.'],
+            extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
+        },
+        {
+            code: 'demo-document-administrator',
+            name: 'Demo Administracion de documentos',
+            description: 'Administra documentos del workspace o de la compania seleccionada.',
             prefixes: ['documents.'],
         },
         {
-            code: 'demo-notifications-manager',
-            name: 'Demo Notifications Manager',
-            description: 'Rol demo para notificaciones de usuario.',
+            code: 'demo-notification-administrator',
+            name: 'Demo Administracion de notificaciones',
+            description: 'Administra notificaciones y consulta la bandeja del usuario.',
             prefixes: ['notifications.'],
         },
-    ];
+    ] as const satisfies readonly DemoRoleDefinition[];
 
     const roles: RoleSeed[] = [];
 
@@ -329,12 +372,28 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             select: { id: true, code: true },
         });
 
-        const permissionCodes = [...ALL_PERMISSION_CODES].filter((code) => definition.prefixes.some((prefix) => code.startsWith(prefix)));
+        const permissionCodes = resolveDemoRolePermissionCodes(definition);
         await syncRolePermissionsByCodes(role.id, permissionCodes);
         roles.push(role);
     }
 
     return roles;
+}
+
+function resolveDemoRolePermissionCodes(definition: DemoRoleDefinition): PermissionCode[] {
+    const permissionCodes = new Set<PermissionCode>();
+
+    for (const code of ALL_PERMISSION_CODES) {
+        if (definition.prefixes.some((prefix) => code.startsWith(prefix))) {
+            permissionCodes.add(code);
+        }
+    }
+
+    for (const code of definition.extraPermissionCodes ?? []) {
+        permissionCodes.add(code);
+    }
+
+    return [...permissionCodes];
 }
 
 async function seedDemoUsers(): Promise<UserSeed[]> {
@@ -424,35 +483,38 @@ async function seedOrganizationMemberships(organizations: OrganizationSeed[], us
     }
 }
 
-async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizations: OrganizationSeed[]): Promise<void> {
+async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizations: OrganizationSeed[], companies: CompanySeed[]): Promise<void> {
     for (const index of seedIndexes()) {
         const user = users[index - 1];
-        const role = roles[index - 1];
         const organization = organizations[index - 1];
-        const scopeKey = 'organizationId';
+        const company = companies[index - 1];
 
-        const existing = await prisma.userAccess.findFirst({
-            where: {
-                userId: user.id,
-                roleId: role.id,
-                organizationId: organization.id,
-                scopeKey,
-                scopeId: organization.id,
-            },
-            select: { id: true },
-        });
+        for (const role of roles) {
+            const existing = await prisma.userAccess.findFirst({
+                where: {
+                    userId: user.id,
+                    roleId: role.id,
+                    organizationId: organization.id,
+                    companyId: company.id,
+                    scopeKey: null,
+                    scopeId: null,
+                },
+                select: { id: true },
+            });
 
-        if (existing) continue;
+            if (existing) continue;
 
-        await prisma.userAccess.create({
-            data: {
-                userId: user.id,
-                roleId: role.id,
-                organizationId: organization.id,
-                scopeKey,
-                scopeId: organization.id,
-            },
-        });
+            await prisma.userAccess.create({
+                data: {
+                    userId: user.id,
+                    roleId: role.id,
+                    organizationId: organization.id,
+                    companyId: company.id,
+                    scopeKey: null,
+                    scopeId: null,
+                },
+            });
+        }
     }
 }
 
@@ -485,13 +547,6 @@ async function seedSettings(adminUserId: string, organizations: OrganizationSeed
             description: 'Limite demo por organizacion.',
             scope: SettingScope.organization,
             organizationId: organizations[0].id,
-        },
-        {
-            key: 'demo.documents.retention',
-            value: { days: 365 },
-            description: 'Retencion demo de documentos.',
-            scope: SettingScope.organization,
-            organizationId: organizations[1].id,
         },
     ] satisfies Array<{
         key: string;
@@ -851,11 +906,11 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
     }
 }
 
-async function seedDocuments(users: UserSeed[], organizations: OrganizationSeed[]): Promise<void> {
+async function seedDocuments(users: UserSeed[], companies: CompanySeed[]): Promise<void> {
     for (const index of seedIndexes()) {
         const suffix = pad(index);
         const user = users[index - 1];
-        const organization = organizations[index - 1];
+        const company = companies[index - 1];
         const storageKey = path.posix.join('seed', 'documents', `demo-document-${suffix}.txt`);
         const content = `Documento demo ${suffix}\nGenerado por prisma/seed.ts\n`;
         const storedFile = await ensureSeedDocumentFile(storageKey, content);
@@ -864,15 +919,15 @@ async function seedDocuments(users: UserSeed[], organizations: OrganizationSeed[
             where: { storageKey },
             create: {
                 uploadedByUserId: user.id,
-                organizationId: organization.id,
+                organizationId: company.organizationId,
                 createdByUserId: user.id,
                 title: `Demo Document ${suffix}`,
                 description: `Documento demo ${suffix}`,
                 category: 'demo',
-                entityType: 'organization',
-                entityId: organization.id,
-                scopeKey: 'organizationId',
-                scopeId: organization.id,
+                entityType: 'company',
+                entityId: company.id,
+                scopeKey: 'companyId',
+                scopeId: company.id,
                 originalName: `demo-document-${suffix}.txt`,
                 storageKey,
                 mimeType: 'text/plain',
@@ -882,16 +937,16 @@ async function seedDocuments(users: UserSeed[], organizations: OrganizationSeed[
             },
             update: {
                 uploadedByUserId: user.id,
-                organizationId: organization.id,
+                organizationId: company.organizationId,
                 updatedByUserId: user.id,
                 deletedByUserId: null,
                 title: `Demo Document ${suffix}`,
                 description: `Documento demo ${suffix}`,
                 category: 'demo',
-                entityType: 'organization',
-                entityId: organization.id,
-                scopeKey: 'organizationId',
-                scopeId: organization.id,
+                entityType: 'company',
+                entityId: company.id,
+                scopeKey: 'companyId',
+                scopeId: company.id,
                 originalName: `demo-document-${suffix}.txt`,
                 mimeType: 'text/plain',
                 extension: '.txt',
@@ -965,12 +1020,12 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     const demoRoles = await seedDemoRoles();
     const users = await seedDemoUsers();
     const organizations = await seedOrganizations(adminUser.id);
+    const companies = await seedCompanies(organizations);
 
     await seedOrganizationMemberships(organizations, users);
-    await seedUserAccesses(users, demoRoles, organizations);
+    await seedUserAccesses(users, demoRoles, organizations, companies);
     await seedSettings(adminUser.id, organizations);
 
-    const companies = await seedCompanies(organizations);
     const subCompanies = await seedSubCompanies(companies);
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);
@@ -980,7 +1035,7 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
 
     await seedStationFuels(stations, fuels);
     await seedCardcloudCardStock(cards);
-    await seedDocuments(users, organizations);
+    await seedDocuments(users, companies);
     await seedNotifications(users);
     await ensureGlobalAdminAccess(adminUser.id, adminRole.id);
 }
@@ -996,7 +1051,8 @@ async function main(): Promise<void> {
 
     console.log('Seed completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
-    console.log(`Datos demo: ${DEMO_COUNT} registros por modulo principal.`);
+    console.log(`Usuario demo: demo.user.01 / ${DEMO_PASSWORD}`);
+    console.log(`Datos demo: ${DEMO_COUNT} registro por modulo principal.`);
 }
 
 main()
