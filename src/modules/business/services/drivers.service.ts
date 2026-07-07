@@ -13,9 +13,9 @@ export class DriversService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateDriverDto, companyId?: string) {
+    async create(dto: CreateDriverDto, companyId?: string) {
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId, companyId) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, companyId) },
             { ids: [dto.userId], count: (ids) => this.relations.countActiveUsers(ids) },
         ]);
         return this.repository.create(
@@ -30,10 +30,10 @@ export class DriversService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindDriversDto, companyId?: string) {
+    async findAll(dto: FindDriversDto, companyId?: string) {
         const where: Prisma.DriverWhereInput = {
             subCompanyId: dto.subCompanyId,
-            subCompany: { company: { organizationId, ...(companyId ? { id: companyId } : {}) } },
+            subCompany: { company: { ...(companyId ? { id: companyId } : {}) } },
             userId: dto.userId,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.DriverWhereInput>(dto.search, ['name', 'externalReference']) } : {}),
@@ -42,17 +42,16 @@ export class DriversService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string, companyId?: string) {
-        const driver = await this.repository.findById(id, organizationId, companyId);
+    async findOne(id: string, companyId?: string) {
+        const driver = await this.repository.findById(id, companyId);
         if (!driver) throw notFound();
         return driver;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateDriverDto, companyId?: string) {
+    async update(id: string, dto: UpdateDriverDto, companyId?: string) {
         await assertActive([{ ids: [dto.userId], count: (ids) => this.relations.countActiveUsers(ids) }]);
         const driver = await this.repository.update(
             id,
-            organizationId,
             {
                 userId: dto.userId,
                 name: dto.name,
@@ -66,8 +65,8 @@ export class DriversService {
         return driver;
     }
 
-    async deactivate(organizationId: string, id: string, companyId?: string) {
-        const driver = await this.repository.deactivate(id, organizationId, companyId);
+    async deactivate(id: string, companyId?: string) {
+        const driver = await this.repository.deactivate(id, companyId);
         if (!driver) throw notFound();
         return { id: driver.id, status: driver.status };
     }

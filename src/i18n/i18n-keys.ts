@@ -20,7 +20,7 @@ export const I18N_KEYS = {
         authorization: {
             unauthorized: 'errors.authorization.unauthorized',
             insufficientPermissions: 'errors.authorization.insufficientPermissions',
-            organizationDenied: 'errors.authorization.organizationDenied',
+            companyDenied: 'errors.authorization.companyDenied',
             mustChangePassword: 'errors.authorization.mustChangePassword',
         },
         documents: {
@@ -61,12 +61,6 @@ export const I18N_KEYS = {
             title: 'errors.mail.emailVerification.title',
             body: 'errors.mail.emailVerification.body',
             action: 'errors.mail.emailVerification.action',
-        },
-        organizationInvitation: {
-            subject: 'errors.mail.organizationInvitation.subject',
-            title: 'errors.mail.organizationInvitation.title',
-            body: 'errors.mail.organizationInvitation.body',
-            action: 'errors.mail.organizationInvitation.action',
         },
     },
     prisma: {

@@ -5,7 +5,6 @@ import { DocumentsModule } from '@/modules/documents/documents.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { IntegrationsModule } from '@/modules/integrations/integrations.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
-import { OrganizationsModule } from '@/modules/organizations/organizations.module';
 import { SchedulerModule } from '@/modules/scheduler/scheduler.module';
 import { SessionsModule } from '@/modules/sessions/sessions.module';
 import { SettingsModule } from '@/modules/settings/settings.module';
@@ -17,7 +16,6 @@ export const APP_MODULES = [
     UsersModule,
     AccessControlModule,
     BusinessModule,
-    OrganizationsModule,
     SessionsModule,
     DocumentsModule,
     NotificationsModule,
@@ -34,7 +32,6 @@ export {
     HealthModule,
     IntegrationsModule,
     NotificationsModule,
-    OrganizationsModule,
     SchedulerModule,
     SessionsModule,
     SettingsModule,

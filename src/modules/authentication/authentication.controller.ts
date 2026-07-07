@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { CurrentCompanyId, CurrentOrganizationId, CurrentUser, Public, RefreshToken, RequestConfig, RequireOrganization, SessionContextData, SkipMustChangePassword } from '@/decorators';
+import { CurrentCompanyId, CurrentUser, Public, RefreshToken, RequestConfig, SessionContextData, SkipMustChangePassword } from '@/decorators';
 import { AuthenticationService } from '@/modules/authentication/authentication.service';
 import { AuthenticationCookiesService } from '@/modules/authentication/services/authentication-cookies.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
@@ -91,17 +91,16 @@ export class AuthenticationController {
         return this.authenticationService.getProfile(user);
     }
 
-    @Get('workspaces')
+    @Get('companies')
     @SkipMustChangePassword()
-    workspaces(@CurrentUser() user: RequestUser) {
-        return this.authenticationService.listWorkspaces(user);
+    companies(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.listCompanies(user);
     }
 
     @Get('capabilities')
-    @RequireOrganization()
     @SkipMustChangePassword()
-    capabilities(@CurrentUser() user: RequestUser, @CurrentOrganizationId() organizationId: string, @CurrentCompanyId() companyId: string | undefined) {
-        return this.authenticationService.getCapabilities(user, organizationId, companyId);
+    capabilities(@CurrentUser() user: RequestUser, @CurrentCompanyId() companyId: string | undefined) {
+        return this.authenticationService.getCapabilities(user, companyId);
     }
 
     @Patch('me')

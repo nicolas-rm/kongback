@@ -17,9 +17,8 @@ export class DocumentsService {
         private readonly storage: DocumentsStorageService
     ) {}
 
-    async create(organizationId: string, dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, companyId?: string) {
+    async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, companyId?: string) {
         this.assertAllowedFile(file);
-        await this.assertOrganizationActive(organizationId);
         this.assertCompanyScope(dto.scopeKey, dto.scopeId, companyId);
 
         const storedFile = await this.storage.saveFile(file);
@@ -28,10 +27,10 @@ export class DocumentsService {
             title: dto.title,
             description: dto.description ?? null,
             category: dto.category ?? null,
-            organizationId,
+            companyId: companyId ?? null,
             entityType: dto.entityType ?? null,
             entityId: dto.entityId ?? null,
-            scopeKey: companyId ? 'companyId' : (dto.scopeKey ?? null),
+            scopeKey: 'companyId',
             scopeId: companyId ?? dto.scopeId ?? null,
             originalName: file.originalname,
             mimeType: file.mimetype,
@@ -42,16 +41,8 @@ export class DocumentsService {
         return DocumentResponse.from(document);
     }
 
-    async findAll(organizationId: string, dto: FindDocumentsDto, companyId?: string) {
+    async findAll(dto: FindDocumentsDto, companyId?: string) {
         const and: Prisma.DocumentWhereInput[] = [];
-        if (companyId) {
-            and.push({
-                OR: [
-                    { scopeKey: 'companyId', scopeId: companyId },
-                    { entityType: 'company', entityId: companyId },
-                ],
-            });
-        }
         if (dto.search) {
             and.push({
                 OR: [
@@ -65,7 +56,7 @@ export class DocumentsService {
         const where: Prisma.DocumentWhereInput = {
             deletedAt: null,
             category: dto.category,
-            organizationId,
+            companyId,
             entityType: dto.entityType,
             entityId: dto.entityId,
             ...(and.length ? { AND: and } : {}),
@@ -78,32 +69,32 @@ export class DocumentsService {
         );
     }
 
-    async findOne(organizationId: string, id: string, companyId?: string) {
-        const document = await this.repository.findById(id, organizationId, companyId);
+    async findOne(id: string, companyId?: string) {
+        const document = await this.repository.findById(id, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
         return DocumentResponse.from(document);
     }
 
-    async update(organizationId: string, id: string, dto: UpdateDocumentDto, userId?: string | null, companyId?: string) {
-        const document = await this.repository.update(id, organizationId, { ...dto, updatedByUserId: userId ?? null }, companyId);
+    async update(id: string, dto: UpdateDocumentDto, userId?: string | null, companyId?: string) {
+        const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null }, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         return DocumentResponse.from(document);
     }
 
-    async download(organizationId: string, id: string, companyId?: string) {
-        const document = await this.repository.findDownloadById(id, organizationId, companyId);
+    async download(id: string, companyId?: string) {
+        const document = await this.repository.findDownloadById(id, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
     }
 
-    async remove(organizationId: string, id: string, userId?: string | null, companyId?: string) {
-        const document = await this.repository.findDownloadById(id, organizationId, companyId);
+    async remove(id: string, userId?: string | null, companyId?: string) {
+        const document = await this.repository.findDownloadById(id, companyId);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
-        const result = await this.repository.softDelete(id, organizationId, userId, companyId);
+        const result = await this.repository.softDelete(id, userId, companyId);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.removeFile(document.storageKey);
@@ -131,13 +122,6 @@ export class DocumentsService {
     private isUtf8Text(buffer: Buffer): boolean {
         if (buffer.includes(0)) return false;
         return Buffer.from(buffer.toString('utf8'), 'utf8').equals(buffer);
-    }
-
-    private async assertOrganizationActive(organizationId: string | null): Promise<void> {
-        if (!organizationId) return;
-
-        const activeOrganizations = await this.repository.countActiveOrganizations([organizationId]);
-        if (activeOrganizations !== 1) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
     }
 
     private assertCompanyScope(scopeKey?: string | null, scopeId?: string | null, companyId?: string): void {

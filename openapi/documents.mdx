@@ -9,11 +9,9 @@ Base path: `/api/documents`
 
 Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` aplica soft delete y tambien elimina el archivo del almacenamiento.
 
-## Workspace
+## Alcance por compania
 
-Requiere header `X-Organization-Id: <organizationId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado al workspace seleccionado. `organizationId` en la respuesta corresponde a ese header y no se acepta en body ni query.
-
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`; listar, obtener, descargar, actualizar y eliminar quedan limitados a documentos de esa compania o documentos cuyo `entityType`/`entityId` apunten a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado a esa compania. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`.
 
 ## Modelo
 
@@ -23,7 +21,7 @@ Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con a
     "title": "Contrato",
     "description": "Contrato firmado",
     "category": "contracts",
-    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "entityType": "company",
     "entityId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "scopeKey": "companyId",

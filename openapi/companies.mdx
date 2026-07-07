@@ -9,20 +9,17 @@ Base path: `/api/companies`
 
 Todos los endpoints requieren autenticacion y permisos `companies.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
-## Workspace
+## Alcance
 
-Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El backend valida que el usuario tenga acceso a esa organizacion y que este activa.
+`Company` es el tenant/cliente operativo. `GET /api/companies` devuelve las companias accesibles para el usuario actual. Un admin global ve todas; un usuario con accesos por compania ve solo las asignadas.
 
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y las lecturas, actualizaciones y desactivaciones quedan limitadas a esa compania.
-
-`POST /api/companies` crea una nueva compania dentro del workspace. Es una accion de alcance workspace: requiere usuario global o acceso completo al workspace. Un usuario restringido por compania no puede crear companias aunque tenga una compania seleccionada, porque el nuevo registro quedaria fuera de su alcance.
+Crear, actualizar y desactivar companias requiere acceso global. `X-Company-Id` no se usa en este modulo; la seleccion de compania aplica a los modulos operativos dependientes.
 
 ## Modelo
 
 ```json
 {
     "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
     "key": "COMPANY001",
     "externalId": "EXT-001",
     "name": "Acme Logistics",
@@ -49,13 +46,13 @@ En listados, `address` no se devuelve para mantener el payload liviano. `address
 
 ## Endpoints
 
-| Metodo   | Ruta                 | Permiso               | Descripcion                        |
-| -------- | -------------------- | --------------------- | ---------------------------------- |
-| `POST`   | `/api/companies`     | `companies.create`    | Crea una compania en el workspace. |
-| `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.                   |
-| `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.              |
-| `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania.            |
-| `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania.            |
+| Metodo   | Ruta                 | Permiso               | Descripcion             |
+| -------- | -------------------- | --------------------- | ----------------------- |
+| `POST`   | `/api/companies`     | `companies.create`    | Crea una compania.      |
+| `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.        |
+| `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.   |
+| `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania. |
+| `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania. |
 
 ## Listado
 
@@ -96,7 +93,7 @@ Requeridos: `key`, `name`.
 
 Opcionales: `externalId`, `tradeName`, `status`, `address`. Strings vacios opcionales se transforman a `null`.
 
-Requiere acceso global o acceso completo al workspace. No crea la compania dentro de `X-Company-Id`; ese header solo aplica como filtro/alcance para usuarios que ya trabajan dentro de una compania existente.
+Requiere acceso global. No requiere `X-Company-Id`.
 
 Response `201`: `Company` con `address`.
 

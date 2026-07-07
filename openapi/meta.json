@@ -2,7 +2,6 @@
     "title": "OpenAPI",
     "pages": [
         "authentication",
-        "organizations",
         "users",
         "roles",
         "permissions",

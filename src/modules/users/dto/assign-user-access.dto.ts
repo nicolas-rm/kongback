@@ -5,9 +5,6 @@ export class AssignUserAccessDto {
     roleId!: string;
 
     @ValidatorUUID({ optional: true, emptyTo: 'null' })
-    organizationId?: string | null;
-
-    @ValidatorUUID({ optional: true, emptyTo: 'null' })
     companyId?: string | null;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })

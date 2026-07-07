@@ -78,12 +78,11 @@ export class UsersService {
 
     async assignAccess(userId: string, dto: AssignUserAccessDto) {
         await this.assertUserActive(userId);
-        await this.assertAccessTargetsActive([{ roleId: dto.roleId, organizationId: dto.organizationId ?? null, companyId: dto.companyId ?? null }]);
+        await this.assertAccessTargetsActive([{ roleId: dto.roleId, companyId: dto.companyId ?? null }]);
 
         await this.repository.assignAccess({
             userId,
             roleId: dto.roleId,
-            organizationId: dto.organizationId ?? null,
             companyId: dto.companyId ?? null,
             scopeKey: dto.scopeKey ?? null,
             scopeId: dto.scopeId ?? null,
@@ -93,14 +92,13 @@ export class UsersService {
 
     async replaceAccess(userId: string, dto: ReplaceUserAccessDto) {
         await this.assertUserActive(userId);
-        await this.assertAccessTargetsActive(dto.accesses.map((access) => ({ roleId: access.roleId, organizationId: access.organizationId ?? null, companyId: access.companyId ?? null })));
+        await this.assertAccessTargetsActive(dto.accesses.map((access) => ({ roleId: access.roleId, companyId: access.companyId ?? null })));
 
         const accesses = await this.repository.replaceAccess(
             userId,
             dto.accesses.map((access) => ({
                 userId,
                 roleId: access.roleId,
-                organizationId: access.organizationId ?? null,
                 companyId: access.companyId ?? null,
                 scopeKey: access.scopeKey ?? null,
                 scopeId: access.scopeId ?? null,
@@ -161,31 +159,16 @@ export class UsersService {
         if (!user || user.status !== 'active') throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
     }
 
-    private async assertAccessTargetsActive(accesses: Array<{ roleId: string; organizationId?: string | null; companyId?: string | null }>): Promise<void> {
-        if (accesses.some((access) => access.companyId && !access.organizationId)) {
-            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
-        }
-
+    private async assertAccessTargetsActive(accesses: Array<{ roleId: string; companyId?: string | null }>): Promise<void> {
         const roleIds = [...new Set(accesses.map((access) => access.roleId))];
-        const organizationIds = [...new Set(accesses.map((access) => access.organizationId).filter((id): id is string => Boolean(id)))];
-        const companyScopes = this.uniqueCompanyScopes(accesses);
+        const companyIds = [...new Set(accesses.map((access) => access.companyId).filter((id): id is string => Boolean(id)))];
 
-        const [activeRoles, activeOrganizations] = await Promise.all([
+        const [activeRoles, activeCompanies] = await Promise.all([
             this.repository.countActiveRoles(roleIds),
-            organizationIds.length > 0 ? this.repository.countActiveOrganizations(organizationIds) : Promise.resolve(0),
+            companyIds.length > 0 ? this.repository.countActiveCompanies(companyIds) : Promise.resolve(0),
         ]);
-        const activeCompanies = companyScopes.length > 0 ? await this.repository.countActiveCompanies(companyScopes) : 0;
-        if (activeRoles !== roleIds.length || activeOrganizations !== organizationIds.length || activeCompanies !== companyScopes.length) {
+        if (activeRoles !== roleIds.length || activeCompanies !== companyIds.length) {
             throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
         }
-    }
-
-    private uniqueCompanyScopes(accesses: Array<{ organizationId?: string | null; companyId?: string | null }>): Array<{ id: string; organizationId: string }> {
-        const scopes = new Map<string, { id: string; organizationId: string }>();
-        for (const access of accesses) {
-            if (!access.companyId || !access.organizationId) continue;
-            scopes.set(`${access.organizationId}:${access.companyId}`, { id: access.companyId, organizationId: access.organizationId });
-        }
-        return [...scopes.values()];
     }
 }

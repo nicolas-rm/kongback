@@ -6,6 +6,6 @@ export type RequestUser = {
     preferredLanguage?: string | null;
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
-    organizationIds?: string[];
+    companyIds?: string[];
     sessionId?: string | null;
 };

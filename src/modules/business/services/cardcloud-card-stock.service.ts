@@ -13,12 +13,12 @@ export class CardcloudCardStockService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateCardcloudCardStockDto, companyId?: string) {
-        if (companyId && !dto.assignedCardId) throw invalidRelation();
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId, companyId) }]);
+    async create(dto: CreateCardcloudCardStockDto, companyId?: string) {
+        if (!companyId) throw invalidRelation();
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, companyId) }]);
 
         return this.repository.create({
-            organizationId,
+            companyId,
             externalId: dto.externalId,
             assignedCardId: dto.assignedCardId ?? null,
             maskedPan: dto.maskedPan ?? null,
@@ -29,10 +29,9 @@ export class CardcloudCardStockService {
         });
     }
 
-    async findAll(organizationId: string, dto: FindCardcloudCardStockDto, companyId?: string) {
+    async findAll(dto: FindCardcloudCardStockDto, companyId?: string) {
         const where: Prisma.CardcloudCardStockWhereInput = {
-            organizationId,
-            ...(companyId ? { assignedCard: { subCompany: { companyId } } } : {}),
+            companyId,
             assignedCardId: dto.assignedCardId,
             providerStatus: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardcloudCardStockWhereInput>(dto.search, ['externalId', 'maskedPan', 'clientId']) } : {}),
@@ -41,19 +40,17 @@ export class CardcloudCardStockService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string, companyId?: string) {
-        const stock = await this.repository.findById(id, organizationId, companyId);
+    async findOne(id: string, companyId?: string) {
+        const stock = await this.repository.findById(id, companyId);
         if (!stock) throw notFound();
         return stock;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateCardcloudCardStockDto, companyId?: string) {
-        if (companyId && dto.assignedCardId === null) throw invalidRelation();
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId, companyId) }]);
+    async update(id: string, dto: UpdateCardcloudCardStockDto, companyId?: string) {
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, companyId) }]);
 
         const stock = await this.repository.update(
             id,
-            organizationId,
             {
                 assignedCardId: dto.assignedCardId,
                 maskedPan: dto.maskedPan,
@@ -68,8 +65,8 @@ export class CardcloudCardStockService {
         return stock;
     }
 
-    async deactivate(organizationId: string, id: string, companyId?: string) {
-        const stock = await this.repository.deactivate(id, organizationId, companyId);
+    async deactivate(id: string, companyId?: string) {
+        const stock = await this.repository.deactivate(id, companyId);
         if (!stock) throw notFound();
         return { id: stock.id, status: stock.providerStatus };
     }

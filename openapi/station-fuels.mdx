@@ -9,11 +9,9 @@ Base path: `/api/station-fuels`
 
 Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
-## Workspace
+## Alcance por compania
 
-Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `stationId` debe pertenecer a una estacion activa de esa organizacion.
-
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y `stationId` y la relacion consultada deben pertenecer a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. `stationId` y la relacion consultada deben pertenecer a esa compania.
 
 ## Modelo
 
@@ -72,7 +70,7 @@ Response `200`: resultado paginado de `StationFuel`.
 }
 ```
 
-Requeridos: `stationId`, `fuelId`. `stationId` debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania. `fuelId` debe estar activo.
+Requeridos: `stationId`, `fuelId`. `stationId` debe estar activo y pertenecer a la compania enviada en `X-Company-Id`. `fuelId` debe estar activo.
 
 Opcional: `status`.
 

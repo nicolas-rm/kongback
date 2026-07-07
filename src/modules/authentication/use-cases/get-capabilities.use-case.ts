@@ -7,11 +7,10 @@ import type { RequestUser } from '@/modules/authentication/types/request-user.in
 export class GetCapabilitiesUseCase {
     constructor(private readonly accessControlService: AccessControlService) {}
 
-    async execute(user: RequestUser, organizationId: string, companyId?: string) {
-        const permissions = await this.accessControlService.listUserPermissionCodes(user.id, organizationId, companyId);
+    async execute(user: RequestUser, companyId?: string) {
+        const permissions = await this.accessControlService.listUserPermissionCodes(user.id, companyId);
 
         return CapabilitiesResponse.from({
-            organizationId,
             companyId,
             isGlobalAdmin: user.isGlobalAdmin,
             permissions,

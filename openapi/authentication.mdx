@@ -49,7 +49,7 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
     "preferredLanguage": "es",
     "mustChangePassword": false,
     "isGlobalAdmin": true,
-    "organizationIds": []
+    "companyIds": []
 }
 ```
 
@@ -67,26 +67,19 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 }
 ```
 
-### Workspace
+### CompanyAccess
 
 ```json
 {
-    "id": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
-    "name": "Demo Organization 01",
-    "slug": "demo-org-01",
+    "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+    "key": "DEMO-COMP-01",
+    "name": "Demo Company 01",
     "isGlobalAdmin": false,
     "roles": [
         {
             "id": "d32ec049-0f01-408c-b97d-c77a82d348c1",
-            "code": "demo-operations-manager",
-            "name": "Demo Operations Manager"
-        }
-    ],
-    "companies": [
-        {
-            "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
-            "key": "DEMO-COMP-01",
-            "name": "Demo Company 01"
+            "code": "demo-company-manager",
+            "name": "Demo Operador de compania"
         }
     ]
 }
@@ -96,31 +89,28 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 
 ```json
 {
-    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
     "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "isGlobalAdmin": false,
     "permissions": ["cards.read-list", "vehicles.read-list"]
 }
 ```
 
-| Campo            | Tipo             | Descripcion                                                                 |
-| ---------------- | ---------------- | --------------------------------------------------------------------------- |
-| `organizationId` | `string`         | UUID v4 del workspace usado para calcular permisos efectivos.               |
-| `companyId`      | `string \| null` | UUID v4 de la compania usada para calcular permisos efectivos, si aplica.   |
-| `isGlobalAdmin`  | `boolean`        | Indica si el usuario tiene acceso admin global.                             |
-| `permissions`    | `string[]`       | Codigos de permisos efectivos para el workspace seleccionado, sin duplicar. |
+| Campo           | Tipo             | Descripcion                                                                |
+| --------------- | ---------------- | -------------------------------------------------------------------------- |
+| `companyId`     | `string \| null` | UUID v4 de la compania usada para calcular permisos efectivos, si aplica.  |
+| `isGlobalAdmin` | `boolean`        | Indica si el usuario tiene acceso admin global.                            |
+| `permissions`   | `string[]`       | Codigos de permisos efectivos para la compania seleccionada, sin duplicar. |
 
 ## Headers utiles
 
-| Header                                | Uso                                                                                                                                                 |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados.                                                                                    |
-| `X-Organization-Id`                   | UUID del workspace seleccionado. Requerido por endpoints tenant-scoped como companias, vehiculos, tarjetas, estaciones y documentos.                |
-| `X-Company-Id`                        | UUID de la compania seleccionada. Opcional para usuarios con acceso completo al workspace; obligatorio si el usuario esta restringido por compania. |
-| `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                                          |
-| `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                                              |
-| `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                                              |
-| `X-Request-Id`                        | ID de request opcional; el backend lo devuelve como response header.                                                                                |
+| Header                                | Uso                                                                                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados.                                                                             |
+| `X-Company-Id`                        | UUID de la compania seleccionada. Requerido por endpoints operativos como vehiculos, tarjetas, estaciones, subcompanias, stock y documentos. |
+| `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                                   |
+| `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                                       |
+| `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                                       |
+| `X-Request-Id`                        | ID de request opcional; el backend lo devuelve como response header.                                                                         |
 
 ## Endpoints
 
@@ -133,8 +123,8 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 | `POST`   | `/api/authentication/logout`                        | Autenticado | Cierra la sesion actual si hay refresh cookie; sin refresh cookie revoca sesiones del usuario. |
 | `POST`   | `/api/authentication/logout-all`                    | Autenticado | Revoca todas las sesiones del usuario.                                                         |
 | `GET`    | `/api/authentication/me`                            | Autenticado | Obtiene perfil actual.                                                                         |
-| `GET`    | `/api/authentication/workspaces`                    | Autenticado | Lista workspaces disponibles para el usuario actual.                                           |
-| `GET`    | `/api/authentication/capabilities`                  | Autenticado | Lista permisos efectivos del usuario para el workspace seleccionado.                           |
+| `GET`    | `/api/authentication/companies`                     | Autenticado | Lista companias disponibles para el usuario actual.                                            |
+| `GET`    | `/api/authentication/capabilities`                  | Autenticado | Lista permisos efectivos del usuario para la compania seleccionada, si se envia header.        |
 | `PATCH`  | `/api/authentication/me`                            | Autenticado | Actualiza perfil actual.                                                                       |
 | `GET`    | `/api/authentication/sessions`                      | Autenticado | Lista sesiones activas.                                                                        |
 | `DELETE` | `/api/authentication/sessions/:sessionId`           | Autenticado | Revoca una sesion.                                                                             |
@@ -310,21 +300,19 @@ Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
 ### Response `200`
 
-Devuelve `Profile`. Este response no incluye permisos; para decisiones de UI por workspace, usa `GET /api/authentication/capabilities`.
+Devuelve `Profile`. Este response no incluye permisos; para decisiones de UI por compania, usa `GET /api/authentication/capabilities`.
 
-## Listar workspaces
+## Listar companias
 
-`GET /api/authentication/workspaces`
+`GET /api/authentication/companies`
 
 Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
-Devuelve los workspaces que el usuario puede seleccionar en el front. Un admin global recibe todas las organizaciones activas con `isGlobalAdmin: true`; un usuario normal recibe solo las organizaciones donde tiene accesos activos.
-
-Si el usuario solo tiene acceso a companias especificas dentro de un workspace, `companies` contiene esas companias permitidas. Si `companies` viene vacio, el usuario puede trabajar a nivel workspace completo o el admin global puede listar companias despues de seleccionar workspace.
+Devuelve las companias que el usuario puede seleccionar en el front. Un admin global recibe todas las companias activas con `isGlobalAdmin: true`; un usuario normal recibe solo las companias donde tiene accesos activos.
 
 ### Response `200`
 
-Devuelve `Workspace[]`.
+Devuelve `CompanyAccess[]`.
 
 ## Consultar capacidades
 
@@ -332,11 +320,9 @@ Devuelve `Workspace[]`.
 
 Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
-Requiere header `X-Organization-Id: <organizationId>`. El backend valida que el workspace exista, este activo y sea accesible para el usuario antes de calcular permisos.
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, el backend valida que la compania exista, este activa y sea accesible para el usuario antes de calcular permisos.
 
-Header opcional: `X-Company-Id: <companyId>`. Si el usuario esta restringido a companias especificas, este header es obligatorio y debe apuntar a una compania permitida. Si el usuario tiene acceso completo al workspace, puede omitirse para calcular permisos a nivel workspace.
-
-Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acciones dependientes del cliente/workspace seleccionado.
+Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acciones dependientes de la compania seleccionada.
 
 ### Response `200`
 
@@ -659,12 +645,11 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 1. Llamar `POST /api/authentication/login`.
 2. Si responde `requiresTwoFactor: true`, pedir codigo TOTP y llamar `POST /api/authentication/2fa/verify-login`.
 3. Guardar estado de sesion desde cookies o desde `TokenResponse`, segun estrategia del cliente.
-4. Llamar `GET /api/authentication/me` para obtener identidad, `organizationIds` y `mustChangePassword`.
-5. Llamar `GET /api/authentication/workspaces`, permitir que el usuario seleccione workspace y enviar su `id` como `X-Organization-Id` en endpoints tenant-scoped.
-6. Si `workspaces[].companies` trae valores, pedir seleccion de compania y enviar su `id` como `X-Company-Id`.
-7. Llamar `GET /api/authentication/capabilities` con `X-Organization-Id` y, si aplica, `X-Company-Id` para renderizar modulos y acciones disponibles.
-8. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, workspaces y endpoints marcados como permitidos arriba.
-9. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
+4. Llamar `GET /api/authentication/me` para obtener identidad, `companyIds` y `mustChangePassword`.
+5. Llamar `GET /api/authentication/companies`, permitir que el usuario seleccione compania y enviar su `id` como `X-Company-Id` en endpoints operativos.
+6. Llamar `GET /api/authentication/capabilities` con `X-Company-Id` para renderizar modulos y acciones disponibles para la compania seleccionada.
+7. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, companias y endpoints marcados como permitidos arriba.
+8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
 
 ## Errores comunes
 

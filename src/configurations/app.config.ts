@@ -27,7 +27,6 @@ export default registerAs('app', () => ({
         maxActiveSessions: parseEnvInt('SESSION_MAX_ACTIVE', APP_DEFAULTS.session.maxActiveSessions),
         passwordResetTtlMinutes: parseEnvInt('PASSWORD_RESET_TTL_MINUTES', APP_DEFAULTS.session.passwordResetTtlMinutes),
         emailVerificationTtlMinutes: parseEnvInt('EMAIL_VERIFICATION_TTL_MINUTES', APP_DEFAULTS.session.emailVerificationTtlMinutes),
-        organizationInvitationTtlHours: parseEnvInt('ORGANIZATION_INVITATION_TTL_HOURS', APP_DEFAULTS.session.organizationInvitationTtlHours),
     },
     twoFactor: {
         issuer: process.env.TWO_FACTOR_ISSUER ?? process.env.APP_NAME ?? APP_DEFAULTS.name,

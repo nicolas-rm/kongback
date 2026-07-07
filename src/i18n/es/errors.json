@@ -19,7 +19,7 @@
     "authorization": {
         "unauthorized": "No autorizado",
         "insufficientPermissions": "Permisos insuficientes",
-        "organizationDenied": "Acceso denegado a esta organizacion",
+        "companyDenied": "Acceso denegado a esta compania",
         "mustChangePassword": "Debes cambiar tu contrasena antes de continuar."
     },
     "documents": {
@@ -59,12 +59,6 @@
             "title": "Verificar correo electronico",
             "body": "Confirma tu correo para completar la configuracion de tu cuenta.",
             "action": "Verificar correo"
-        },
-        "organizationInvitation": {
-            "subject": "Invitacion a {organizationName}",
-            "title": "Invitacion a {organizationName}",
-            "body": "Recibiste una invitacion para unirte a {organizationName}.",
-            "action": "Aceptar invitacion"
         }
     },
     "prisma": {

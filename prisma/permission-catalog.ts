@@ -5,14 +5,6 @@ export type PermissionSeed = {
 };
 
 export const PERMISSION_CATALOG = [
-    { code: 'organizations.create', name: 'Crear organización', description: 'Permite crear una organización.' },
-    { code: 'organizations.read-list', name: 'Listar organizaciones', description: 'Permite consultar el listado de organizaciones.' },
-    { code: 'organizations.read-one', name: 'Ver organización', description: 'Permite consultar el detalle de una organización.' },
-    { code: 'organizations.update', name: 'Actualizar organización', description: 'Permite actualizar una organización.' },
-    { code: 'organizations.delete', name: 'Eliminar organización', description: 'Permite eliminar una organización.' },
-    { code: 'organizations.members.read', name: 'Listar miembros de organización', description: 'Permite consultar los miembros de una organización.' },
-    { code: 'organizations.members.add', name: 'Agregar miembro a organización', description: 'Permite agregar miembros a una organización.' },
-    { code: 'organizations.members.remove', name: 'Remover miembro de organización', description: 'Permite remover miembros de una organización.' },
     { code: 'companies.create', name: 'Crear empresa', description: 'Permite crear empresas operativas.' },
     { code: 'companies.read-list', name: 'Listar empresas', description: 'Permite consultar el listado de empresas operativas.' },
     { code: 'companies.read-one', name: 'Ver empresa', description: 'Permite consultar el detalle de una empresa operativa.' },

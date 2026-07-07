@@ -1,25 +1,17 @@
 import { Prisma } from '@prisma/client';
 
-export function buildActiveUserAccessWhere(input: Prisma.UserAccessWhereInput, organizationId?: string | null, companyId?: string | null): Prisma.UserAccessWhereInput {
-    const requiresGlobalAccess = organizationId === null && companyId === null;
+export function buildActiveUserAccessWhere(input: Prisma.UserAccessWhereInput, companyId?: string | null): Prisma.UserAccessWhereInput {
+    const requiresGlobalAccess = companyId === null;
 
     return {
         AND: [
             input,
-            requiresGlobalAccess ? { organizationId: null, companyId: null } : {},
-            organizationId ? { OR: [{ organizationId: null }, { organizationId }] } : {},
+            requiresGlobalAccess ? { companyId: null } : {},
             companyId
                 ? {
-                      OR: [
-                          { organizationId: null, companyId: null },
-                          { organizationId, companyId: null },
-                          { organizationId, companyId },
-                      ],
+                      OR: [{ companyId: null }, { companyId }],
                   }
                 : {},
-            {
-                OR: [{ organizationId: null }, { organization: { status: 'active' } }],
-            },
             {
                 OR: [{ companyId: null }, { company: { status: 'active' } }],
             },

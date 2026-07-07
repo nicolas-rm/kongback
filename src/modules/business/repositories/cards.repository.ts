@@ -18,29 +18,28 @@ export class CardsRepository {
         return this.prisma.card.count({ where });
     }
 
-    findById(id: string, organizationId: string, companyId?: string) {
-        return this.prisma.card.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
+    findById(id: string, companyId?: string) {
+        return this.prisma.card.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
     }
 
-    update(id: string, organizationId: string, data: Prisma.CardUncheckedUpdateInput, companyId?: string) {
+    update(id: string, data: Prisma.CardUncheckedUpdateInput, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.card.updateMany({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, data });
+            const result = await tx.card.updateMany({ where: { id, subCompany: { company: this.companyScope(companyId) } }, data });
             if (result.count === 0) return null;
-            return tx.card.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
+            return tx.card.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
         });
     }
 
-    deactivate(id: string, organizationId: string, companyId?: string) {
+    deactivate(id: string, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.card.updateMany({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, data: { status: Status.inactive } });
+            const result = await tx.card.updateMany({ where: { id, subCompany: { company: this.companyScope(companyId) } }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.card.findFirst({ where: { id, subCompany: { company: this.companyScope(organizationId, companyId) } }, select: this.select() });
+            return tx.card.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
         });
     }
 
-    private companyScope(organizationId: string, companyId?: string): Prisma.CompanyWhereInput {
+    private companyScope(companyId?: string): Prisma.CompanyWhereInput {
         return {
-            organizationId,
             ...(companyId ? { id: companyId } : {}),
         };
     }

@@ -9,11 +9,9 @@ Base path: `/api/vehicles`
 
 Todos los endpoints requieren autenticacion y permisos `vehicles.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
-## Workspace
+## Alcance por compania
 
-Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId`, `driverId` y el vehiculo consultado deben pertenecer a esa organizacion.
-
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y `subCompanyId`, `driverId` y el vehiculo consultado deben pertenecer a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. `subCompanyId`, `driverId` y el vehiculo consultado deben pertenecer a esa compania.
 
 ## Modelo
 
@@ -91,7 +89,7 @@ Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driv
 }
 ```
 
-Requeridos: `subCompanyId`, `fuelId`, `plates`. `subCompanyId` debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania. `plates` se normaliza a mayusculas.
+Requeridos: `subCompanyId`, `fuelId`, `plates`. `subCompanyId` debe estar activo y pertenecer a la compania enviada en `X-Company-Id`. `plates` se normaliza a mayusculas.
 
 Opcionales: `driverId`, `economicNumber`, `model`, `year`, `odometerControl`, `odometerInitial`, `status`.
 

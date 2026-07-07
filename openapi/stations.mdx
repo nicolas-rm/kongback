@@ -9,11 +9,9 @@ Base path: `/api/stations`
 
 Todos los endpoints requieren autenticacion y permisos `stations.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
-## Workspace
+## Alcance por compania
 
-Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `subCompanyId` debe pertenecer a una subcompania activa de esa organizacion.
-
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y `subCompanyId` y la estacion consultada deben pertenecer a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. `subCompanyId` y la estacion consultada deben pertenecer a esa compania.
 
 ## Modelo
 
@@ -90,7 +88,7 @@ Response `200`: resultado paginado de `Station` con `subCompany` summary y sin `
 }
 ```
 
-Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar activo en el workspace seleccionado y, si se envia `X-Company-Id`, debe pertenecer a esa compania.
+Requeridos: `subCompanyId`, `stationNumber`, `name`. `subCompanyId` debe estar activo y pertenecer a la compania enviada en `X-Company-Id`.
 
 Opcionales: `lat`, `lon`, `status`, `address`. `lat` acepta -90 a 90; `lon` acepta -180 a 180.
 

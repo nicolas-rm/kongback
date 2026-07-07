@@ -13,7 +13,6 @@ type TokenUser = {
 type SessionContext = {
     userAgent?: string | null;
     ipAddress?: string | null;
-    organizationId?: string | null;
     deviceName?: string | null;
 };
 
@@ -34,7 +33,6 @@ export class AuthenticationTokensService {
 
         const session = await this.repository.createSession({
             userId: user.id,
-            organizationId: sessionContext.organizationId ?? null,
             expiresAt,
             idleExpiresAt,
             userAgent: sessionContext.userAgent ?? null,

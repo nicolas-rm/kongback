@@ -9,7 +9,7 @@ Base path: `/api/permissions`
 
 Todos los endpoints requieren autenticacion y el permiso indicado en cada operacion. Los permisos se asignan a roles desde `/api/roles/:id/permissions` y los guards validan sus `code`.
 
-Esta API es de administracion global. Los permisos `permissions.*` deben venir de un acceso global (`organizationId: null`, `companyId: null`).
+Esta API es de administracion global. Los permisos `permissions.*` deben venir de un acceso global (`companyId: null`).
 
 ## Modelos
 

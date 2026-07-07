@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
+import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CreateCompanyDto, FindStatusRecordsDto, UpdateCompanyDto } from '@/modules/business/dto';
 import { CompaniesRepository } from '@/modules/business/repositories/companies.repository';
 
@@ -9,10 +10,9 @@ import { CompaniesRepository } from '@/modules/business/repositories/companies.r
 export class CompaniesService {
     constructor(private readonly repository: CompaniesRepository) {}
 
-    async create(organizationId: string, dto: CreateCompanyDto) {
+    async create(dto: CreateCompanyDto) {
         return this.repository.create(
             {
-                organizationId,
                 key: dto.key,
                 externalId: dto.externalId ?? null,
                 name: dto.name,
@@ -23,10 +23,10 @@ export class CompaniesService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindStatusRecordsDto, companyId?: string) {
+    async findAll(dto: FindStatusRecordsDto, user: RequestUser) {
+        const companyIds = user.isGlobalAdmin ? undefined : await this.repository.findAccessibleCompanyIds(user.id);
         const where: Prisma.CompanyWhereInput = {
-            organizationId,
-            ...(companyId ? { id: companyId } : {}),
+            ...(companyIds ? { id: { in: companyIds } } : {}),
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CompanyWhereInput>(dto.search, ['key', 'externalId', 'name', 'tradeName']) } : {}),
         };
@@ -34,16 +34,15 @@ export class CompaniesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string, companyId?: string) {
-        const company = await this.repository.findById(id, organizationId, companyId);
+    async findOne(id: string, user: RequestUser) {
+        const company = user.isGlobalAdmin ? await this.repository.findById(id) : await this.repository.findAccessibleById(id, user.id);
         if (!company) throw notFound();
         return company;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateCompanyDto, companyId?: string) {
+    async update(id: string, dto: UpdateCompanyDto) {
         const company = await this.repository.update(
             id,
-            organizationId,
             {
                 key: dto.key,
                 externalId: dto.externalId,
@@ -51,15 +50,14 @@ export class CompaniesService {
                 tradeName: dto.tradeName,
                 status: dto.status,
             },
-            toAddressData(dto.address),
-            companyId
+            toAddressData(dto.address)
         );
         if (!company) throw notFound();
         return company;
     }
 
-    async deactivate(organizationId: string, id: string, companyId?: string) {
-        const company = await this.repository.deactivate(id, organizationId, companyId);
+    async deactivate(id: string) {
+        const company = await this.repository.deactivate(id);
         if (!company) throw notFound();
         return { id: company.id, status: company.status };
     }

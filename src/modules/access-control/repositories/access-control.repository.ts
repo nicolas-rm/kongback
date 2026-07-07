@@ -7,19 +7,19 @@ import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-us
 export class AccessControlRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async findUserRoleLabels(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
+    async findUserRoleLabels(userId: string, companyId?: string | null): Promise<string[]> {
         const accesses = await this.prisma.userAccess.findMany({
-            where: buildActiveUserAccessWhere({ userId }, organizationId, companyId),
+            where: buildActiveUserAccessWhere({ userId }, companyId),
             select: { role: { select: { code: true, name: true } } },
         });
 
         return accesses.flatMap((entry) => [entry.role.code, entry.role.name]);
     }
 
-    async findUserPermissionCodes(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
+    async findUserPermissionCodes(userId: string, companyId?: string | null): Promise<string[]> {
         const rolePermissions = await this.prisma.rolePermission.findMany({
             where: {
-                role: { accesses: { some: buildActiveUserAccessWhere({ userId }, organizationId, companyId) } },
+                role: { accesses: { some: buildActiveUserAccessWhere({ userId }, companyId) } },
             },
             select: { permission: { select: { code: true } } },
         });
@@ -102,23 +102,19 @@ export class AccessControlRepository {
         return this.prisma.permission.count({ where: { id: { in: ids } } });
     }
 
-    countActiveOrganizations(ids: string[]): Promise<number> {
-        return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
+    countActiveCompanies(ids: string[]): Promise<number> {
+        return this.prisma.company.count({ where: { id: { in: ids }, status: 'active' } });
     }
 
-    countActiveCompanies(ids: string[], organizationId: string): Promise<number> {
-        return this.prisma.company.count({ where: { id: { in: ids }, organizationId, status: 'active' } });
-    }
-
-    countUserOrganizationWideAccesses(userId: string, organizationId: string): Promise<number> {
+    countUserGlobalAccesses(userId: string): Promise<number> {
         return this.prisma.userAccess.count({
-            where: buildActiveUserAccessWhere({ userId, companyId: null }, organizationId),
+            where: buildActiveUserAccessWhere({ userId }, null),
         });
     }
 
-    countUserCompanyAccesses(userId: string, organizationId: string, companyId: string): Promise<number> {
+    countUserCompanyAccesses(userId: string, companyId: string): Promise<number> {
         return this.prisma.userAccess.count({
-            where: buildActiveUserAccessWhere({ userId }, organizationId, companyId),
+            where: buildActiveUserAccessWhere({ userId }, companyId),
         });
     }
 

@@ -9,18 +9,16 @@ Base path: `/api/cardcloud-card-stock`
 
 Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`. El borrado desactiva el registro cambiando `providerStatus` a `inactive`.
 
-## Workspace
+## Alcance por compania
 
-Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El stock no asignado tambien queda asociado a esa organizacion.
-
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y el stock queda limitado a registros asignados a tarjetas de esa compania. Como el stock no asignado no tiene `companyId` directo, para crear stock con `X-Company-Id` es obligatorio enviar `assignedCardId` y en update no se permite dejarlo en `null`.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. El stock queda asociado directamente a `companyId`; si `assignedCardId` se envia, debe pertenecer a una tarjeta activa de esa misma compania.
 
 ## Modelo
 
 ```json
 {
     "id": "413117ed-83f0-4d74-bf7b-1e26d3a9b9de",
-    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "externalId": "CC-00001",
     "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
     "maskedPan": "**** **** **** 1234",
@@ -78,7 +76,7 @@ Response `200`: resultado paginado de `CardcloudCardStock`.
 
 Requerido: `externalId`.
 
-Opcionales: `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`. Si `assignedCardId` se envia, debe apuntar a una tarjeta activa del workspace seleccionado. Si se envia `X-Company-Id`, `assignedCardId` es obligatorio y debe pertenecer a esa compania.
+Opcionales: `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`. Si `assignedCardId` se envia, debe apuntar a una tarjeta activa de la compania enviada en `X-Company-Id`.
 
 Response `201`: `CardcloudCardStock`.
 
@@ -94,7 +92,7 @@ Response `200`: `CardcloudCardStock`.
 
 `PATCH /api/cardcloud-card-stock/:id`
 
-Acepta `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`, todos opcionales. Si se envia `X-Company-Id`, el registro actual debe pertenecer a esa compania y cualquier `assignedCardId` nuevo tambien debe pertenecer a esa compania. En ese contexto, `assignedCardId: null` es invalido porque moveria el registro a stock sin compania.
+Acepta `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`, todos opcionales. El registro actual debe pertenecer a la compania enviada en `X-Company-Id` y cualquier `assignedCardId` nuevo tambien debe pertenecer a esa compania.
 
 Response `200`: `CardcloudCardStock` actualizado.
 

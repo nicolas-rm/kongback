@@ -19,7 +19,7 @@
     "authorization": {
         "unauthorized": "Nicht autorisiert",
         "insufficientPermissions": "Unzureichende Berechtigungen",
-        "organizationDenied": "Zugriff auf diese Organisation verweigert",
+        "companyDenied": "Zugriff auf dieses Unternehmen verweigert",
         "mustChangePassword": "Sie muessen Ihr Passwort aendern, bevor Sie fortfahren."
     },
     "documents": {
@@ -59,12 +59,6 @@
             "title": "E-Mail-Adresse bestaetigen",
             "body": "Bestaetigen Sie Ihre E-Mail, um die Kontoeinrichtung abzuschliessen.",
             "action": "E-Mail bestaetigen"
-        },
-        "organizationInvitation": {
-            "subject": "Einladung zu {organizationName}",
-            "title": "Einladung zu {organizationName}",
-            "body": "Sie haben eine Einladung erhalten, {organizationName} beizutreten.",
-            "action": "Einladung annehmen"
         }
     },
     "prisma": {
