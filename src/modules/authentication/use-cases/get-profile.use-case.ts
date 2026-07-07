@@ -14,7 +14,6 @@ export class GetProfileUseCase {
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin: user.isGlobalAdmin,
             organizationIds: user.organizationIds ?? [],
-            permissions: user.permissions ?? [],
         });
     }
 }

@@ -7,6 +7,5 @@ export type RequestUser = {
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
     organizationIds?: string[];
-    permissions?: string[];
     sessionId?: string | null;
 };

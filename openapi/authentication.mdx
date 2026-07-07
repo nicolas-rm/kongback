@@ -49,8 +49,7 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
     "preferredLanguage": "es",
     "mustChangePassword": false,
     "isGlobalAdmin": true,
-    "organizationIds": [],
-    "permissions": ["users.read-list"]
+    "organizationIds": []
 }
 ```
 
@@ -86,6 +85,22 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 }
 ```
 
+### Capabilities
+
+```json
+{
+    "organizationId": "2b4c918a-e7e0-4e99-b6c1-c2efed00b478",
+    "isGlobalAdmin": false,
+    "permissions": ["cards.read-list", "vehicles.read-list"]
+}
+```
+
+| Campo            | Tipo       | Descripcion                                                                 |
+| ---------------- | ---------- | --------------------------------------------------------------------------- |
+| `organizationId` | `string`   | UUID v4 del workspace usado para calcular permisos efectivos.               |
+| `isGlobalAdmin`  | `boolean`  | Indica si el usuario tiene acceso admin global.                             |
+| `permissions`    | `string[]` | Codigos de permisos efectivos para el workspace seleccionado, sin duplicar. |
+
 ## Headers utiles
 
 | Header                                | Uso                                                                                                                                  |
@@ -110,6 +125,7 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 | `POST`   | `/api/authentication/logout-all`                    | Autenticado | Revoca todas las sesiones del usuario.                                                         |
 | `GET`    | `/api/authentication/me`                            | Autenticado | Obtiene perfil actual.                                                                         |
 | `GET`    | `/api/authentication/workspaces`                    | Autenticado | Lista workspaces disponibles para el usuario actual.                                           |
+| `GET`    | `/api/authentication/capabilities`                  | Autenticado | Lista permisos efectivos del usuario para el workspace seleccionado.                           |
 | `PATCH`  | `/api/authentication/me`                            | Autenticado | Actualiza perfil actual.                                                                       |
 | `GET`    | `/api/authentication/sessions`                      | Autenticado | Lista sesiones activas.                                                                        |
 | `DELETE` | `/api/authentication/sessions/:sessionId`           | Autenticado | Revoca una sesion.                                                                             |
@@ -285,7 +301,7 @@ Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
 ### Response `200`
 
-Devuelve `Profile`.
+Devuelve `Profile`. Este response no incluye permisos; para decisiones de UI por workspace, usa `GET /api/authentication/capabilities`.
 
 ## Listar workspaces
 
@@ -298,6 +314,20 @@ Devuelve los workspaces que el usuario puede seleccionar en el front. Un admin g
 ### Response `200`
 
 Devuelve `Workspace[]`.
+
+## Consultar capacidades
+
+`GET /api/authentication/capabilities`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Requiere header `X-Organization-Id: <organizationId>`. El backend valida que el workspace exista, este activo y sea accesible para el usuario antes de calcular permisos.
+
+Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acciones dependientes del cliente/workspace seleccionado.
+
+### Response `200`
+
+Devuelve `Capabilities`.
 
 ## Actualizar perfil
 
@@ -616,11 +646,12 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 1. Llamar `POST /api/authentication/login`.
 2. Si responde `requiresTwoFactor: true`, pedir codigo TOTP y llamar `POST /api/authentication/2fa/verify-login`.
 3. Guardar estado de sesion desde cookies o desde `TokenResponse`, segun estrategia del cliente.
-4. Llamar `GET /api/authentication/me` para obtener `permissions`, `organizationIds` y `mustChangePassword`.
+4. Llamar `GET /api/authentication/me` para obtener identidad, `organizationIds` y `mustChangePassword`.
 5. Llamar `GET /api/authentication/workspaces`, permitir que el usuario seleccione workspace y enviar su `id` como `X-Organization-Id` en endpoints tenant-scoped.
-6. Opcionalmente seleccionar compania dentro del workspace y enviar su `id` como `X-Company-Id` para trabajar solo con datos de esa compania.
-7. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, workspaces y endpoints marcados como permitidos arriba.
-8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
+6. Llamar `GET /api/authentication/capabilities` con `X-Organization-Id` para renderizar modulos y acciones disponibles en el workspace seleccionado.
+7. Opcionalmente seleccionar compania dentro del workspace y enviar su `id` como `X-Company-Id` para trabajar solo con datos de esa compania.
+8. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, workspaces y endpoints marcados como permitidos arriba.
+9. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
 
 ## Errores comunes
 

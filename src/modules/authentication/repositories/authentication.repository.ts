@@ -48,9 +48,6 @@ export class AuthenticationRepository {
                         role: {
                             select: {
                                 code: true,
-                                permissions: {
-                                    select: { permission: { select: { code: true } } },
-                                },
                             },
                         },
                     },
