@@ -10,21 +10,21 @@ import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@
 export class AccessControlService {
     constructor(private readonly repository: AccessControlRepository) {}
 
-    async userHasAnyRole(userId: string, requiredRoles: string[], organizationId?: string, companyId?: string): Promise<boolean> {
+    async userHasAnyRole(userId: string, requiredRoles: string[], organizationId?: string | null, companyId?: string | null): Promise<boolean> {
         if (requiredRoles.length === 0) return true;
 
         const roles = new Set(await this.repository.findUserRoleLabels(userId, organizationId, companyId));
         return requiredRoles.some((role) => roles.has(role));
     }
 
-    async userHasAllPermissions(userId: string, requiredPermissions: string[], organizationId?: string, companyId?: string): Promise<boolean> {
+    async userHasAllPermissions(userId: string, requiredPermissions: string[], organizationId?: string | null, companyId?: string | null): Promise<boolean> {
         if (requiredPermissions.length === 0) return true;
 
         const permissions = new Set(await this.listUserPermissionCodes(userId, organizationId, companyId));
         return requiredPermissions.every((permission) => permissions.has(permission));
     }
 
-    async listUserPermissionCodes(userId: string, organizationId?: string, companyId?: string): Promise<string[]> {
+    async listUserPermissionCodes(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
         const permissions = await this.repository.findUserPermissionCodes(userId, organizationId, companyId);
         return [...new Set(permissions)].sort((left, right) => left.localeCompare(right));
     }

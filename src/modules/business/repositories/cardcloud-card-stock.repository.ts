@@ -26,7 +26,7 @@ export class CardcloudCardStockRepository {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
         });
     }
 
@@ -34,7 +34,7 @@ export class CardcloudCardStockRepository {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data: { providerStatus: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: { id, organizationId }, select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
         });
     }
 

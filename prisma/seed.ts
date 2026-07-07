@@ -45,13 +45,79 @@ type DemoRoleDefinition = {
     description: string;
     prefixes: readonly string[];
     extraPermissionCodes?: readonly PermissionCode[];
+    excludePermissionCodes?: readonly PermissionCode[];
+    readOnly?: boolean;
 };
 
 type UserSeed = {
     id: string;
     username: string;
     fullName: string;
+    roleCode?: string;
+    accessScope?: DemoAccessScope;
 };
+
+type DemoAccessScope = 'global' | 'workspace' | 'company';
+
+type DemoUserDefinition = {
+    username: string;
+    email: string;
+    fullName: string;
+    roleCode: string;
+    accessScope: DemoAccessScope;
+};
+
+const DEMO_USER_DEFINITIONS = [
+    {
+        username: 'demo.company.manager',
+        email: 'demo.company.manager@example.com',
+        fullName: 'Demo Company Manager',
+        roleCode: 'demo-company-manager',
+        accessScope: 'company',
+    },
+    {
+        username: 'demo.workspace.manager',
+        email: 'demo.workspace.manager@example.com',
+        fullName: 'Demo Workspace Manager',
+        roleCode: 'demo-workspace-manager',
+        accessScope: 'workspace',
+    },
+    {
+        username: 'demo.company.viewer',
+        email: 'demo.company.viewer@example.com',
+        fullName: 'Demo Company Viewer',
+        roleCode: 'demo-company-viewer',
+        accessScope: 'company',
+    },
+    {
+        username: 'demo.cards.manager',
+        email: 'demo.cards.manager@example.com',
+        fullName: 'Demo Cards Manager',
+        roleCode: 'demo-card-administrator',
+        accessScope: 'company',
+    },
+    {
+        username: 'demo.stations.manager',
+        email: 'demo.stations.manager@example.com',
+        fullName: 'Demo Stations Manager',
+        roleCode: 'demo-station-administrator',
+        accessScope: 'company',
+    },
+    {
+        username: 'demo.users.admin',
+        email: 'demo.users.admin@example.com',
+        fullName: 'Demo Users Admin',
+        roleCode: 'demo-user-administrator',
+        accessScope: 'global',
+    },
+    {
+        username: 'demo.rbac.admin',
+        email: 'demo.rbac.admin@example.com',
+        fullName: 'Demo RBAC Admin',
+        roleCode: 'demo-rbac-administrator',
+        accessScope: 'global',
+    },
+] as const satisfies readonly DemoUserDefinition[];
 
 type OrganizationSeed = {
     id: string;
@@ -302,10 +368,26 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             prefixes: ['roles.', 'permissions.'],
         },
         {
+            code: 'demo-workspace-manager',
+            name: 'Demo Administrador de workspace',
+            description: 'Administra companias y modulos operativos principales dentro de todo el workspace.',
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.'],
+            extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
+        },
+        {
             code: 'demo-company-manager',
-            name: 'Demo Administracion de companias',
-            description: 'Administra companias y subcompanias dentro del workspace.',
-            prefixes: ['companies.', 'sub-companies.'],
+            name: 'Demo Operador de compania',
+            description: 'Administra los modulos operativos principales dentro de una compania.',
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.'],
+            extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
+            excludePermissionCodes: ['companies.create', 'companies.delete'],
+        },
+        {
+            code: 'demo-company-viewer',
+            name: 'Demo Consulta de compania',
+            description: 'Consulta los modulos operativos principales dentro de una compania sin permisos de escritura.',
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.', 'notifications.'],
+            readOnly: true,
         },
         {
             code: 'demo-driver-administrator',
@@ -384,7 +466,7 @@ function resolveDemoRolePermissionCodes(definition: DemoRoleDefinition): Permiss
     const permissionCodes = new Set<PermissionCode>();
 
     for (const code of ALL_PERMISSION_CODES) {
-        if (definition.prefixes.some((prefix) => code.startsWith(prefix))) {
+        if (definition.prefixes.some((prefix) => code.startsWith(prefix)) && (!definition.readOnly || isReadPermissionCode(code))) {
             permissionCodes.add(code);
         }
     }
@@ -393,22 +475,28 @@ function resolveDemoRolePermissionCodes(definition: DemoRoleDefinition): Permiss
         permissionCodes.add(code);
     }
 
+    for (const code of definition.excludePermissionCodes ?? []) {
+        permissionCodes.delete(code);
+    }
+
     return [...permissionCodes];
+}
+
+function isReadPermissionCode(code: PermissionCode): boolean {
+    return code.includes('.read') || code.endsWith('.download');
 }
 
 async function seedDemoUsers(): Promise<UserSeed[]> {
     const passwordHash = await argon2.hash(DEMO_PASSWORD);
     const users: UserSeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const username = `demo.user.${suffix}`;
+    for (const definition of DEMO_USER_DEFINITIONS) {
         const user = await prisma.user.upsert({
-            where: { username },
+            where: { username: definition.username },
             create: {
-                username,
-                email: `demo.user.${suffix}@example.com`,
-                fullName: `Demo User ${suffix}`,
+                username: definition.username,
+                email: definition.email,
+                fullName: definition.fullName,
                 passwordHash,
                 preferredLanguage: 'es',
                 status: Status.active,
@@ -416,8 +504,8 @@ async function seedDemoUsers(): Promise<UserSeed[]> {
                 emailVerifiedAt: new Date(),
             },
             update: {
-                email: `demo.user.${suffix}@example.com`,
-                fullName: `Demo User ${suffix}`,
+                email: definition.email,
+                fullName: definition.fullName,
                 passwordHash,
                 preferredLanguage: 'es',
                 status: Status.active,
@@ -426,7 +514,7 @@ async function seedDemoUsers(): Promise<UserSeed[]> {
             select: { id: true, username: true, fullName: true },
         });
 
-        users.push(user);
+        users.push({ ...user, roleCode: definition.roleCode, accessScope: definition.accessScope });
     }
 
     return users;
@@ -463,10 +551,9 @@ async function seedOrganizations(adminUserId: string): Promise<OrganizationSeed[
 }
 
 async function seedOrganizationMemberships(organizations: OrganizationSeed[], users: UserSeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const organization = organizations[index - 1];
-        const user = users[index - 1];
+    const organization = organizations[0];
 
+    for (const user of users) {
         await prisma.organizationMembership.upsert({
             where: {
                 organizationId_userId: {
@@ -484,37 +571,43 @@ async function seedOrganizationMemberships(organizations: OrganizationSeed[], us
 }
 
 async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizations: OrganizationSeed[], companies: CompanySeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const user = users[index - 1];
-        const organization = organizations[index - 1];
-        const company = companies[index - 1];
+    const organization = organizations[0];
+    const company = companies[0];
+    const rolesByCode = new Map(roles.map((role) => [role.code, role]));
 
-        for (const role of roles) {
-            const existing = await prisma.userAccess.findFirst({
-                where: {
-                    userId: user.id,
-                    roleId: role.id,
-                    organizationId: organization.id,
-                    companyId: company.id,
-                    scopeKey: null,
-                    scopeId: null,
-                },
-                select: { id: true },
-            });
+    for (const user of users) {
+        if (!user.roleCode || !user.accessScope) continue;
 
-            if (existing) continue;
+        const role = rolesByCode.get(user.roleCode);
+        if (!role) throw new Error(`Rol demo no encontrado para ${user.username}: ${user.roleCode}`);
 
-            await prisma.userAccess.create({
-                data: {
-                    userId: user.id,
-                    roleId: role.id,
-                    organizationId: organization.id,
-                    companyId: company.id,
-                    scopeKey: null,
-                    scopeId: null,
-                },
-            });
-        }
+        const organizationId = user.accessScope === 'global' ? null : organization.id;
+        const companyId = user.accessScope === 'company' ? company.id : null;
+
+        const existing = await prisma.userAccess.findFirst({
+            where: {
+                userId: user.id,
+                roleId: role.id,
+                organizationId,
+                companyId,
+                scopeKey: null,
+                scopeId: null,
+            },
+            select: { id: true },
+        });
+
+        if (existing) continue;
+
+        await prisma.userAccess.create({
+            data: {
+                userId: user.id,
+                roleId: role.id,
+                organizationId,
+                companyId,
+                scopeKey: null,
+                scopeId: null,
+            },
+        });
     }
 }
 
@@ -1051,7 +1144,7 @@ async function main(): Promise<void> {
 
     console.log('Seed completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
-    console.log(`Usuario demo: demo.user.01 / ${DEMO_PASSWORD}`);
+    console.log(`Usuarios demo (${DEMO_PASSWORD}): ${DEMO_USER_DEFINITIONS.map((user) => user.username).join(', ')}`);
     console.log(`Datos demo: ${DEMO_COUNT} registro por modulo principal.`);
 }
 

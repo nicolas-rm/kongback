@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUser, Permissions } from '@/decorators';
+import { CurrentUser, Permissions, RequireGlobalAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsGateway } from '@/modules/notifications/notifications.gateway';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 @Controller('notifications')
+@RequireGlobalAccess()
 export class NotificationsController {
     constructor(
         private readonly notificationsService: NotificationsService,
