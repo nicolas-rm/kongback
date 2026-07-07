@@ -9,6 +9,7 @@ type WorkspaceEntry = {
     slug: string;
     isGlobalAdmin: boolean;
     roles: Array<{ id: string; code: string; name: string }>;
+    companies: Array<{ id: string; key: string; name: string }>;
 };
 
 @Injectable()
@@ -18,11 +19,13 @@ export class ListWorkspacesUseCase {
     async execute(user: RequestUser) {
         if (user.isGlobalAdmin) {
             const organizations = await this.repository.listActiveOrganizations();
-            return organizations.map((organization) => WorkspaceResponse.from({ ...organization, isGlobalAdmin: true, roles: [] }));
+            return organizations.map((organization) => WorkspaceResponse.from({ ...organization, isGlobalAdmin: true, roles: [], companies: [] }));
         }
 
         const accesses = await this.repository.listUserOrganizationAccesses(user.id);
         const workspaces = new Map<string, WorkspaceEntry>();
+        const companyIdsByWorkspace = new Map<string, Set<string>>();
+        const organizationWideWorkspaceIds = new Set<string>();
 
         for (const access of accesses) {
             if (!access.organization) continue;
@@ -33,9 +36,22 @@ export class ListWorkspacesUseCase {
                 slug: access.organization.slug,
                 isGlobalAdmin: false,
                 roles: [],
+                companies: [],
             };
 
             workspace.roles.push(access.role);
+            if (!access.company) {
+                organizationWideWorkspaceIds.add(workspace.id);
+                workspace.companies = [];
+                companyIdsByWorkspace.delete(workspace.id);
+            } else if (!organizationWideWorkspaceIds.has(workspace.id)) {
+                const companyIds = companyIdsByWorkspace.get(workspace.id) ?? new Set<string>();
+                if (!companyIds.has(access.company.id)) {
+                    workspace.companies.push(access.company);
+                    companyIds.add(access.company.id);
+                    companyIdsByWorkspace.set(workspace.id, companyIds);
+                }
+            }
             workspaces.set(workspace.id, workspace);
         }
 

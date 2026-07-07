@@ -1,6 +1,7 @@
 type UserAccessResponseData = {
     id: string;
     organizationId: string | null;
+    companyId: string | null;
     scopeKey: string | null;
     scopeId: string | null;
     role: {
@@ -26,12 +27,13 @@ export class UserAccessResponse {
     constructor(
         public id: string,
         public organizationId: string | null,
+        public companyId: string | null,
         public scopeKey: string | null,
         public scopeId: string | null,
         public role: UserAccessRoleResponse
     ) {}
 
     static from(data: UserAccessResponseData): UserAccessResponse {
-        return new UserAccessResponse(data.id, data.organizationId, data.scopeKey, data.scopeId, UserAccessRoleResponse.from(data.role));
+        return new UserAccessResponse(data.id, data.organizationId, data.companyId, data.scopeKey, data.scopeId, UserAccessRoleResponse.from(data.role));
     }
 }

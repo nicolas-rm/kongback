@@ -83,7 +83,7 @@ export class UsersRepository {
     assignAccess(data: Prisma.UserAccessUncheckedCreateInput) {
         return this.prisma.userAccess.create({
             data,
-            select: { id: true, userId: true, roleId: true, organizationId: true, scopeKey: true, scopeId: true },
+            select: { id: true, userId: true, roleId: true, organizationId: true, companyId: true, scopeKey: true, scopeId: true },
         });
     }
 
@@ -93,6 +93,15 @@ export class UsersRepository {
 
     countActiveOrganizations(ids: string[]): Promise<number> {
         return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
+    }
+
+    countActiveCompanies(scopes: Array<{ id: string; organizationId: string }>): Promise<number> {
+        return this.prisma.company.count({
+            where: {
+                status: 'active',
+                OR: scopes.map((scope) => ({ id: scope.id, organizationId: scope.organizationId })),
+            },
+        });
     }
 
     replaceAccess(userId: string, data: Prisma.UserAccessUncheckedCreateInput[]) {
@@ -170,6 +179,7 @@ export class UsersRepository {
         return {
             id: true,
             organizationId: true,
+            companyId: true,
             scopeKey: true,
             scopeId: true,
             role: { select: { id: true, code: true, name: true } },
