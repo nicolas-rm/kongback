@@ -7,19 +7,19 @@ import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-us
 export class AccessControlRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async findUserRoleLabels(userId: string, organizationId?: string): Promise<string[]> {
+    async findUserRoleLabels(userId: string, organizationId?: string, companyId?: string): Promise<string[]> {
         const accesses = await this.prisma.userAccess.findMany({
-            where: buildActiveUserAccessWhere({ userId }, organizationId),
+            where: buildActiveUserAccessWhere({ userId }, organizationId, companyId),
             select: { role: { select: { code: true, name: true } } },
         });
 
         return accesses.flatMap((entry) => [entry.role.code, entry.role.name]);
     }
 
-    async findUserPermissionCodes(userId: string, organizationId?: string): Promise<string[]> {
+    async findUserPermissionCodes(userId: string, organizationId?: string, companyId?: string): Promise<string[]> {
         const rolePermissions = await this.prisma.rolePermission.findMany({
             where: {
-                role: { accesses: { some: buildActiveUserAccessWhere({ userId }, organizationId) } },
+                role: { accesses: { some: buildActiveUserAccessWhere({ userId }, organizationId, companyId) } },
             },
             select: { permission: { select: { code: true } } },
         });
@@ -108,6 +108,18 @@ export class AccessControlRepository {
 
     countActiveCompanies(ids: string[], organizationId: string): Promise<number> {
         return this.prisma.company.count({ where: { id: { in: ids }, organizationId, status: 'active' } });
+    }
+
+    countUserOrganizationWideAccesses(userId: string, organizationId: string): Promise<number> {
+        return this.prisma.userAccess.count({
+            where: buildActiveUserAccessWhere({ userId, companyId: null }, organizationId),
+        });
+    }
+
+    countUserCompanyAccesses(userId: string, organizationId: string, companyId: string): Promise<number> {
+        return this.prisma.userAccess.count({
+            where: buildActiveUserAccessWhere({ userId }, organizationId, companyId),
+        });
     }
 
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {

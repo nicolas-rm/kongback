@@ -10,6 +10,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_accesses_global_active_unique
 CREATE UNIQUE INDEX IF NOT EXISTS user_accesses_organization_active_unique
     ON user_accesses ("userId", "roleId", "organizationId")
     WHERE "organizationId" IS NOT NULL
+        AND "companyId" IS NULL
+        AND "scopeKey" IS NULL
+        AND "scopeId" IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_accesses_company_active_unique
+    ON user_accesses ("userId", "roleId", "organizationId", "companyId")
+    WHERE "organizationId" IS NOT NULL
+        AND "companyId" IS NOT NULL
         AND "scopeKey" IS NULL
         AND "scopeId" IS NULL;
 

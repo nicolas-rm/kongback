@@ -338,6 +338,7 @@ model UserAccess {
     userId         String
     roleId         String
     organizationId String?
+    companyId      String?
     scopeKey       String?
     scopeId        String?
     assignedAt     DateTime      @default(now())
@@ -346,10 +347,13 @@ model UserAccess {
     user           User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     role           Role          @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
     organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    company        Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     @@index([userId])
     @@index([roleId])
     @@index([organizationId])
+    @@index([companyId])
+    @@index([userId, organizationId, companyId])
     @@index([scopeKey, scopeId])
     @@index([userId, roleId, scopeKey, scopeId])
     @@map("user_accesses")
@@ -512,6 +516,7 @@ model Company {
     address        Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
     organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
     subCompanies   SubCompany[]
+    userAccesses   UserAccess[]
 
     @@unique([organizationId, key])
     @@unique([organizationId, externalId])
