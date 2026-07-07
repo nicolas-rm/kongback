@@ -18,38 +18,37 @@ export class CardcloudCardStockRepository {
         return this.prisma.cardcloudCardStock.count({ where });
     }
 
-    findById(id: string, organizationId: string, companyId?: string) {
-        return this.prisma.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
+    findById(id: string, companyId?: string) {
+        return this.prisma.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
     }
 
-    update(id: string, organizationId: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput, companyId?: string) {
+    update(id: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, companyId), data });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
         });
     }
 
-    deactivate(id: string, organizationId: string, companyId?: string) {
+    deactivate(id: string, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, organizationId, companyId), data: { providerStatus: Status.inactive } });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, companyId), data: { providerStatus: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, organizationId, companyId), select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
         });
     }
 
-    private scopeWhere(id: string, organizationId: string, companyId?: string): Prisma.CardcloudCardStockWhereInput {
+    private scopeWhere(id: string, companyId?: string): Prisma.CardcloudCardStockWhereInput {
         return {
             id,
-            organizationId,
-            ...(companyId ? { assignedCard: { subCompany: { companyId } } } : {}),
+            ...(companyId ? { companyId } : {}),
         };
     }
 
     private select(): Prisma.CardcloudCardStockSelect {
         return {
             id: true,
-            organizationId: true,
+            companyId: true,
             externalId: true,
             assignedCardId: true,
             maskedPan: true,

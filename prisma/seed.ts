@@ -57,7 +57,7 @@ type UserSeed = {
     accessScope?: DemoAccessScope;
 };
 
-type DemoAccessScope = 'global' | 'workspace' | 'company';
+type DemoAccessScope = 'global' | 'company';
 
 type DemoUserDefinition = {
     username: string;
@@ -74,13 +74,6 @@ const DEMO_USER_DEFINITIONS = [
         fullName: 'Demo Company Manager',
         roleCode: 'demo-company-manager',
         accessScope: 'company',
-    },
-    {
-        username: 'demo.workspace.manager',
-        email: 'demo.workspace.manager@example.com',
-        fullName: 'Demo Workspace Manager',
-        roleCode: 'demo-workspace-manager',
-        accessScope: 'workspace',
     },
     {
         username: 'demo.company.viewer',
@@ -119,21 +112,15 @@ const DEMO_USER_DEFINITIONS = [
     },
 ] as const satisfies readonly DemoUserDefinition[];
 
-type OrganizationSeed = {
-    id: string;
-    slug: string;
-};
-
 type CompanySeed = {
     id: string;
     key: string;
-    organizationId: string;
 };
 
 type SubCompanySeed = {
     id: string;
     key: string;
-    organizationId: string;
+    companyId: string;
 };
 
 type DriverSeed = {
@@ -154,7 +141,7 @@ type VehicleSeed = {
 
 type CardSeed = {
     id: string;
-    organizationId: string;
+    companyId: string;
 };
 
 type StationSeed = {
@@ -332,7 +319,7 @@ async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<
         where: {
             userId,
             roleId,
-            organizationId: null,
+            companyId: null,
             scopeKey: null,
             scopeId: null,
         },
@@ -345,7 +332,7 @@ async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<
         data: {
             userId,
             roleId,
-            organizationId: null,
+            companyId: null,
             scopeKey: null,
             scopeId: null,
         },
@@ -366,13 +353,6 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             name: 'Demo Administracion de roles y permisos',
             description: 'Administra el catalogo de roles, permisos y asignaciones de permisos por rol.',
             prefixes: ['roles.', 'permissions.'],
-        },
-        {
-            code: 'demo-workspace-manager',
-            name: 'Demo Administrador de workspace',
-            description: 'Administra companias y modulos operativos principales dentro de todo el workspace.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.'],
-            extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
         },
         {
             code: 'demo-company-manager',
@@ -426,7 +406,7 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
         {
             code: 'demo-document-administrator',
             name: 'Demo Administracion de documentos',
-            description: 'Administra documentos del workspace o de la compania seleccionada.',
+            description: 'Administra documentos de la compania seleccionada.',
             prefixes: ['documents.'],
         },
         {
@@ -520,58 +500,7 @@ async function seedDemoUsers(): Promise<UserSeed[]> {
     return users;
 }
 
-async function seedOrganizations(adminUserId: string): Promise<OrganizationSeed[]> {
-    const organizations: OrganizationSeed[] = [];
-
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const organization = await prisma.organization.upsert({
-            where: { slug: `demo-org-${suffix}` },
-            create: {
-                name: `Demo Organization ${suffix}`,
-                slug: `demo-org-${suffix}`,
-                description: `Organizacion demo ${suffix}`,
-                status: Status.active,
-                createdByUserId: adminUserId,
-                updatedByUserId: adminUserId,
-            },
-            update: {
-                name: `Demo Organization ${suffix}`,
-                description: `Organizacion demo ${suffix}`,
-                status: Status.active,
-                updatedByUserId: adminUserId,
-            },
-            select: { id: true, slug: true },
-        });
-
-        organizations.push(organization);
-    }
-
-    return organizations;
-}
-
-async function seedOrganizationMemberships(organizations: OrganizationSeed[], users: UserSeed[]): Promise<void> {
-    const organization = organizations[0];
-
-    for (const user of users) {
-        await prisma.organizationMembership.upsert({
-            where: {
-                organizationId_userId: {
-                    organizationId: organization.id,
-                    userId: user.id,
-                },
-            },
-            create: {
-                organizationId: organization.id,
-                userId: user.id,
-            },
-            update: {},
-        });
-    }
-}
-
-async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizations: OrganizationSeed[], companies: CompanySeed[]): Promise<void> {
-    const organization = organizations[0];
+async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies: CompanySeed[]): Promise<void> {
     const company = companies[0];
     const rolesByCode = new Map(roles.map((role) => [role.code, role]));
 
@@ -581,14 +510,12 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizati
         const role = rolesByCode.get(user.roleCode);
         if (!role) throw new Error(`Rol demo no encontrado para ${user.username}: ${user.roleCode}`);
 
-        const organizationId = user.accessScope === 'global' ? null : organization.id;
         const companyId = user.accessScope === 'company' ? company.id : null;
 
         const existing = await prisma.userAccess.findFirst({
             where: {
                 userId: user.id,
                 roleId: role.id,
-                organizationId,
                 companyId,
                 scopeKey: null,
                 scopeId: null,
@@ -602,7 +529,6 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizati
             data: {
                 userId: user.id,
                 roleId: role.id,
-                organizationId,
                 companyId,
                 scopeKey: null,
                 scopeId: null,
@@ -611,42 +537,31 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], organizati
     }
 }
 
-async function seedSettings(adminUserId: string, organizations: OrganizationSeed[]): Promise<void> {
+async function seedSettings(adminUserId: string): Promise<void> {
     const settings = [
         {
             key: 'demo.ui.theme',
             value: { theme: 'light' },
             description: 'Tema demo global.',
             scope: SettingScope.global,
-            organizationId: null,
         },
         {
             key: 'demo.features.cards',
             value: { enabled: true },
             description: 'Feature flag demo para tarjetas.',
             scope: SettingScope.global,
-            organizationId: null,
         },
         {
             key: 'demo.notifications.digest',
             value: { frequency: 'daily' },
             description: 'Preferencia demo de digest.',
             scope: SettingScope.global,
-            organizationId: null,
-        },
-        {
-            key: 'demo.organization.limit',
-            value: { vehicles: 25 },
-            description: 'Limite demo por organizacion.',
-            scope: SettingScope.organization,
-            organizationId: organizations[0].id,
         },
     ] satisfies Array<{
         key: string;
         value: Prisma.JsonObject;
         description: string;
         scope: SettingScope;
-        organizationId: string | null;
     }>;
 
     for (const setting of settings) {
@@ -654,7 +569,6 @@ async function seedSettings(adminUserId: string, organizations: OrganizationSeed
             where: {
                 key: setting.key,
                 scope: setting.scope,
-                organizationId: setting.organizationId,
             },
             select: { id: true },
         });
@@ -677,7 +591,6 @@ async function seedSettings(adminUserId: string, organizations: OrganizationSeed
                 value: setting.value,
                 description: setting.description,
                 scope: setting.scope,
-                organizationId: setting.organizationId,
                 createdByUserId: adminUserId,
                 updatedByUserId: adminUserId,
             },
@@ -685,45 +598,35 @@ async function seedSettings(adminUserId: string, organizations: OrganizationSeed
     }
 }
 
-async function seedCompanies(organizations: OrganizationSeed[]): Promise<CompanySeed[]> {
+async function seedCompanies(): Promise<CompanySeed[]> {
     const companies: CompanySeed[] = [];
 
     for (const index of seedIndexes()) {
         const suffix = pad(index);
-        const organization = organizations[index - 1];
         const key = `DEMO-COMP-${suffix}`;
         const data = {
-            organizationId: organization.id,
             externalId: `DEMO-EXT-COMP-${suffix}`,
             name: `Demo Company ${suffix}`,
             tradeName: `Demo Trade ${suffix}`,
             status: Status.active,
         };
-        const existing =
-            (await prisma.company.findFirst({
-                where: {
-                    organizationId: organization.id,
-                    key,
-                },
-                select: { id: true },
-            })) ??
-            (await prisma.company.findFirst({
-                where: { key },
-                select: { id: true },
-            }));
+        const existing = await prisma.company.findFirst({
+            where: { key },
+            select: { id: true },
+        });
 
         const company = existing
             ? await prisma.company.update({
                   where: { id: existing.id },
                   data,
-                  select: { id: true, key: true, organizationId: true },
+                  select: { id: true, key: true },
               })
             : await prisma.company.create({
                   data: {
                       ...data,
                       key,
                   },
-                  select: { id: true, key: true, organizationId: true },
+                  select: { id: true, key: true },
               });
 
         companies.push(company);
@@ -762,7 +665,7 @@ async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySee
             select: { id: true, key: true },
         });
 
-        subCompanies.push({ ...subCompany, organizationId: company.organizationId });
+        subCompanies.push({ ...subCompany, companyId: company.id });
     }
 
     return subCompanies;
@@ -903,7 +806,7 @@ async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]
             select: { id: true },
         });
 
-        cards.push({ ...card, organizationId: subCompany.organizationId });
+        cards.push({ ...card, companyId: subCompany.companyId });
     }
 
     return cards;
@@ -977,7 +880,7 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
         await prisma.cardcloudCardStock.upsert({
             where: { externalId: `DEMO-STOCK-${suffix}` },
             create: {
-                organizationId: card.organizationId,
+                companyId: card.companyId,
                 externalId: `DEMO-STOCK-${suffix}`,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
@@ -987,7 +890,7 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
                 syncedAt: new Date(),
             },
             update: {
-                organizationId: card.organizationId,
+                companyId: card.companyId,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
                 clientId: `DEMO-CLIENT-${suffix}`,
@@ -1012,7 +915,7 @@ async function seedDocuments(users: UserSeed[], companies: CompanySeed[]): Promi
             where: { storageKey },
             create: {
                 uploadedByUserId: user.id,
-                organizationId: company.organizationId,
+                companyId: company.id,
                 createdByUserId: user.id,
                 title: `Demo Document ${suffix}`,
                 description: `Documento demo ${suffix}`,
@@ -1030,7 +933,7 @@ async function seedDocuments(users: UserSeed[], companies: CompanySeed[]): Promi
             },
             update: {
                 uploadedByUserId: user.id,
-                organizationId: company.organizationId,
+                companyId: company.id,
                 updatedByUserId: user.id,
                 deletedByUserId: null,
                 title: `Demo Document ${suffix}`,
@@ -1112,12 +1015,10 @@ async function seedNotifications(users: UserSeed[]): Promise<void> {
 async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<void> {
     const demoRoles = await seedDemoRoles();
     const users = await seedDemoUsers();
-    const organizations = await seedOrganizations(adminUser.id);
-    const companies = await seedCompanies(organizations);
+    const companies = await seedCompanies();
 
-    await seedOrganizationMemberships(organizations, users);
-    await seedUserAccesses(users, demoRoles, organizations, companies);
-    await seedSettings(adminUser.id, organizations);
+    await seedUserAccesses(users, demoRoles, companies);
+    await seedSettings(adminUser.id);
 
     const subCompanies = await seedSubCompanies(companies);
     const fuels = await seedFuels();

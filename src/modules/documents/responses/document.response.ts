@@ -3,7 +3,7 @@ type DocumentResponseData = {
     title: string;
     description: string | null;
     category: string | null;
-    organizationId: string | null;
+    companyId: string | null;
     entityType: string | null;
     entityId: string | null;
     scopeKey: string | null;
@@ -19,7 +19,7 @@ export class DocumentResponse {
         public title: string,
         public description: string | null,
         public category: string | null,
-        public organizationId: string | null,
+        public companyId: string | null,
         public entityType: string | null,
         public entityId: string | null,
         public scopeKey: string | null,
@@ -35,7 +35,7 @@ export class DocumentResponse {
             data.title,
             data.description,
             data.category,
-            data.organizationId,
+            data.companyId,
             data.entityType,
             data.entityId,
             data.scopeKey,

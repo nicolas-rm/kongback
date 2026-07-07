@@ -13,8 +13,8 @@ export class StationsService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(organizationId: string, dto: CreateStationDto, companyId?: string) {
-        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, organizationId, companyId) }]);
+    async create(dto: CreateStationDto, companyId?: string) {
+        await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, companyId) }]);
 
         return this.repository.create(
             {
@@ -29,10 +29,10 @@ export class StationsService {
         );
     }
 
-    async findAll(organizationId: string, dto: FindStationsDto, companyId?: string) {
+    async findAll(dto: FindStationsDto, companyId?: string) {
         const where: Prisma.StationWhereInput = {
             subCompanyId: dto.subCompanyId,
-            subCompany: { company: { organizationId, ...(companyId ? { id: companyId } : {}) } },
+            subCompany: { company: { ...(companyId ? { id: companyId } : {}) } },
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name']) } : {}),
         };
@@ -40,16 +40,15 @@ export class StationsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(organizationId: string, id: string, companyId?: string) {
-        const station = await this.repository.findById(id, organizationId, companyId);
+    async findOne(id: string, companyId?: string) {
+        const station = await this.repository.findById(id, companyId);
         if (!station) throw notFound();
         return station;
     }
 
-    async update(organizationId: string, id: string, dto: UpdateStationDto, companyId?: string) {
+    async update(id: string, dto: UpdateStationDto, companyId?: string) {
         const station = await this.repository.update(
             id,
-            organizationId,
             {
                 stationNumber: dto.stationNumber,
                 name: dto.name,
@@ -64,8 +63,8 @@ export class StationsService {
         return station;
     }
 
-    async deactivate(organizationId: string, id: string, companyId?: string) {
-        const station = await this.repository.deactivate(id, organizationId, companyId);
+    async deactivate(id: string, companyId?: string) {
+        const station = await this.repository.deactivate(id, companyId);
         if (!station) throw notFound();
         return { id: station.id, status: station.status };
     }

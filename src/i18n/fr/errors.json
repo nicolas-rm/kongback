@@ -19,7 +19,7 @@
     "authorization": {
         "unauthorized": "Non autorise",
         "insufficientPermissions": "Permissions insuffisantes",
-        "organizationDenied": "Acces refuse a cette organisation",
+        "companyDenied": "Acces refuse a cette compagnie",
         "mustChangePassword": "Vous devez changer votre mot de passe avant de continuer."
     },
     "documents": {
@@ -59,12 +59,6 @@
             "title": "Verifier l'adresse e-mail",
             "body": "Confirmez votre e-mail pour terminer la configuration de votre compte.",
             "action": "Verifier l'e-mail"
-        },
-        "organizationInvitation": {
-            "subject": "Invitation a {organizationName}",
-            "title": "Invitation a {organizationName}",
-            "body": "Vous avez recu une invitation a rejoindre {organizationName}.",
-            "action": "Accepter l'invitation"
         }
     },
     "prisma": {

@@ -19,17 +19,13 @@ export class DocumentsRepository {
         return this.prisma.document.count({ where });
     }
 
-    countActiveOrganizations(ids: string[]): Promise<number> {
-        return this.prisma.organization.count({ where: { id: { in: ids }, status: 'active' } });
+    findById(id: string, companyId?: string) {
+        return this.prisma.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, companyId)), select: this.publicSelect() });
     }
 
-    findById(id: string, organizationId: string, companyId?: string) {
-        return this.prisma.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, organizationId, companyId)), select: this.publicSelect() });
-    }
-
-    findDownloadById(id: string, organizationId: string, companyId?: string) {
+    findDownloadById(id: string, companyId?: string) {
         return this.prisma.document.findFirst({
-            where: activeRecordWhere(this.scopeWhere(id, organizationId, companyId)),
+            where: activeRecordWhere(this.scopeWhere(id, companyId)),
             select: {
                 id: true,
                 originalName: true,
@@ -39,34 +35,26 @@ export class DocumentsRepository {
         });
     }
 
-    update(id: string, organizationId: string, data: Prisma.DocumentUncheckedUpdateManyInput, companyId?: string) {
+    update(id: string, data: Prisma.DocumentUncheckedUpdateManyInput, companyId?: string) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.document.updateMany({ where: activeRecordWhere(this.scopeWhere(id, organizationId, companyId)), data });
+            const result = await tx.document.updateMany({ where: activeRecordWhere(this.scopeWhere(id, companyId)), data });
             if (result.count === 0) return null;
 
-            return tx.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, organizationId, companyId)), select: this.publicSelect() });
+            return tx.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, companyId)), select: this.publicSelect() });
         });
     }
 
-    softDelete(id: string, organizationId: string, userId?: string | null, companyId?: string) {
+    softDelete(id: string, userId?: string | null, companyId?: string) {
         return this.prisma.document.updateMany({
-            where: activeRecordWhere(this.scopeWhere(id, organizationId, companyId)),
+            where: activeRecordWhere(this.scopeWhere(id, companyId)),
             data: softDeleteData(userId ?? null),
         });
     }
 
-    private scopeWhere(id: string, organizationId: string, companyId?: string): Prisma.DocumentWhereInput {
+    private scopeWhere(id: string, companyId?: string): Prisma.DocumentWhereInput {
         return {
             id,
-            organizationId,
-            ...(companyId
-                ? {
-                      OR: [
-                          { scopeKey: 'companyId', scopeId: companyId },
-                          { entityType: 'company', entityId: companyId },
-                      ],
-                  }
-                : {}),
+            ...(companyId ? { companyId } : {}),
         };
     }
 
@@ -76,7 +64,7 @@ export class DocumentsRepository {
             title: true,
             description: true,
             category: true,
-            organizationId: true,
+            companyId: true,
             entityType: true,
             entityId: true,
             scopeKey: true,

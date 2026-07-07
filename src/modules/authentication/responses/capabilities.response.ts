@@ -1,5 +1,4 @@
 type CapabilitiesResponseData = {
-    organizationId: string;
     companyId?: string;
     isGlobalAdmin?: boolean;
     permissions?: string[];
@@ -7,13 +6,12 @@ type CapabilitiesResponseData = {
 
 export class CapabilitiesResponse {
     constructor(
-        public organizationId: string,
         public companyId: string | null,
         public isGlobalAdmin: boolean,
         public permissions: string[]
     ) {}
 
     static from(data: CapabilitiesResponseData): CapabilitiesResponse {
-        return new CapabilitiesResponse(data.organizationId, data.companyId ?? null, data.isGlobalAdmin ?? false, data.permissions ?? []);
+        return new CapabilitiesResponse(data.companyId ?? null, data.isGlobalAdmin ?? false, data.permissions ?? []);
     }
 }

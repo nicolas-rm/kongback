@@ -15,7 +15,6 @@ export const APP_DEFAULTS = {
         maxActiveSessions: 5,
         passwordResetTtlMinutes: 60,
         emailVerificationTtlMinutes: 60,
-        organizationInvitationTtlHours: 72,
     },
     twoFactor: {
         setupTtlMinutes: 10,

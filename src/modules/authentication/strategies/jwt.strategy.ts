@@ -39,12 +39,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
         if (!user) return null as never;
 
-        const organizationIds = new Set<string>();
+        const companyIds = new Set<string>();
         let isGlobalAdmin = false;
 
         for (const access of user.accesses) {
-            if (access.role.code === 'admin' && !access.organizationId) isGlobalAdmin = true;
-            if (access.organizationId) organizationIds.add(access.organizationId);
+            if (access.role.code === 'admin' && !access.companyId) isGlobalAdmin = true;
+            if (access.companyId) companyIds.add(access.companyId);
         }
 
         return {
@@ -55,7 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
             preferredLanguage: user.preferredLanguage,
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin,
-            organizationIds: [...organizationIds],
+            companyIds: [...companyIds],
             sessionId: payload.sessionId ?? null,
         };
     }

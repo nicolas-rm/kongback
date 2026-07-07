@@ -18,8 +18,8 @@ import {
     ChangePasswordUseCase,
     GetCapabilitiesUseCase,
     GetProfileUseCase,
+    ListCompaniesUseCase,
     ListSessionsUseCase,
-    ListWorkspacesUseCase,
     LoginUseCase,
     LogoutUseCase,
     RefreshUseCase,
@@ -43,7 +43,7 @@ export class AuthenticationService {
         private readonly revokeSessionUseCase: RevokeSessionUseCase,
         private readonly getCapabilitiesUseCase: GetCapabilitiesUseCase,
         private readonly getProfileUseCase: GetProfileUseCase,
-        private readonly listWorkspacesUseCase: ListWorkspacesUseCase,
+        private readonly listCompaniesUseCase: ListCompaniesUseCase,
         private readonly updateMyProfileUseCase: UpdateMyProfileUseCase,
         private readonly changePasswordUseCase: ChangePasswordUseCase,
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
@@ -88,12 +88,12 @@ export class AuthenticationService {
         return this.listSessionsUseCase.execute(userId, refreshToken);
     }
 
-    listWorkspaces(user: RequestUser) {
-        return this.listWorkspacesUseCase.execute(user);
+    listCompanies(user: RequestUser) {
+        return this.listCompaniesUseCase.execute(user);
     }
 
-    getCapabilities(user: RequestUser, organizationId: string, companyId?: string) {
-        return this.getCapabilitiesUseCase.execute(user, organizationId, companyId);
+    getCapabilities(user: RequestUser, companyId?: string) {
+        return this.getCapabilitiesUseCase.execute(user, companyId);
     }
 
     revokeSession(userId: string, sessionId: string, refreshToken?: string) {

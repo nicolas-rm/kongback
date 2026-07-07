@@ -6,7 +6,7 @@ type ProfileResponseData = {
     preferredLanguage?: string | null;
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
-    organizationIds?: string[];
+    companyIds?: string[];
 };
 
 export class ProfileResponse {
@@ -18,7 +18,7 @@ export class ProfileResponse {
         public preferredLanguage: string,
         public mustChangePassword: boolean,
         public isGlobalAdmin: boolean,
-        public organizationIds: string[]
+        public companyIds: string[]
     ) {}
 
     static from(data: ProfileResponseData): ProfileResponse {
@@ -30,7 +30,7 @@ export class ProfileResponse {
             data.preferredLanguage ?? 'es',
             data.mustChangePassword ?? false,
             data.isGlobalAdmin ?? false,
-            data.organizationIds ?? []
+            data.companyIds ?? []
         );
     }
 }

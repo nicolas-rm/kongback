@@ -23,7 +23,6 @@ export const envSchema = z.object({
     SESSION_MAX_ACTIVE: z.coerce.number().int().positive().default(APP_DEFAULTS.session.maxActiveSessions),
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.session.passwordResetTtlMinutes),
     EMAIL_VERIFICATION_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.session.emailVerificationTtlMinutes),
-    ORGANIZATION_INVITATION_TTL_HOURS: z.coerce.number().int().positive().default(APP_DEFAULTS.session.organizationInvitationTtlHours),
 
     TWO_FACTOR_ISSUER: z.string().min(1).default(APP_DEFAULTS.name),
     TWO_FACTOR_SETUP_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.setupTtlMinutes),

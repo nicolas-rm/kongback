@@ -10,39 +10,35 @@ import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@
 export class AccessControlService {
     constructor(private readonly repository: AccessControlRepository) {}
 
-    async userHasAnyRole(userId: string, requiredRoles: string[], organizationId?: string | null, companyId?: string | null): Promise<boolean> {
+    async userHasAnyRole(userId: string, requiredRoles: string[], companyId?: string | null): Promise<boolean> {
         if (requiredRoles.length === 0) return true;
 
-        const roles = new Set(await this.repository.findUserRoleLabels(userId, organizationId, companyId));
+        const roles = new Set(await this.repository.findUserRoleLabels(userId, companyId));
         return requiredRoles.some((role) => roles.has(role));
     }
 
-    async userHasAllPermissions(userId: string, requiredPermissions: string[], organizationId?: string | null, companyId?: string | null): Promise<boolean> {
+    async userHasAllPermissions(userId: string, requiredPermissions: string[], companyId?: string | null): Promise<boolean> {
         if (requiredPermissions.length === 0) return true;
 
-        const permissions = new Set(await this.listUserPermissionCodes(userId, organizationId, companyId));
+        const permissions = new Set(await this.listUserPermissionCodes(userId, companyId));
         return requiredPermissions.every((permission) => permissions.has(permission));
     }
 
-    async listUserPermissionCodes(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
-        const permissions = await this.repository.findUserPermissionCodes(userId, organizationId, companyId);
+    async listUserPermissionCodes(userId: string, companyId?: string | null): Promise<string[]> {
+        const permissions = await this.repository.findUserPermissionCodes(userId, companyId);
         return [...new Set(permissions)].sort((left, right) => left.localeCompare(right));
     }
 
-    async organizationIsActive(organizationId: string): Promise<boolean> {
-        return (await this.repository.countActiveOrganizations([organizationId])) === 1;
+    async companyIsActive(companyId: string): Promise<boolean> {
+        return (await this.repository.countActiveCompanies([companyId])) === 1;
     }
 
-    async companyIsActiveInOrganization(companyId: string, organizationId: string): Promise<boolean> {
-        return (await this.repository.countActiveCompanies([companyId], organizationId)) === 1;
+    async userHasGlobalAccess(userId: string): Promise<boolean> {
+        return (await this.repository.countUserGlobalAccesses(userId)) > 0;
     }
 
-    async userHasOrganizationWideAccess(userId: string, organizationId: string): Promise<boolean> {
-        return (await this.repository.countUserOrganizationWideAccesses(userId, organizationId)) > 0;
-    }
-
-    async userCanAccessCompany(userId: string, organizationId: string, companyId: string): Promise<boolean> {
-        return (await this.repository.countUserCompanyAccesses(userId, organizationId, companyId)) > 0;
+    async userCanAccessCompany(userId: string, companyId: string): Promise<boolean> {
+        return (await this.repository.countUserCompanyAccesses(userId, companyId)) > 0;
     }
 
     async createRole(dto: CreateRoleDto) {

@@ -13,7 +13,7 @@ export class GetProfileUseCase {
             preferredLanguage: user.preferredLanguage,
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin: user.isGlobalAdmin,
-            organizationIds: user.organizationIds ?? [],
+            companyIds: user.companyIds ?? [],
         });
     }
 }

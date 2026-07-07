@@ -110,33 +110,6 @@ export class AppMailerService {
         return reservation;
     }
 
-    async sendOrganizationInvitation(to: string, token: string, organizationName: string, context: MailContext = {}) {
-        const reservation = await this.emailRateLimiter.reserve({
-            context: EmailDispatchContext.custom,
-            recipientEmail: to,
-            recipientUserId: context.recipientUserId,
-            triggeredByUserId: context.triggeredByUserId,
-            ipAddress: context.ipAddress,
-            metadata: context.metadata,
-        });
-        if (!reservation.allowed) return reservation;
-
-        const invitationUrl = new URL(`/invitations/${token}`, this.config.mail.webUrl);
-        const lang = this.resolveLanguage(context.language);
-        await this.sendTrackedTemplateMail({
-            dispatchId: reservation.dispatchId,
-            to,
-            subject: this.translate(lang, I18N_KEYS.mail.organizationInvitation.subject, 'Invitacion a {organizationName}', { organizationName }),
-            appName: this.config.name,
-            title: this.translate(lang, I18N_KEYS.mail.organizationInvitation.title, 'Invitacion a {organizationName}', { organizationName }),
-            body: this.translate(lang, I18N_KEYS.mail.organizationInvitation.body, 'Recibiste una invitacion para unirte a {organizationName}.', { organizationName }),
-            actionLabel: this.translate(lang, I18N_KEYS.mail.organizationInvitation.action, 'Aceptar invitacion'),
-            actionUrl: invitationUrl.toString(),
-        });
-
-        return reservation;
-    }
-
     private async sendTrackedTemplateMail(input: { dispatchId: string; to: string; subject: string; appName: string; title: string; body: string; actionLabel?: string; actionUrl?: string }) {
         const html = this.emailTemplateService.buildSimpleEmail({
             appName: input.appName,

@@ -19,7 +19,7 @@
     "authorization": {
         "unauthorized": "未授权",
         "insufficientPermissions": "权限不足",
-        "organizationDenied": "无权访问该组织",
+        "companyDenied": "无权访问该公司",
         "mustChangePassword": "继续之前必须修改密码。"
     },
     "documents": {
@@ -59,12 +59,6 @@
             "title": "验证邮箱地址",
             "body": "请确认您的邮箱以完成账户设置。",
             "action": "验证邮箱"
-        },
-        "organizationInvitation": {
-            "subject": "{organizationName} 邀请",
-            "title": "{organizationName} 邀请",
-            "body": "您收到加入 {organizationName} 的邀请。",
-            "action": "接受邀请"
         }
     },
     "prisma": {

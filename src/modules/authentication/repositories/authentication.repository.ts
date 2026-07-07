@@ -6,7 +6,6 @@ export type AuthenticatedUserRecord = Awaited<ReturnType<AuthenticationRepositor
 
 export type CreateSessionInput = {
     userId: string;
-    organizationId?: string | null;
     expiresAt: Date;
     idleExpiresAt: Date;
     userAgent?: string | null;
@@ -44,7 +43,6 @@ export class AuthenticationRepository {
                 accesses: {
                     where: buildActiveUserAccessWhere({}),
                     select: {
-                        organizationId: true,
                         companyId: true,
                         role: {
                             select: {
@@ -73,7 +71,6 @@ export class AuthenticationRepository {
         return this.prisma.session.create({
             data: {
                 userId: input.userId,
-                organizationId: input.organizationId ?? null,
                 expiresAt: input.expiresAt,
                 idleExpiresAt: input.idleExpiresAt,
                 userAgent: input.userAgent ?? null,
@@ -266,30 +263,23 @@ export class AuthenticationRepository {
         });
     }
 
-    listActiveOrganizations() {
-        return this.prisma.organization.findMany({
+    listActiveCompanies() {
+        return this.prisma.company.findMany({
             where: { status: 'active' },
             orderBy: { name: 'asc' },
             select: {
                 id: true,
+                key: true,
                 name: true,
-                slug: true,
             },
         });
     }
 
-    listUserOrganizationAccesses(userId: string) {
+    listUserCompanyAccesses(userId: string) {
         return this.prisma.userAccess.findMany({
-            where: buildActiveUserAccessWhere({ userId, organizationId: { not: null } }),
+            where: { userId, companyId: { not: null }, company: { status: 'active' } },
             orderBy: { assignedAt: 'asc' },
             select: {
-                organization: {
-                    select: {
-                        id: true,
-                        name: true,
-                        slug: true,
-                    },
-                },
                 role: {
                     select: {
                         id: true,
