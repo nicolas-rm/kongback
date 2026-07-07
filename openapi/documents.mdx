@@ -13,7 +13,7 @@ Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` a
 
 Requiere header `X-Organization-Id: <organizationId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado al workspace seleccionado. `organizationId` en la respuesta corresponde a ese header y no se acepta en body ni query.
 
-Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`; listar, obtener, descargar, actualizar y eliminar quedan limitados a documentos de esa compania o documentos cuyo `entityType`/`entityId` apunten a esa compania.
+Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`; listar, obtener, descargar, actualizar y eliminar quedan limitados a documentos de esa compania o documentos cuyo `entityType`/`entityId` apunten a esa compania.
 
 ## Modelo
 

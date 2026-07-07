@@ -42,9 +42,10 @@ export class AuthenticationRepository {
                 preferredLanguage: true,
                 mustChangePassword: true,
                 accesses: {
-                    where: { OR: [{ organizationId: null }, { organization: { status: 'active' } }] },
+                    where: buildActiveUserAccessWhere({}),
                     select: {
                         organizationId: true,
+                        companyId: true,
                         role: {
                             select: {
                                 code: true,
@@ -293,6 +294,13 @@ export class AuthenticationRepository {
                     select: {
                         id: true,
                         code: true,
+                        name: true,
+                    },
+                },
+                company: {
+                    select: {
+                        id: true,
+                        key: true,
                         name: true,
                     },
                 },

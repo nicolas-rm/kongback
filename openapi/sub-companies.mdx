@@ -13,7 +13,7 @@ Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El bor
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. `companyId` debe pertenecer a una compania activa de esa organizacion.
 
-Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y todas las operaciones quedan limitadas a esa compania. En create, el `companyId` del body debe coincidir con la compania seleccionada.
+Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y todas las operaciones quedan limitadas a esa compania. En create, el `companyId` del body debe coincidir con la compania seleccionada.
 
 ## Modelo
 

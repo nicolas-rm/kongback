@@ -45,8 +45,9 @@ Todos los endpoints requieren autenticacion y el permiso indicado en cada operac
 {
     "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
     "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-    "scopeKey": "companyId",
-    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+    "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+    "scopeKey": null,
+    "scopeId": null,
     "role": {
         "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
         "code": "company.admin",
@@ -238,8 +239,9 @@ Devuelve los accesos activos del usuario. El usuario debe existir y estar en est
     {
         "id": "2db0b73a-b3cb-49a6-8fdf-f81789ab2117",
         "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-        "scopeKey": "companyId",
-        "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+        "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+        "scopeKey": null,
+        "scopeId": null,
         "role": {
             "id": "768684d0-5892-442c-b52f-ad7d0ef372c6",
             "code": "company.admin",
@@ -255,7 +257,7 @@ Devuelve los accesos activos del usuario. El usuario debe existir y estar en est
 
 Requiere `users.access.assign`.
 
-El usuario debe estar `active`. El rol debe existir. Si `organizationId` se envia, la organizacion debe existir y estar `active`.
+El usuario debe estar `active`. El rol debe existir. Si `organizationId` se envia, la organizacion debe existir y estar `active`. Si `companyId` se envia, `organizationId` es obligatorio y la compania debe estar activa dentro de esa organizacion.
 
 ### Body
 
@@ -263,17 +265,23 @@ El usuario debe estar `active`. El rol debe existir. Si `organizationId` se envi
 {
     "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
     "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-    "scopeKey": "companyId",
-    "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+    "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
 }
 ```
 
-| Campo            | Tipo             | Requerido | Descripcion                                                       |
-| ---------------- | ---------------- | --------- | ----------------------------------------------------------------- |
-| `roleId`         | `uuid`           | Si        | Rol a asignar.                                                    |
-| `organizationId` | `uuid \| null`   | No        | Organizacion del acceso. String vacio se transforma a `null`.     |
-| `scopeKey`       | `string \| null` | No        | Nombre del scope especifico. String vacio se transforma a `null`. |
-| `scopeId`        | `string \| null` | No        | ID del scope especifico. String vacio se transforma a `null`.     |
+| Campo            | Tipo             | Requerido | Descripcion                                                                                     |
+| ---------------- | ---------------- | --------- | ----------------------------------------------------------------------------------------------- |
+| `roleId`         | `uuid`           | Si        | Rol a asignar.                                                                                  |
+| `organizationId` | `uuid \| null`   | No        | Organizacion del acceso. String vacio se transforma a `null`.                                   |
+| `companyId`      | `uuid \| null`   | No        | Compania especifica del acceso. Requiere `organizationId` y debe pertenecer a esa organizacion. |
+| `scopeKey`       | `string \| null` | No        | Scope generico opcional para reglas futuras. String vacio se transforma a `null`.               |
+| `scopeId`        | `string \| null` | No        | ID del scope generico opcional para reglas futuras. String vacio se transforma a `null`.        |
+
+Reglas de alcance:
+
+- `organizationId: null` y `companyId: null`: acceso global.
+- `organizationId` con `companyId: null`: acceso a todo el workspace.
+- `organizationId` con `companyId`: acceso solo a esa compania.
 
 ### Response `201`
 
@@ -295,8 +303,7 @@ Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses
         {
             "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
             "organizationId": "9ba5a07a-3816-4a57-9fdf-7c8a48f452b2",
-            "scopeKey": "companyId",
-            "scopeId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
+            "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
         }
     ]
 }

@@ -92,8 +92,8 @@ export class AuthenticationService {
         return this.listWorkspacesUseCase.execute(user);
     }
 
-    getCapabilities(user: RequestUser, organizationId: string) {
-        return this.getCapabilitiesUseCase.execute(user, organizationId);
+    getCapabilities(user: RequestUser, organizationId: string, companyId?: string) {
+        return this.getCapabilitiesUseCase.execute(user, organizationId, companyId);
     }
 
     revokeSession(userId: string, sessionId: string, refreshToken?: string) {

@@ -13,7 +13,7 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El stock no asignado tambien queda asociado a esa organizacion.
 
-Header opcional: `X-Company-Id: <companyId>`. Si se envia, debe ser una compania activa dentro del workspace y el stock queda limitado a registros asignados a tarjetas de esa compania. Como el stock no asignado no tiene `companyId` directo, para crear stock con `X-Company-Id` es obligatorio enviar `assignedCardId`.
+Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y el stock queda limitado a registros asignados a tarjetas de esa compania. Como el stock no asignado no tiene `companyId` directo, para crear stock con `X-Company-Id` es obligatorio enviar `assignedCardId`.
 
 ## Modelo
 
