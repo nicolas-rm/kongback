@@ -6,6 +6,7 @@ import { ORGANIZATION_CONTEXT_REQUIRED_KEY, type OrganizationRequest } from '@/d
 import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
+import { GLOBAL_ACCESS_REQUIRED_KEY } from '@/decorators/global-access.decorator';
 import { I18N_KEYS, I18nBadRequestException, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
@@ -25,6 +26,7 @@ export class PermissionsGuard implements CanActivate {
         const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]) ?? [];
         const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [context.getHandler(), context.getClass()]) ?? [];
         const requiresOrganization = this.reflector.getAllAndOverride<boolean>(ORGANIZATION_CONTEXT_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
+        const requiresGlobalAccess = this.reflector.getAllAndOverride<boolean>(GLOBAL_ACCESS_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
 
         const request = context.switchToHttp().getRequest<OrganizationRequest & { user?: RequestUser }>();
         const user = request.user;
@@ -32,17 +34,19 @@ export class PermissionsGuard implements CanActivate {
 
         const organizationId = requiresOrganization ? await this.resolveOrganizationId(request, user) : undefined;
         const companyId = request.companyId;
+        const accessOrganizationId = requiresGlobalAccess ? null : organizationId;
+        const accessCompanyId = requiresGlobalAccess ? null : companyId;
         if (requiredPermissions.length === 0 && requiredRoles.length === 0) return true;
 
         if (requiredRoles.length > 0) {
-            const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, organizationId, companyId);
+            const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, accessOrganizationId, accessCompanyId);
             if (!hasRole) {
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }
         }
 
         if (requiredPermissions.length > 0) {
-            const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, organizationId, companyId);
+            const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, accessOrganizationId, accessCompanyId);
             if (!hasPermissions) {
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }

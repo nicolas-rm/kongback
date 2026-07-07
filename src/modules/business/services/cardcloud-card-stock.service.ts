@@ -48,6 +48,7 @@ export class CardcloudCardStockService {
     }
 
     async update(organizationId: string, id: string, dto: UpdateCardcloudCardStockDto, companyId?: string) {
+        if (companyId && dto.assignedCardId === null) throw invalidRelation();
         await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, organizationId, companyId) }]);
 
         const stock = await this.repository.update(

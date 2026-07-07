@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
-import { Permissions } from '@/decorators';
+import { Permissions, RequireGlobalAccess } from '@/decorators';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { AssignRolePermissionsDto, CreateRoleDto, FindAccessControlDto, UpdateRoleDto } from '@/modules/access-control/dto';
 
 @Controller('roles')
+@RequireGlobalAccess()
 export class RolesController {
     constructor(private readonly accessControlService: AccessControlService) {}
 

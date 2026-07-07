@@ -11,6 +11,8 @@ Todos los endpoints requieren autenticacion y permisos `organizations.*`. El bor
 
 En esta API, una organizacion representa el workspace/cliente tenant que el front puede seleccionar. Los datos operativos tenant-scoped usan `X-Organization-Id` para trabajar dentro de una organizacion activa.
 
+Esta API es de administracion global. Los permisos `organizations.*` deben venir de un acceso global (`organizationId: null`, `companyId: null`). Para el selector del front usa `/api/authentication/workspaces`, no este listado administrativo.
+
 ## Modelos
 
 ### Organization

@@ -9,6 +9,8 @@ Base path: `/api/fuels`
 
 Todos los endpoints requieren autenticacion y permisos `fuels.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+El catalogo de combustibles es global. Los endpoints de lectura pueden usarse como catalogo de referencia desde modulos operativos. Crear, actualizar y desactivar combustibles requiere acceso global; no se ejecuta dentro de `X-Organization-Id` ni `X-Company-Id`.
+
 ## Modelo
 
 ```json
@@ -56,6 +58,8 @@ Requeridos: `code`, `name`. `code` se normaliza a mayusculas.
 
 Opcional: `status`.
 
+Requiere acceso global.
+
 Response `201`: `Fuel`.
 
 ## Obtener
@@ -72,11 +76,15 @@ Response `200`: `Fuel`.
 
 Acepta `code`, `name` y `status`, todos opcionales.
 
+Requiere acceso global.
+
 Response `200`: `Fuel` actualizado.
 
 ## Desactivar
 
 `DELETE /api/fuels/:id`
+
+Requiere acceso global.
 
 Response `200`:
 
@@ -89,10 +97,10 @@ Response `200`:
 
 ## Errores comunes
 
-| Estado | Caso                                             |
-| ------ | ------------------------------------------------ |
-| `400`  | Body, query o path params invalidos.             |
-| `401`  | Request sin autenticacion valida.                |
-| `403`  | Usuario autenticado sin el permiso requerido.    |
-| `404`  | Combustible no encontrado.                       |
-| `409`  | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                                              |
+| ------ | --------------------------------------------------------------------------------- |
+| `400`  | Body, query o path params invalidos.                                              |
+| `401`  | Request sin autenticacion valida.                                                 |
+| `403`  | Usuario autenticado sin el permiso requerido o sin acceso global para mutaciones. |
+| `404`  | Combustible no encontrado.                                                        |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                                  |

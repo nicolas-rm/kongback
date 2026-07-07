@@ -9,6 +9,8 @@ Base paths: `/api/notifications` y `/api/me/notifications`
 
 Todos los endpoints requieren autenticacion. Las notificaciones creadas por API se emiten tambien por Socket.IO mediante el gateway de notificaciones.
 
+`POST /api/notifications` es una accion administrativa global y requiere un acceso global con `notifications.create`. Los endpoints `/api/me/notifications` son personales: operan solo sobre la bandeja del usuario autenticado y pueden autorizarse con permisos efectivos del usuario.
+
 ## Modelo
 
 ```json

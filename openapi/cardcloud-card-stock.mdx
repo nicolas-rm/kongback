@@ -13,7 +13,7 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El stock no asignado tambien queda asociado a esa organizacion.
 
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y el stock queda limitado a registros asignados a tarjetas de esa compania. Como el stock no asignado no tiene `companyId` directo, para crear stock con `X-Company-Id` es obligatorio enviar `assignedCardId`.
+Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y el stock queda limitado a registros asignados a tarjetas de esa compania. Como el stock no asignado no tiene `companyId` directo, para crear stock con `X-Company-Id` es obligatorio enviar `assignedCardId` y en update no se permite dejarlo en `null`.
 
 ## Modelo
 
@@ -94,7 +94,7 @@ Response `200`: `CardcloudCardStock`.
 
 `PATCH /api/cardcloud-card-stock/:id`
 
-Acepta `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`, todos opcionales. Si se envia `X-Company-Id`, el registro actual debe pertenecer a esa compania y cualquier `assignedCardId` nuevo tambien debe pertenecer a esa compania.
+Acepta `assignedCardId`, `maskedPan`, `clientId`, `balance`, `providerStatus`, `syncedAt`, todos opcionales. Si se envia `X-Company-Id`, el registro actual debe pertenecer a esa compania y cualquier `assignedCardId` nuevo tambien debe pertenecer a esa compania. En ese contexto, `assignedCardId: null` es invalido porque moveria el registro a stock sin compania.
 
 Response `200`: `CardcloudCardStock` actualizado.
 

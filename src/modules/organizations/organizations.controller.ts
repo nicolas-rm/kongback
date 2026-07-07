@@ -1,10 +1,11 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUser, Permissions } from '@/decorators';
+import { CurrentUser, Permissions, RequireGlobalAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { AddOrganizationMemberDto, CreateOrganizationDto, FindOrganizationsDto, UpdateOrganizationDto } from '@/modules/organizations/dto';
 import { OrganizationsService } from '@/modules/organizations/services/organizations.service';
 
 @Controller('organizations')
+@RequireGlobalAccess()
 export class OrganizationsController {
     constructor(private readonly organizationsService: OrganizationsService) {}
 

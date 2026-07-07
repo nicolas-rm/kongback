@@ -13,7 +13,9 @@ Todos los endpoints requieren autenticacion y permisos `companies.*`. El borrado
 
 Requiere header `X-Organization-Id: <organizationId>`. Todas las operaciones quedan limitadas al workspace seleccionado. El backend valida que el usuario tenga acceso a esa organizacion y que este activa.
 
-Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y las lecturas, actualizaciones y desactivaciones quedan limitadas a esa compania. `POST /api/companies` crea una nueva compania dentro del workspace y no usa este header como relacion.
+Header de compania: `X-Company-Id: <companyId>`. Es opcional para usuarios con acceso completo al workspace y obligatorio para usuarios restringidos por compania. Debe ser una compania activa dentro del workspace y las lecturas, actualizaciones y desactivaciones quedan limitadas a esa compania.
+
+`POST /api/companies` crea una nueva compania dentro del workspace. Es una accion de alcance workspace: requiere usuario global o acceso completo al workspace. Un usuario restringido por compania no puede crear companias aunque tenga una compania seleccionada, porque el nuevo registro quedaria fuera de su alcance.
 
 ## Modelo
 
@@ -47,13 +49,13 @@ En listados, `address` no se devuelve para mantener el payload liviano. `address
 
 ## Endpoints
 
-| Metodo   | Ruta                 | Permiso               | Descripcion             |
-| -------- | -------------------- | --------------------- | ----------------------- |
-| `POST`   | `/api/companies`     | `companies.create`    | Crea una compania.      |
-| `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.        |
-| `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.   |
-| `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania. |
-| `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania. |
+| Metodo   | Ruta                 | Permiso               | Descripcion                        |
+| -------- | -------------------- | --------------------- | ---------------------------------- |
+| `POST`   | `/api/companies`     | `companies.create`    | Crea una compania en el workspace. |
+| `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.                   |
+| `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.              |
+| `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania.            |
+| `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania.            |
 
 ## Listado
 
@@ -94,6 +96,8 @@ Requeridos: `key`, `name`.
 
 Opcionales: `externalId`, `tradeName`, `status`, `address`. Strings vacios opcionales se transforman a `null`.
 
+Requiere acceso global o acceso completo al workspace. No crea la compania dentro de `X-Company-Id`; ese header solo aplica como filtro/alcance para usuarios que ya trabajan dentro de una compania existente.
+
 Response `201`: `Company` con `address`.
 
 ## Obtener
@@ -127,10 +131,10 @@ Response `200`:
 
 ## Errores comunes
 
-| Estado | Caso                                             |
-| ------ | ------------------------------------------------ |
-| `400`  | Body, query o path params invalidos.             |
-| `401`  | Request sin autenticacion valida.                |
-| `403`  | Usuario autenticado sin el permiso requerido.    |
-| `404`  | Compania no encontrada.                          |
-| `409`  | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------- |
+| `400`  | Body, query o path params invalidos.                                                        |
+| `401`  | Request sin autenticacion valida.                                                           |
+| `403`  | Usuario autenticado sin el permiso requerido o sin alcance suficiente para crear companias. |
+| `404`  | Compania no encontrada.                                                                     |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                                            |

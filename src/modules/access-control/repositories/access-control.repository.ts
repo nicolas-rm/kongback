@@ -7,7 +7,7 @@ import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-us
 export class AccessControlRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async findUserRoleLabels(userId: string, organizationId?: string, companyId?: string): Promise<string[]> {
+    async findUserRoleLabels(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
         const accesses = await this.prisma.userAccess.findMany({
             where: buildActiveUserAccessWhere({ userId }, organizationId, companyId),
             select: { role: { select: { code: true, name: true } } },
@@ -16,7 +16,7 @@ export class AccessControlRepository {
         return accesses.flatMap((entry) => [entry.role.code, entry.role.name]);
     }
 
-    async findUserPermissionCodes(userId: string, organizationId?: string, companyId?: string): Promise<string[]> {
+    async findUserPermissionCodes(userId: string, organizationId?: string | null, companyId?: string | null): Promise<string[]> {
         const rolePermissions = await this.prisma.rolePermission.findMany({
             where: {
                 role: { accesses: { some: buildActiveUserAccessWhere({ userId }, organizationId, companyId) } },

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AccessControlModule } from '@/modules/access-control/access-control.module';
 import { CardcloudCardStockController } from '@/modules/business/cardcloud-card-stock.controller';
 import { CardsController } from '@/modules/business/cards.controller';
 import { CompaniesController } from '@/modules/business/companies.controller';
@@ -30,6 +31,7 @@ import { SubCompaniesController } from '@/modules/business/sub-companies.control
 import { VehiclesController } from '@/modules/business/vehicles.controller';
 
 @Module({
+    imports: [AccessControlModule],
     controllers: [
         CompaniesController,
         SubCompaniesController,
