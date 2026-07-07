@@ -31,17 +31,18 @@ export class PermissionsGuard implements CanActivate {
         if (!user?.id) throw new I18nForbiddenException(I18N_KEYS.errors.authorization.unauthorized, 'Usuario no autorizado');
 
         const organizationId = requiresOrganization ? await this.resolveOrganizationId(request, user) : undefined;
+        const companyId = request.companyId;
         if (requiredPermissions.length === 0 && requiredRoles.length === 0) return true;
 
         if (requiredRoles.length > 0) {
-            const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, organizationId);
+            const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, organizationId, companyId);
             if (!hasRole) {
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }
         }
 
         if (requiredPermissions.length > 0) {
-            const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, organizationId);
+            const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, organizationId, companyId);
             if (!hasPermissions) {
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
             }
@@ -62,19 +63,26 @@ export class PermissionsGuard implements CanActivate {
         }
 
         (request as OrganizationRequest).organizationId = organizationId;
-        await this.resolveCompanyId(request, organizationId);
+        await this.resolveCompanyId(request, user, organizationId);
         return organizationId;
     }
 
-    private async resolveCompanyId(request: Request, organizationId: string): Promise<void> {
+    private async resolveCompanyId(request: Request, user: RequestUser, organizationId: string): Promise<void> {
         const companyId = request.get('x-company-id')?.trim();
-        if (!companyId) return;
+        if (!companyId) {
+            if (user.isGlobalAdmin || (await this.accessControl.userHasOrganizationWideAccess(user.id, organizationId))) return;
+            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'X-Company-Id requerido');
+        }
 
         if (!isUUID(companyId, '4')) {
             throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'X-Company-Id invalido');
         }
 
         if (!(await this.accessControl.companyIsActiveInOrganization(companyId, organizationId))) {
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.organizationDenied, 'Acceso denegado a esta compania');
+        }
+
+        if (!user.isGlobalAdmin && !(await this.accessControl.userCanAccessCompany(user.id, organizationId, companyId))) {
             throw new I18nForbiddenException(I18N_KEYS.errors.authorization.organizationDenied, 'Acceso denegado a esta compania');
         }
 
