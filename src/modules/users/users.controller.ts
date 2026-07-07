@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
-import { Permissions, RequireGlobalAccess } from '@/decorators';
+import { Permissions, RequireSystemAccess } from '@/decorators';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersService } from '@/modules/users/services/users.service';
 
 @Controller('users')
-@RequireGlobalAccess()
+@RequireSystemAccess()
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 

@@ -1,10 +1,10 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { Permissions, RequireGlobalAccess } from '@/decorators';
+import { Permissions, RequireSystemAccess } from '@/decorators';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { CreatePermissionDto, FindAccessControlDto, UpdatePermissionDto } from '@/modules/access-control/dto';
 
 @Controller('permissions')
-@RequireGlobalAccess()
+@RequireSystemAccess()
 export class PermissionsController {
     constructor(private readonly accessControlService: AccessControlService) {}
 

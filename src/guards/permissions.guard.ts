@@ -3,10 +3,10 @@ import { Reflector } from '@nestjs/core';
 import { isUUID } from 'class-validator';
 import type { Request } from 'express';
 import { COMPANY_CONTEXT_REQUIRED_KEY, type CompanyRequest } from '@/decorators/company-context.decorator';
-import { GLOBAL_ACCESS_REQUIRED_KEY } from '@/decorators/global-access.decorator';
 import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
+import { SYSTEM_ACCESS_REQUIRED_KEY } from '@/decorators/system-access.decorator';
 import { I18N_KEYS, I18nBadRequestException, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
@@ -25,7 +25,7 @@ export class PermissionsGuard implements CanActivate {
         const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]) ?? [];
         const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [context.getHandler(), context.getClass()]) ?? [];
         const requiresCompany = this.reflector.getAllAndOverride<boolean>(COMPANY_CONTEXT_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
-        const requiresGlobalAccess = this.reflector.getAllAndOverride<boolean>(GLOBAL_ACCESS_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
+        const requiresSystemAccess = this.reflector.getAllAndOverride<boolean>(SYSTEM_ACCESS_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
 
         const request = context.switchToHttp().getRequest<CompanyRequest & { user?: RequestUser }>();
         const user = request.user;
@@ -33,7 +33,7 @@ export class PermissionsGuard implements CanActivate {
 
         await this.resolveCompanyId(request, user, requiresCompany);
         const companyId = request.companyId;
-        const accessCompanyId = requiresGlobalAccess ? null : companyId;
+        const accessCompanyId = requiresSystemAccess ? null : companyId;
         if (requiredPermissions.length === 0 && requiredRoles.length === 0) return true;
 
         if (requiredRoles.length > 0) {
