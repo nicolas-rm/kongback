@@ -360,7 +360,7 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             description: 'Administra los modulos operativos principales dentro de una compania.',
             prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.'],
             extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
-            excludePermissionCodes: ['companies.create', 'companies.delete'],
+            excludePermissionCodes: ['companies.create', 'companies.update', 'companies.delete'],
         },
         {
             code: 'demo-company-viewer',
