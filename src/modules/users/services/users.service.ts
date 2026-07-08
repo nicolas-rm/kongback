@@ -23,17 +23,24 @@ export class UsersService {
         const access = dto.access ? this.resolveAccessInput(dto.access) : undefined;
         if (access) await this.assertAccessTargetsActive([access]);
 
+        const password = dto.password ?? generateSecurePassword();
+        const mustChangePassword = !dto.password;
         const user = await this.repository.create(
             {
                 username: dto.username,
                 email: dto.email,
                 fullName: dto.fullName,
-                passwordHash: await this.cryptoService.hashPassword(dto.password),
+                passwordHash: await this.cryptoService.hashPassword(password),
                 status: dto.status ?? 'active',
+                mustChangePassword,
                 preferredLanguage: dto.preferredLanguage ?? 'es',
             },
             access
         );
+        if (mustChangePassword) {
+            await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id, language: user.preferredLanguage });
+        }
+
         return UserResponse.from(user);
     }
 
