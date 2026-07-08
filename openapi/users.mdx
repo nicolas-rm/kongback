@@ -16,7 +16,7 @@ Esta API es mixta:
 - En contexto de compania, los listados y lecturas solo devuelven usuarios con acceso directo a esa compania. No mezclan usuarios de otras companias.
 - En contexto de compania, asignar/reemplazar/eliminar accesos solo afecta accesos de esa compania. No permite crear accesos globales ni accesos para otra compania.
 - Si el acceso del usuario autenticado esta limitado con `scopeKey: "subCompanyId"`, los endpoints mixtos solo muestran y administran accesos de esas subcompanias.
-- Crear usuarios, editar datos base, eliminar usuarios, cambiar contrasena, desvincular 2FA y reenviar credenciales siguen siendo operaciones globales.
+- Crear usuarios, editar datos base, eliminar usuarios, cambiar contrasena, desvincular 2FA y reenviar credenciales siguen siendo operaciones globales. Al crear usuario se puede enviar un acceso inicial opcional para relacionarlo con una compania desde el alta.
 
 ## Modelos
 
@@ -124,18 +124,29 @@ Requiere `users.create`.
     "fullName": "Admin User",
     "password": "Secret123",
     "status": "active",
-    "preferredLanguage": "es"
+    "preferredLanguage": "es",
+    "access": {
+        "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
+        "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
+        "scopeKey": null,
+        "scopeId": null
+    }
 }
 ```
 
-| Campo               | Tipo                              | Requerido | Reglas                                                         |
-| ------------------- | --------------------------------- | --------- | -------------------------------------------------------------- |
-| `username`          | `string`                          | Si        | Se recorta y colapsa espacios.                                 |
-| `email`             | `string`                          | Si        | Se recorta, colapsa espacios y normaliza a minusculas.         |
-| `fullName`          | `string`                          | Si        | Se recorta y colapsa espacios.                                 |
-| `password`          | `string`                          | Si        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. |
-| `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                     |
-| `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.              |
+| Campo               | Tipo                              | Requerido | Reglas                                                                     |
+| ------------------- | --------------------------------- | --------- | -------------------------------------------------------------------------- |
+| `username`          | `string`                          | Si        | Se recorta y colapsa espacios.                                             |
+| `email`             | `string`                          | Si        | Se recorta, colapsa espacios y normaliza a minusculas.                     |
+| `fullName`          | `string`                          | Si        | Se recorta y colapsa espacios.                                             |
+| `password`          | `string`                          | Si        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero.             |
+| `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                                 |
+| `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.                          |
+| `access`            | `object`                          | No        | Acceso inicial del usuario. Usa el mismo contrato de asignacion de acceso. |
+
+Si `access` se envia, el backend crea el usuario y el acceso en una sola transaccion. `access.roleId` es requerido dentro de ese objeto. `access.companyId` puede ser `null` para acceso global o el UUID de una compania activa. Para limitarlo a una subcompania, usa `scopeKey: "subCompanyId"` y `scopeId` con el UUID de una subcompania activa perteneciente a esa compania.
+
+El front debe enviar roles, no permisos individuales. Los permisos efectivos salen de los roles asignados.
 
 ### Response `201`
 

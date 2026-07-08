@@ -8,10 +8,23 @@ import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/co
 export class UsersRepository {
     constructor(protected readonly prisma: PrismaService) {}
 
-    create(data: Prisma.UserUncheckedCreateInput) {
-        return this.prisma.user.create({
-            data,
-            select: this.defaultSelect(),
+    create(data: Prisma.UserUncheckedCreateInput, access?: Omit<Prisma.UserAccessUncheckedCreateInput, 'userId'>) {
+        return this.prisma.$transaction(async (tx) => {
+            const user = await tx.user.create({
+                data,
+                select: this.defaultSelect(),
+            });
+
+            if (access) {
+                await tx.userAccess.create({
+                    data: {
+                        ...access,
+                        userId: user.id,
+                    },
+                });
+            }
+
+            return user;
         });
     }
 

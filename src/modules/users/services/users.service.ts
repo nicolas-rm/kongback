@@ -20,14 +20,20 @@ export class UsersService {
     ) {}
 
     async create(dto: CreateUserDto) {
-        const user = await this.repository.create({
-            username: dto.username,
-            email: dto.email,
-            fullName: dto.fullName,
-            passwordHash: await this.cryptoService.hashPassword(dto.password),
-            status: dto.status ?? 'active',
-            preferredLanguage: dto.preferredLanguage ?? 'es',
-        });
+        const access = dto.access ? this.resolveAccessInput(dto.access) : undefined;
+        if (access) await this.assertAccessTargetsActive([access]);
+
+        const user = await this.repository.create(
+            {
+                username: dto.username,
+                email: dto.email,
+                fullName: dto.fullName,
+                passwordHash: await this.cryptoService.hashPassword(dto.password),
+                status: dto.status ?? 'active',
+                preferredLanguage: dto.preferredLanguage ?? 'es',
+            },
+            access
+        );
         return UserResponse.from(user);
     }
 
