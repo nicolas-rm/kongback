@@ -132,6 +132,8 @@ Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con c
 
 Este modulo administra clientes/tenants. No debe depender de la compania seleccionada y no debe enviar `X-Company-Id`.
 
+No generes un modulo separado de `workspaces`. En este proyecto, la compania es el tenant/cliente operativo. El selector de contexto del usuario debe mostrar companias accesibles, no workspaces independientes.
+
 Campos recomendados para formularios:
 
 - Clave: `key`.

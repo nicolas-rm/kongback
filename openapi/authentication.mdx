@@ -661,6 +661,8 @@ Para construir formularios desde esta documentacion, aplica tambien las reglas d
 
 Este modulo no es CRUD de catalogo, pero aplica las reglas de `Frontend Guidelines` para formularios y acciones: renderiza solo campos necesarios, no persistas secretos, confirma acciones sensibles y refresca estado de sesion, companias o capacidades despues de mutaciones.
 
+No generes una pagina de menu llamada `authentication`. Estos endpoints deben alimentar pantallas o componentes concretos: login, perfil, seguridad, sesiones, recuperacion de contrasena, selector de compania y carga de capacidades.
+
 Para aplicaciones web, prefiere cookies HttpOnly con requests usando credenciales incluidas. Si usas cookies, no necesitas guardar tokens en storage del navegador.
 
 Campos y datos que no deben mostrarse o persistirse como datos de UI normal:

@@ -129,6 +129,8 @@ Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con c
 
 El front debe enviar `X-Company-Id`. `subCompanyId` debe venir de un select de subcompanias disponibles para la compania seleccionada y el alcance del usuario.
 
+Los combustibles disponibles de una estacion no se capturan en el formulario base de estacion. En el detalle o edicion de estacion, agrega una seccion `Combustibles disponibles` que consuma `GET /api/station-fuels?stationId=<id>` y use `POST`, `PATCH` o `DELETE /api/station-fuels` para administrar la relacion. No debe existir una pagina principal separada para `station-fuels` en el menu del frontend.
+
 Campos recomendados para formularios:
 
 - Subcompania: `subCompanyId`.

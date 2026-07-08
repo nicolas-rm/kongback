@@ -469,6 +469,10 @@ Mapeo de alcance:
 
 No muestres `scopeKey` ni `scopeId` como campos editables con esos nombres. Son campos tecnicos del backend; en UI deben representarse como `Alcance` y `Subcompania`.
 
+La edicion de datos base del usuario no debe mezclar roles ni alcances. Usa `PATCH /api/users/:id` solo para nombre, usuario, correo, estado, idioma o `mustChangePassword`; administra roles y companias desde una seccion separada `Accesos` con `/api/users/:id/access`.
+
+Las acciones sensibles tambien deben ser acciones separadas: `PATCH /api/users/:id/password` para cambiar contrasena, `PATCH /api/users/:id/2fa/unlink` para desvincular 2FA y `POST /api/users/:id/resend-credentials` para reenviar credenciales.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                        |

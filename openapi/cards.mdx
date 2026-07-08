@@ -192,6 +192,8 @@ No muestres `assignmentMode` como campo editable. Es un estado derivado por back
 
 Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcompania. Para quitar asignacion, usa la accion dedicada `PATCH /api/cards/:id/unassign`.
 
+Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignacion como accion posterior. Si se crea desde el detalle de un vehiculo, deriva `vehicleId`, `subCompanyId` y `assignedAt` desde ese contexto cuando aplique.
+
 ## Errores comunes
 
 | Estado | Caso                                                      |

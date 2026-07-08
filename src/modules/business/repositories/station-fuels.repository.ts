@@ -7,8 +7,14 @@ import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/com
 export class StationFuelsRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    create(data: Prisma.StationFuelUncheckedCreateInput) {
-        return this.prisma.stationFuel.create({ data, select: this.select() });
+    createOrReactivate(data: Prisma.StationFuelUncheckedCreateInput) {
+        const status = data.status ?? Status.active;
+        return this.prisma.stationFuel.upsert({
+            where: { stationId_fuelId: { stationId: data.stationId, fuelId: data.fuelId } },
+            create: { ...data, status },
+            update: { status },
+            select: this.select(),
+        });
     }
 
     findMany(where: Prisma.StationFuelWhereInput, skip: number, take?: number) {

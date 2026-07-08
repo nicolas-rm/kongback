@@ -190,6 +190,8 @@ Campos recomendados para formularios:
 
 El front no debe generar permisos dinamicos por modulo ni permitir que usuarios de compania creen permisos. El catalogo de permisos es fuente de verdad del backend y se asigna a roles.
 
+Esta pagina es opcional para el producto final y normalmente solo se muestra a super administradores. Si el front no expone mantenimiento tecnico de RBAC, usa `GET /api/permissions` solo como fuente para el selector de permisos dentro de roles.
+
 En pantallas de usuarios, no muestres permisos como controles editables; muestra roles. Los permisos efectivos pueden mostrarse solo como lectura avanzada o diagnostico.
 
 ## Errores comunes

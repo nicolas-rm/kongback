@@ -103,6 +103,8 @@ Devuelve `Notification` actualizada.
 
 Este modulo no es CRUD tradicional para usuarios finales, pero aplica las reglas de `Frontend Guidelines` para acciones: crear notificaciones solo desde flujos administrativos, marcar leidas con endpoints dedicados y refrescar conteos/listados despues de cada mutacion.
 
+No generes una pantalla CRUD principal de `notifications` para usuarios finales. Usa estos endpoints para la campana, bandeja personal, contador de no leidas y acciones de lectura.
+
 Los endpoints `/api/me/notifications` son personales. No requieren selector de usuario ni `X-Company-Id`.
 
 Para la bandeja de notificaciones:

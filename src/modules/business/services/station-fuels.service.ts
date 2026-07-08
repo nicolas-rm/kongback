@@ -20,7 +20,7 @@ export class StationFuelsService {
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
-        return this.repository.create({
+        return this.repository.createOrReactivate({
             stationId: dto.stationId,
             fuelId: dto.fuelId,
             status: dto.status ?? Status.active,

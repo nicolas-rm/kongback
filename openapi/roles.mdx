@@ -250,6 +250,8 @@ Campos recomendados para formularios:
 
 No permitas asignar permisos sueltos directamente a usuarios desde el front. El flujo correcto es asignar permisos a roles y luego asignar roles a usuarios.
 
+No generes una pagina separada para `/api/roles/:id/permissions`. La lectura y reemplazo de permisos debe vivir dentro de crear/editar/detalle de rol.
+
 Para usuarios no tecnicos, muestra `name` como etiqueta principal del rol y deja `code` como dato secundario o tecnico.
 
 ## Errores comunes

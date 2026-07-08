@@ -166,6 +166,8 @@ Campos recomendados para formularios:
 
 No muestres `fuelId`, `driverId` ni `subCompanyId` como campos de texto. En tablas usa `fuel.name`, `driver.name` y `subCompany.name`.
 
+Cuando el usuario solo quiera asignar o quitar conductor, usa la accion dedicada `PATCH /api/vehicles/:id/driver`. Reserva `PATCH /api/vehicles/:id` para cambios generales del vehiculo.
+
 ## Errores comunes
 
 | Estado | Caso                                                           |

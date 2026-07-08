@@ -9,6 +9,8 @@ Base path: `/api/station-fuels`
 
 Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
 
+Este es un modulo tecnico de relacion entre estaciones y combustibles. No debe renderizarse como pagina principal del frontend ni como opcion de menu; debe consumirse dentro del detalle o edicion de una estacion.
+
 ## Alcance por compania
 
 Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, `stationId` y la relacion consultada tambien deben pertenecer a una de esas subcompanias.
@@ -74,6 +76,8 @@ Requeridos: `stationId`, `fuelId`. `stationId` debe estar activo y pertenecer a 
 
 Opcional: `status`.
 
+Si ya existe una relacion con el mismo `stationId` y `fuelId`, el backend no crea una fila nueva. Reactiva o actualiza la relacion existente con el `status` enviado, usando `active` por defecto. Esto permite volver a agregar desde el tab de combustibles una relacion que antes fue desactivada.
+
 Response `201`: `StationFuel`.
 
 ## Obtener
@@ -116,6 +120,12 @@ Response `200`:
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
 El front debe enviar `X-Company-Id`. `stationId` debe venir de estaciones activas visibles para la compania y alcance seleccionados; `fuelId` viene del catalogo global de combustibles activos.
+
+Este modulo normalmente se consume como seccion hija de una estacion: `Combustibles disponibles`. Para agregar un combustible a una estacion, crea la relacion con `stationId` y `fuelId`; para quitarlo de la vista operativa, desactiva o elimina la relacion segun la accion disponible en UI.
+
+No generes una pantalla CRUD independiente para `station-fuels`. El usuario debe llegar a estas acciones desde `Estaciones > Detalle/Editar > Combustibles disponibles`.
+
+Si el usuario vuelve a agregar un combustible que habia quitado de la estacion, llama nuevamente `POST /api/station-fuels` con el mismo `stationId` y `fuelId`; no intentes crear una variante local ni cambiar IDs. El backend reactivara la relacion existente.
 
 Campos recomendados para formularios:
 

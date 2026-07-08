@@ -101,6 +101,8 @@ Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con c
 
 Este catalogo es global. No envies `X-Company-Id` para crear, actualizar o desactivar combustibles.
 
+La pantalla de combustibles es opcional segun permisos/producto. Si el usuario no administra catalogos globales, usa `GET /api/fuels` solo como fuente de selects para vehiculos, tarjetas y combustibles disponibles en estaciones.
+
 Campos recomendados para formularios:
 
 - Codigo: `code`.

@@ -47,6 +47,8 @@ Si la base de datos falla, el response mantiene formato y devuelve:
 
 Este endpoint no tiene CRUD. Aplica las reglas de `Frontend Guidelines` solo para consumo de estado: no renderices formularios, no envies headers de compania y no muestres detalles tecnicos a usuarios finales.
 
+No generes pagina de operacion ni item de menu para `health`. Si se usa en UI, debe ser una vista tecnica interna o monitoreo fuera del flujo normal del usuario.
+
 Este endpoint es para monitoreo, splash tecnico o verificacion de disponibilidad. No requiere autenticacion, `X-Company-Id` ni permisos.
 
 Para UI:
