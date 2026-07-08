@@ -118,6 +118,42 @@ export class AccessControlRepository {
         });
     }
 
+    findUserCompanyScopeAccesses(userId: string, companyId: string, permissionCodes: string[], roleLabels: string[]) {
+        return this.prisma.userAccess.findMany({
+            where: {
+                AND: [
+                    buildActiveUserAccessWhere({ userId }, companyId),
+                    permissionCodes.length > 0 || roleLabels.length > 0
+                        ? {
+                              role: {
+                                  OR: [
+                                      ...(permissionCodes.length > 0 ? [{ permissions: { some: { permission: { code: { in: permissionCodes } } } } }] : []),
+                                      ...(roleLabels.length > 0 ? [{ code: { in: roleLabels } }, { name: { in: roleLabels } }] : []),
+                                  ],
+                              },
+                          }
+                        : {},
+                ],
+            },
+            select: { companyId: true, scopeKey: true, scopeId: true },
+        });
+    }
+
+    async findActiveSubCompanyScopeIds(companyId: string, subCompanyIds: string[]): Promise<string[]> {
+        if (subCompanyIds.length === 0) return [];
+
+        const subCompanies = await this.prisma.subCompany.findMany({
+            where: {
+                id: { in: subCompanyIds },
+                companyId,
+                status: 'active',
+            },
+            select: { id: true },
+        });
+
+        return subCompanies.map((subCompany) => subCompany.id);
+    }
+
     findPermissions(where: Prisma.PermissionWhereInput, skip: number, take?: number) {
         return this.prisma.permission.findMany({ where, skip, take, orderBy: { createdAt: 'desc' }, select: this.permissionSelect() });
     }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignRolePermissionsDto, CreatePermissionDto, CreateRoleDto, FindAccessControlDto, UpdatePermissionDto, UpdateRoleDto } from '@/modules/access-control/dto';
 import { AccessControlRepository } from '@/modules/access-control/repositories/access-control.repository';
 import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@/modules/access-control/responses';
@@ -39,6 +40,20 @@ export class AccessControlService {
 
     async userCanAccessCompany(userId: string, companyId: string): Promise<boolean> {
         return (await this.repository.countUserCompanyAccesses(userId, companyId)) > 0;
+    }
+
+    async resolveCompanyScope(userId: string, companyId: string, permissionCodes: string[], roleLabels: string[]): Promise<CompanyScope | null> {
+        const accesses = await this.repository.findUserCompanyScopeAccesses(userId, companyId, permissionCodes, roleLabels);
+        const hasCompanyWideAccess = accesses.some((access) => !access.companyId || (!access.scopeKey && !access.scopeId));
+        if (hasCompanyWideAccess) return { companyId };
+
+        const subCompanyIds = [
+            ...new Set(accesses.filter((access) => access.companyId === companyId && access.scopeKey === SUB_COMPANY_SCOPE_KEY && access.scopeId).map((access) => access.scopeId as string)),
+        ];
+        const activeSubCompanyIds = await this.repository.findActiveSubCompanyScopeIds(companyId, subCompanyIds);
+        if (activeSubCompanyIds.length === 0) return null;
+
+        return { companyId, subCompanyIds: activeSubCompanyIds };
     }
 
     async createRole(dto: CreateRoleDto) {

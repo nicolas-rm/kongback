@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { activeRecordWhere, softDeleteData } from '@/utilities/prisma/soft-delete';
+import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class DocumentsRepository {
@@ -19,13 +20,13 @@ export class DocumentsRepository {
         return this.prisma.document.count({ where });
     }
 
-    findById(id: string, companyId?: string) {
-        return this.prisma.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, companyId)), select: this.publicSelect() });
+    findById(id: string, scope?: CompanyScope) {
+        return this.prisma.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, scope)), select: this.publicSelect() });
     }
 
-    findDownloadById(id: string, companyId?: string) {
+    findDownloadById(id: string, scope?: CompanyScope) {
         return this.prisma.document.findFirst({
-            where: activeRecordWhere(this.scopeWhere(id, companyId)),
+            where: activeRecordWhere(this.scopeWhere(id, scope)),
             select: {
                 id: true,
                 originalName: true,
@@ -35,26 +36,27 @@ export class DocumentsRepository {
         });
     }
 
-    update(id: string, data: Prisma.DocumentUncheckedUpdateManyInput, companyId?: string) {
+    update(id: string, data: Prisma.DocumentUncheckedUpdateManyInput, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.document.updateMany({ where: activeRecordWhere(this.scopeWhere(id, companyId)), data });
+            const result = await tx.document.updateMany({ where: activeRecordWhere(this.scopeWhere(id, scope)), data });
             if (result.count === 0) return null;
 
-            return tx.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, companyId)), select: this.publicSelect() });
+            return tx.document.findFirst({ where: activeRecordWhere(this.scopeWhere(id, scope)), select: this.publicSelect() });
         });
     }
 
-    softDelete(id: string, userId?: string | null, companyId?: string) {
+    softDelete(id: string, userId?: string | null, scope?: CompanyScope) {
         return this.prisma.document.updateMany({
-            where: activeRecordWhere(this.scopeWhere(id, companyId)),
+            where: activeRecordWhere(this.scopeWhere(id, scope)),
             data: softDeleteData(userId ?? null),
         });
     }
 
-    private scopeWhere(id: string, companyId?: string): Prisma.DocumentWhereInput {
+    private scopeWhere(id: string, scope?: CompanyScope): Prisma.DocumentWhereInput {
         return {
             id,
-            ...(companyId ? { companyId } : {}),
+            ...(scope?.companyId ? { companyId: scope.companyId } : {}),
+            ...(scope?.subCompanyIds ? { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds } } : {}),
         };
     }
 

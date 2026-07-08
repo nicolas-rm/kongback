@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CardAssignmentMode, Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
 import { AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, UpdateCardDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
@@ -15,16 +16,16 @@ export class CardsService {
         private readonly vehicles: VehiclesRepository
     ) {}
 
-    async create(dto: CreateCardDto, companyId?: string) {
+    async create(dto: CreateCardDto, scope?: CompanyScope) {
         const assignmentMode = dto.vehicleId ? CardAssignmentMode.vehicle : CardAssignmentMode.unassigned;
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, companyId) },
-            { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, companyId) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) },
+            { ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, scope) },
             { ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
         if (dto.vehicleId) {
-            const vehicle = await this.vehicles.findById(dto.vehicleId, companyId);
+            const vehicle = await this.vehicles.findById(dto.vehicleId, scope);
             if (!vehicle || vehicle.subCompanyId !== dto.subCompanyId) throw invalidRelation();
             if (dto.designFuelId && vehicle.fuelId !== dto.designFuelId) throw invalidRelation();
         }
@@ -40,10 +41,10 @@ export class CardsService {
         });
     }
 
-    async findAll(dto: FindCardsDto, companyId?: string) {
+    async findAll(dto: FindCardsDto, scope?: CompanyScope) {
         const where: Prisma.CardWhereInput = {
-            subCompanyId: dto.subCompanyId,
-            subCompany: { company: { ...(companyId ? { id: companyId } : {}) } },
+            subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope),
+            subCompany: subCompanyScopeWhere(scope),
             vehicleId: dto.vehicleId,
             designFuelId: dto.designFuelId,
             assignmentMode: dto.assignmentMode,
@@ -54,17 +55,17 @@ export class CardsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string, companyId?: string) {
-        const card = await this.repository.findById(id, companyId);
+    async findOne(id: string, scope?: CompanyScope) {
+        const card = await this.repository.findById(id, scope);
         if (!card) throw notFound();
         return card;
     }
 
-    async findByDesignFuel(designFuelId: string, dto: FindStatusRecordsDto, companyId?: string) {
+    async findByDesignFuel(designFuelId: string, dto: FindStatusRecordsDto, scope?: CompanyScope) {
         await assertActive([{ ids: [designFuelId], count: (ids) => this.relations.countActiveFuels(ids) }]);
 
         const where: Prisma.CardWhereInput = {
-            subCompany: { company: { ...(companyId ? { id: companyId } : {}) } },
+            subCompany: subCompanyScopeWhere(scope),
             designFuelId,
             status: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardWhereInput>(dto.search, ['externalId']) } : {}),
@@ -73,14 +74,14 @@ export class CardsService {
         return paginate(data, total, dto);
     }
 
-    async update(id: string, dto: UpdateCardDto, companyId?: string) {
-        const current = await this.repository.findById(id, companyId);
+    async update(id: string, dto: UpdateCardDto, scope?: CompanyScope) {
+        const current = await this.repository.findById(id, scope);
         if (!current) throw notFound();
 
         await assertActive([{ ids: [dto.designFuelId], count: (ids) => this.relations.countActiveFuels(ids) }]);
 
         if (dto.designFuelId && current.vehicleId) {
-            const vehicle = await this.vehicles.findById(current.vehicleId, companyId);
+            const vehicle = await this.vehicles.findById(current.vehicleId, scope);
             if (!vehicle || vehicle.fuelId !== dto.designFuelId) throw invalidRelation();
         }
 
@@ -90,25 +91,25 @@ export class CardsService {
             status: dto.status,
         };
 
-        const card = await this.repository.update(id, data, companyId);
+        const card = await this.repository.update(id, data, scope);
         if (!card) throw notFound();
         return card;
     }
 
-    async deactivate(id: string, companyId?: string) {
-        const card = await this.repository.deactivate(id, companyId);
+    async deactivate(id: string, scope?: CompanyScope) {
+        const card = await this.repository.deactivate(id, scope);
         if (!card) throw notFound();
         return { id: card.id, status: card.status };
     }
 
-    async assignVehicle(id: string, dto: AssignCardVehicleDto, companyId?: string) {
-        const current = await this.repository.findById(id, companyId);
+    async assignVehicle(id: string, dto: AssignCardVehicleDto, scope?: CompanyScope) {
+        const current = await this.repository.findById(id, scope);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
-        await assertActive([{ ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, companyId) }]);
+        await assertActive([{ ids: [dto.vehicleId], count: (ids) => this.relations.countActiveVehicles(ids, scope) }]);
 
-        const vehicle = await this.vehicles.findById(dto.vehicleId, companyId);
+        const vehicle = await this.vehicles.findById(dto.vehicleId, scope);
         if (!vehicle || vehicle.subCompanyId !== current.subCompanyId) throw invalidRelation();
         if (current.designFuelId && vehicle.fuelId !== current.designFuelId) throw invalidRelation();
 
@@ -120,14 +121,14 @@ export class CardsService {
                 assignmentMode: CardAssignmentMode.vehicle,
                 assignedAt,
             },
-            companyId
+            scope
         );
         if (!card) throw notFound();
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
     }
 
-    async unassign(id: string, companyId?: string) {
-        const current = await this.repository.findById(id, companyId);
+    async unassign(id: string, scope?: CompanyScope) {
+        const current = await this.repository.findById(id, scope);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
@@ -138,7 +139,7 @@ export class CardsService {
                 assignmentMode: CardAssignmentMode.unassigned,
                 assignedAt: null,
             },
-            companyId
+            scope
         );
         if (!card) throw notFound();
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };

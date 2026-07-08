@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentCompanyId, Permissions, RequireCompany } from '@/decorators';
+import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateSubCompanyDto, FindSubCompaniesDto, UpdateSubCompanyDto } from '@/modules/business/dto';
 import { SubCompaniesService } from '@/modules/business/services/sub-companies.service';
 
@@ -10,31 +11,31 @@ export class SubCompaniesController {
 
     @Post()
     @Permissions('sub-companies.create')
-    create(@CurrentCompanyId() companyId: string | undefined, @Body() dto: CreateSubCompanyDto) {
-        return this.subCompaniesService.create(dto, companyId);
+    create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateSubCompanyDto) {
+        return this.subCompaniesService.create(dto, scope);
     }
 
     @Get()
     @Permissions('sub-companies.read-list')
-    findAll(@CurrentCompanyId() companyId: string | undefined, @Query() dto: FindSubCompaniesDto) {
-        return this.subCompaniesService.findAll(dto, companyId);
+    findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindSubCompaniesDto) {
+        return this.subCompaniesService.findAll(dto, scope);
     }
 
     @Get(':id')
     @Permissions('sub-companies.read-one')
-    findOne(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.subCompaniesService.findOne(id, companyId);
+    findOne(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.subCompaniesService.findOne(id, scope);
     }
 
     @Patch(':id')
     @Permissions('sub-companies.update')
-    update(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSubCompanyDto) {
-        return this.subCompaniesService.update(id, dto, companyId);
+    update(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSubCompanyDto) {
+        return this.subCompaniesService.update(id, dto, scope);
     }
 
     @Delete(':id')
     @Permissions('sub-companies.delete')
-    remove(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.subCompaniesService.deactivate(id, companyId);
+    remove(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.subCompaniesService.deactivate(id, scope);
     }
 }
