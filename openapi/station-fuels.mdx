@@ -111,6 +111,20 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id`. `stationId` debe venir de estaciones activas visibles para la compania y alcance seleccionados; `fuelId` viene del catalogo global de combustibles activos.
+
+Campos recomendados para formularios:
+
+- Estacion: `stationId`.
+- Combustible: `fuelId`.
+- Estado: `status`, con `active` como valor inicial.
+
+En tablas usa `station.name` y `fuel.name`; no muestres `stationId` ni `fuelId` como columnas principales. Este modulo no requiere busqueda textual, solo filtros por estacion, combustible y estado.
+
 ## Errores comunes
 
 | Estado | Caso                                             |

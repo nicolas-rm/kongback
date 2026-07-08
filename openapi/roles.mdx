@@ -235,6 +235,23 @@ Devuelve los permisos asignados al rol, ordenados por `code`.
 
 Comportamiento actual: si el rol no existe, devuelve `null`.
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar rol`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
+
+Esta pantalla debe tratarse como administracion global. No envies `X-Company-Id` en estos endpoints.
+
+Campos recomendados para formularios:
+
+- Codigo: `code`, identificador tecnico estable del rol.
+- Nombre: `name`, etiqueta visible para administradores.
+- Descripcion: `description`, opcional.
+- Permisos: selector multiple que envie `permissionIds`.
+
+No permitas asignar permisos sueltos directamente a usuarios desde el front. El flujo correcto es asignar permisos a roles y luego asignar roles a usuarios.
+
+Para usuarios no tecnicos, muestra `name` como etiqueta principal del rol y deja `code` como dato secundario o tecnico.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                   |

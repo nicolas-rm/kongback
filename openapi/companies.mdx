@@ -126,6 +126,27 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+Este modulo administra clientes/tenants. No debe depender de la compania seleccionada y no debe enviar `X-Company-Id`.
+
+Campos recomendados para formularios:
+
+- Clave: `key`.
+- Nombre legal: `name`.
+- Nombre comercial: `tradeName`.
+- Estado: `status`, con `active` como valor inicial.
+- Direccion: grupo colapsable u opcional basado en `address`.
+
+Campos que pueden omitirse si el negocio no los usa en pantalla:
+
+- `externalId`: mostrar como `ID externo` solo si hay integracion o migracion que lo requiera.
+- `address`: no pedirlo en alta rapida; puede capturarse despues desde editar.
+
+Para selector de compania del usuario autenticado, usa `GET /api/authentication/companies`. Usa `GET /api/companies` para administracion/catalogo de companias.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                        |

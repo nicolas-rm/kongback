@@ -655,6 +655,30 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 7. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, companias y endpoints marcados como permitidos arriba.
 8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
 
+Para construir formularios desde esta documentacion, aplica tambien las reglas de `Frontend Guidelines`: no todos los campos del contrato deben mostrarse como controles visibles; algunos se omiten por default, se derivan del contexto o se traducen a nombres de UI.
+
+## Notas para frontend
+
+Este modulo no es CRUD de catalogo, pero aplica las reglas de `Frontend Guidelines` para formularios y acciones: renderiza solo campos necesarios, no persistas secretos, confirma acciones sensibles y refresca estado de sesion, companias o capacidades despues de mutaciones.
+
+Para aplicaciones web, prefiere cookies HttpOnly con requests usando credenciales incluidas. Si usas cookies, no necesitas guardar tokens en storage del navegador.
+
+Campos y datos que no deben mostrarse o persistirse como datos de UI normal:
+
+- `accessToken` y `refreshToken`: si usas cookies, tratarlos como detalle tecnico de respuesta.
+- `challengeToken`: conservarlo solo durante el flujo 2FA.
+- `recoveryCodes`: mostrarlos una sola vez al usuario y no persistirlos en estado global.
+- `otpAuthenticationUrl` y `secret`: usarlos solo para configurar 2FA.
+
+Para seleccion de compania:
+
+- Usa `GET /api/authentication/companies` para llenar el selector.
+- Guarda internamente el `id` seleccionado y mandalo como `X-Company-Id`.
+- Muestra `name` y `key`; no muestres el UUID como etiqueta principal.
+- Despues de cambiar compania, vuelve a consultar `GET /api/authentication/capabilities` con el nuevo header.
+
+Para UI de permisos, usa `capabilities.permissions` como lista de acciones habilitadas. No infieras permisos por rol visible ni por nombre de usuario.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                                         |

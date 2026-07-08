@@ -95,6 +95,22 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+Este catalogo es global. No envies `X-Company-Id` para crear, actualizar o desactivar combustibles.
+
+Campos recomendados para formularios:
+
+- Codigo: `code`.
+- Nombre: `name`.
+- Estado: `status`, con `active` como valor inicial.
+
+El `code` se normaliza a mayusculas en backend. En formularios puedes transformar visualmente a mayusculas, pero conserva la validacion del backend como fuente de verdad.
+
+En modulos operativos, usa combustibles activos como opciones de select y muestra `name` con `code` como apoyo visual.
+
 ## Errores comunes
 
 | Estado | Caso                                                                              |

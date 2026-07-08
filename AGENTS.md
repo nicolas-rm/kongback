@@ -86,6 +86,10 @@ Cuando haya duda sobre una API, patron o decorador del framework, verifica la do
 
 - Los endpoints deben usar DTO validation, responses tipadas y codigos HTTP correctos.
 - Manten la documentacion OpenAPI en `openapi/` actualizada cuando cambien rutas, DTOs, responses, parametros, filtros, auth, permisos o codigos de error de endpoints REST.
+- Cuando actualices `openapi/`, conserva el contrato completo del endpoint, pero separa claramente lo que es DTO tecnico de lo que debe renderizar el frontend. Si un campo puede omitirse con seguridad, tiene default de backend, es tecnico, o debe mostrarse con otro nombre, agrega una seccion `Notas para frontend` al final del MDX afectado.
+- En esas notas para frontend, indica campos visibles recomendados, campos omitibles, campos que el front debe derivar automaticamente y nombres de UI esperados. Ejemplos: no pedir `preferredLanguage` por defecto si backend usa `es`; no pedir contrasena temporal si backend puede generarla; mostrar `Alcance` y `Subcompania` en vez de `scopeKey` y `scopeId`.
+- Documenta tambien reglas CRUD para frontend cuando aplique: campos esperados al crear, campos editables al actualizar, campos solo lectura, comportamiento de eliminar/desactivar, refresh de listados, uso de confirmaciones y acciones que deben ocultarse segun `capabilities`.
+- No elimines informacion de endpoints para simplificar el front. Manten tablas de parametros/body/responses completas y agrega aclaraciones de UI al final o en una guia transversal.
 - Manten versioning, naming y rutas consistentes con los controllers existentes.
 - Usa paginacion, filtros y sorting estandarizados para listados.
 - No filtres datos sensibles solo en el frontend; serializa responses seguras desde backend.

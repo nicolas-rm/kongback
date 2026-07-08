@@ -123,6 +123,23 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+Este modulo siempre trabaja dentro de la compania seleccionada. El front debe enviar `X-Company-Id` y prellenar `companyId` con ese mismo valor; no lo muestres como campo editable cuando ya hay contexto.
+
+Campos recomendados para formularios:
+
+- Clave: `key`.
+- Nombre: `name`.
+- ID externo: `externalId`, opcional.
+- Predeterminada: `isDefault`, checkbox.
+- Estado: `status`, con `active` como valor inicial.
+- Direccion: grupo colapsable u opcional basado en `address`.
+
+En tablas, evita mostrar UUIDs. Usa `company.name`, `company.key`, `key` y `name`. Conserva `id` y `companyId` solo para acciones, filtros y payloads.
+
 ## Errores comunes
 
 | Estado | Caso                                             |

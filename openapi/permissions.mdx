@@ -176,6 +176,22 @@ Los permisos no se asignan directamente a usuarios. El flujo actual es:
 3. Asignar el rol a un usuario desde `/api/users/:id/access`.
 4. Consultar permisos efectivos del usuario en `/api/users/:id/permissions`.
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar permiso`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
+
+Esta pantalla debe tratarse como administracion global y normalmente solo debe mostrarse a super administradores. No envies `X-Company-Id` en estos endpoints.
+
+Campos recomendados para formularios:
+
+- Codigo: `code`, valor tecnico que usan guards y backend.
+- Nombre: `name`, etiqueta legible para administradores.
+- Descripcion: `description`, opcional.
+
+El front no debe generar permisos dinamicos por modulo ni permitir que usuarios de compania creen permisos. El catalogo de permisos es fuente de verdad del backend y se asigna a roles.
+
+En pantallas de usuarios, no muestres permisos como controles editables; muestra roles. Los permisos efectivos pueden mostrarse solo como lectura avanzada o diagnostico.
+
 ## Errores comunes
 
 | Estado | Caso                                                                         |

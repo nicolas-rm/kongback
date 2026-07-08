@@ -145,6 +145,27 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id`. `subCompanyId`, `fuelId` y `driverId` deben venir de selects filtrados por la compania seleccionada y por el alcance del usuario.
+
+Campos recomendados para formularios:
+
+- Subcompania: `subCompanyId`.
+- Combustible: `fuelId`.
+- Placas: `plates`.
+- Numero economico: `economicNumber`, opcional.
+- Modelo: `model`, opcional.
+- Ano: `year`, opcional.
+- Conductor: `driverId`, opcional.
+- Control de odometro: `odometerControl`, toggle.
+- Odometro inicial: `odometerInitial`, visible solo si aplica control de odometro.
+- Estado: `status`, con `active` como valor inicial.
+
+No muestres `fuelId`, `driverId` ni `subCompanyId` como campos de texto. En tablas usa `fuel.name`, `driver.name` y `subCompany.name`.
+
 ## Errores comunes
 
 | Estado | Caso                                                           |

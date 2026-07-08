@@ -99,6 +99,23 @@ Response: resultado paginado de `Notification`.
 
 Devuelve `Notification` actualizada.
 
+## Notas para frontend
+
+Este modulo no es CRUD tradicional para usuarios finales, pero aplica las reglas de `Frontend Guidelines` para acciones: crear notificaciones solo desde flujos administrativos, marcar leidas con endpoints dedicados y refrescar conteos/listados despues de cada mutacion.
+
+Los endpoints `/api/me/notifications` son personales. No requieren selector de usuario ni `X-Company-Id`.
+
+Para la bandeja de notificaciones:
+
+- Usa `GET /api/me/notifications/unread-count` para badge de campana.
+- Usa `GET /api/me/notifications` para el listado paginado.
+- Usa `PATCH /api/me/notifications/:id/read` al abrir una notificacion.
+- Usa `PATCH /api/me/notifications/read-all` para la accion global de marcar todas.
+
+No expongas `POST /api/notifications` como flujo normal de usuario final. Es una accion administrativa/global para crear notificaciones dirigidas a otro usuario.
+
+En tablas o listas, muestra `title`, `message`, `type`, `isRead` y fecha formateada desde `createdAt`. Usa `link` solo para navegacion interna si apunta a una ruta permitida del front.
+
 ## Errores comunes
 
 | Estado | Caso                                          |

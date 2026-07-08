@@ -122,29 +122,27 @@ Requiere `users.create`.
     "username": "admin",
     "email": "admin@example.com",
     "fullName": "Admin User",
-    "password": "Secret123",
     "status": "active",
-    "preferredLanguage": "es",
     "access": {
         "roleId": "768684d0-5892-442c-b52f-ad7d0ef372c6",
-        "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97",
-        "scopeKey": null,
-        "scopeId": null
+        "companyId": "c118d5f0-55c7-48f0-a17f-784909a61f97"
     }
 }
 ```
 
-| Campo               | Tipo                              | Requerido | Reglas                                                                     |
-| ------------------- | --------------------------------- | --------- | -------------------------------------------------------------------------- |
-| `username`          | `string`                          | Si        | Se recorta y colapsa espacios.                                             |
-| `email`             | `string`                          | Si        | Se recorta, colapsa espacios y normaliza a minusculas.                     |
-| `fullName`          | `string`                          | Si        | Se recorta y colapsa espacios.                                             |
-| `password`          | `string`                          | Si        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero.             |
-| `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                                 |
-| `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.                          |
-| `access`            | `object`                          | No        | Acceso inicial del usuario. Usa el mismo contrato de asignacion de acceso. |
+| Campo               | Tipo                              | Requerido | Reglas                                                                                                                     |
+| ------------------- | --------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `username`          | `string`                          | Si        | Se recorta y colapsa espacios.                                                                                             |
+| `email`             | `string`                          | Si        | Se recorta, colapsa espacios y normaliza a minusculas.                                                                     |
+| `fullName`          | `string`                          | Si        | Se recorta y colapsa espacios.                                                                                             |
+| `password`          | `string`                          | No        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. Si se omite, backend genera una contrasena temporal segura. |
+| `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                                                                                 |
+| `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.                                                                          |
+| `access`            | `object`                          | No        | Acceso inicial del usuario. Usa el mismo contrato de asignacion de acceso.                                                 |
 
 Si `access` se envia, el backend crea el usuario y el acceso en una sola transaccion. `access.roleId` es requerido dentro de ese objeto. `access.companyId` puede ser `null` para acceso global o el UUID de una compania activa. Para limitarlo a una subcompania, usa `scopeKey: "subCompanyId"` y `scopeId` con el UUID de una subcompania activa perteneciente a esa compania.
+
+Si `password` se omite, el usuario queda con `mustChangePassword: true` y el backend envia correo de bienvenida con credenciales temporales usando `preferredLanguage` o `es` por defecto.
 
 El front debe enviar roles, no permisos individuales. Los permisos efectivos salen de los roles asignados.
 
@@ -442,6 +440,34 @@ Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassw
     "credentialsSent": true
 }
 ```
+
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar usuario`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
+
+El formulario de alta de usuario no debe mapear todos los campos tecnicos del body como controles visibles. Usa estos controles recomendados:
+
+- Nombre completo: `fullName`.
+- Usuario: `username`.
+- Correo: `email`.
+- Estado: `status`, con `active` como valor inicial.
+- Rol: `access.roleId`.
+- Compania: `access.companyId`, prellenada con la compania seleccionada cuando exista contexto.
+- Alcance: control de UI con opciones `Toda la compania` y `Solo una subcompania`.
+- Subcompania: select visible solo si Alcance es `Solo una subcompania`.
+
+Campos que el front puede omitir de forma segura en alta:
+
+- `preferredLanguage`: si se omite, backend usa `es`.
+- `password`: si se omite, backend genera una contrasena temporal, marca `mustChangePassword: true` y envia correo de bienvenida.
+- `access.scopeKey` y `access.scopeId`: omitir cuando el alcance sea toda la compania.
+
+Mapeo de alcance:
+
+- Toda la compania: enviar `access.roleId` y `access.companyId`; no enviar `scopeKey` ni `scopeId`.
+- Solo una subcompania: enviar `access.scopeKey: "subCompanyId"` y `access.scopeId` con el UUID de la subcompania seleccionada.
+
+No muestres `scopeKey` ni `scopeId` como campos editables con esos nombres. Son campos tecnicos del backend; en UI deben representarse como `Alcance` y `Subcompania`.
 
 ## Errores comunes
 

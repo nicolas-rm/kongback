@@ -14,8 +14,9 @@ export class CreateUserDto {
     @ValidatorString()
     fullName!: string;
 
+    @IsOptional()
     @ValidatorPassword()
-    password!: string;
+    password?: string;
 
     @ValidatorEnum(Status, { optional: true })
     status?: Status;

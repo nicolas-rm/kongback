@@ -16,6 +16,7 @@
         "cardcloud-card-stock",
         "documents",
         "notifications",
-        "health"
+        "health",
+        "frontend-guidelines"
     ]
 }

@@ -109,6 +109,24 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id`. `companyId` lo asigna el backend desde el header, no lo pidas en el formulario.
+
+Campos recomendados para formularios:
+
+- ID externo: `externalId`.
+- Tarjeta asignada: `assignedCardId`, opcional y desde select de tarjetas activas visibles.
+- PAN enmascarado: `maskedPan`, opcional.
+- Cliente externo: `clientId`, opcional.
+- Balance: `balance`, opcional.
+- Estado proveedor: `providerStatus`, con `active` como valor inicial.
+- Fecha de sincronizacion: `syncedAt`, opcional.
+
+En tablas usa `assignedCard.externalId` cuando exista. Si el stock no esta asignado a una tarjeta, muestra un estado como `Sin tarjeta asignada` en vez de mostrar `assignedCardId: null`.
+
 ## Errores comunes
 
 | Estado | Caso                                                                        |

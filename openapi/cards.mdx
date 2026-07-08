@@ -173,6 +173,25 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id`. `subCompanyId`, `vehicleId` y `designFuelId` deben seleccionarse desde catalogos filtrados por la compania seleccionada y por el alcance del usuario.
+
+Campos recomendados para formularios:
+
+- Subcompania: `subCompanyId`.
+- Vehiculo asignado: `vehicleId`, opcional.
+- Combustible de diseno: `designFuelId`, opcional.
+- ID externo: `externalId`, opcional.
+- Estado: `status`, con `active` como valor inicial.
+- Fecha de asignacion: `assignedAt`, opcional y visible solo cuando se asigna vehiculo.
+
+No muestres `assignmentMode` como campo editable. Es un estado derivado por backend: queda `vehicle` si hay vehiculo asignado y `unassigned` si no lo hay.
+
+Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcompania. Para quitar asignacion, usa la accion dedicada `PATCH /api/cards/:id/unassign`.
+
 ## Errores comunes
 
 | Estado | Caso                                                      |

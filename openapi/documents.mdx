@@ -130,6 +130,30 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id`. `companyId` se toma del header y no debe pedirse como campo visible.
+
+Campos recomendados para formularios:
+
+- Archivo: `file`.
+- Titulo: `title`.
+- Descripcion: `description`, opcional.
+- Categoria: `category`, opcional; idealmente select si el producto define categorias.
+- Entidad relacionada: control de UI que derive `entityType` y `entityId` cuando el documento pertenezca a una entidad especifica.
+- Alcance: control de UI con opciones `Toda la compania` y `Solo una subcompania`, cuando el usuario tenga alcance completo.
+- Subcompania: select visible solo si el alcance es `Solo una subcompania`.
+
+Campos tecnicos:
+
+- No muestres `scopeKey` ni `scopeId` con esos nombres.
+- Para toda la compania, omite `scopeKey` y `scopeId`; backend guardara `scopeKey: "companyId"` y `scopeId: <companyId>`.
+- Para subcompania, envia `scopeKey: "subCompanyId"` y `scopeId` con el UUID seleccionado.
+
+En listados, muestra `title`, `category`, `originalName`, `mimeType` y un tamano formateado desde `sizeBytes`. Usa `id` solo para acciones como ver, descargar, editar o eliminar.
+
 ## Errores comunes
 
 | Estado | Caso                                                                       |

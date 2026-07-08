@@ -121,6 +121,23 @@ Response `200`:
 }
 ```
 
+## Notas para frontend
+
+Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
+
+El front debe enviar `X-Company-Id` y poblar `subCompanyId` desde un select de subcompanias disponibles para la compania seleccionada. Si el usuario autenticado esta limitado a subcompanias, ese select solo debe contener las que devuelve el backend.
+
+Campos recomendados para formularios:
+
+- Subcompania: `subCompanyId`.
+- Nombre: `name`.
+- Usuario vinculado: `userId`, opcional; mostrar `user.fullName` en tablas.
+- Referencia externa: `externalReference`, opcional.
+- Estado: `status`, con `active` como valor inicial.
+- Direccion: grupo opcional basado en `address`.
+
+No muestres `userId` ni `subCompanyId` como texto libre. Deben ser selects. Para desvincular usuario en editar, envia `userId: null`.
+
 ## Errores comunes
 
 | Estado | Caso                                             |

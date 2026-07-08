@@ -1,0 +1,151 @@
+---
+title: Frontend Guidelines
+description: Reglas para interpretar la documentacion OpenAPI al construir formularios, tablas y flujos del frontend.
+---
+
+## Objetivo
+
+La documentacion de `openapi/` describe el contrato completo del backend. El frontend no debe convertir cada campo documentado en un control visible. Algunos campos son defaults, detalles tecnicos, IDs internos o valores que el cliente debe derivar automaticamente.
+
+## Reglas generales
+
+- Mantener los campos requeridos por endpoint como fuente de validacion.
+- Omitir campos opcionales cuando el backend tenga default claro.
+- No mostrar IDs tecnicos si existe un nombre legible en la respuesta o en un catalogo relacionado.
+- No exponer campos de seguridad, contrasenas generadas, tokens, secretos 2FA, recovery codes ni hashes.
+- Enviar roles, no permisos individuales, cuando se asigna acceso a usuarios.
+- Usar `GET /api/authentication/capabilities` para renderizar modulos y acciones disponibles.
+- Usar `X-Company-Id` solo cuando el endpoint opere en contexto de compania o sea mixto.
+
+## Campos omitibles por defecto
+
+| Campo               | Regla para frontend                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `preferredLanguage` | No pedirlo en formularios basicos. Si se omite, backend usa `es`.                   |
+| `password` en alta  | No pedirlo por defecto. Si se omite, backend genera contrasena temporal y la envia. |
+| `scopeKey`          | No mostrarlo con ese nombre. Derivarlo desde el control `Alcance`.                  |
+| `scopeId`           | No mostrarlo con ese nombre. Derivarlo desde el select de subcompania.              |
+| `companyId`         | Prellenarlo desde la compania seleccionada cuando el flujo ya esta en contexto.     |
+
+## Nombres recomendados en UI
+
+| Campo tecnico | Nombre recomendado |
+| ------------- | ------------------ |
+| `companyId`   | Compania           |
+| `roleId`      | Rol                |
+| `scopeKey`    | Alcance            |
+| `scopeId`     | Subcompania        |
+| `fullName`    | Nombre completo    |
+| `username`    | Usuario            |
+| `status`      | Estado             |
+| `email`       | Correo             |
+
+## Alcance de usuario
+
+Para usuarios, el front debe mostrar un control de alcance con dos opciones:
+
+- Toda la compania.
+- Solo una subcompania.
+
+Payload para toda la compania:
+
+```json
+{
+    "access": {
+        "companyId": "company-id",
+        "roleId": "role-id"
+    }
+}
+```
+
+Payload para una subcompania:
+
+```json
+{
+    "access": {
+        "companyId": "company-id",
+        "roleId": "role-id",
+        "scopeKey": "subCompanyId",
+        "scopeId": "sub-company-id"
+    }
+}
+```
+
+El usuario final no debe escribir `subCompanyId`, `scopeKey` ni `scopeId`. Debe elegir una subcompania desde un select.
+
+## Formularios de alta
+
+Los formularios deben separar:
+
+- Campos visibles: datos que el usuario realmente decide.
+- Campos derivados: `companyId`, `scopeKey`, `scopeId`, filtros y headers.
+- Campos omitidos: valores con default seguro del backend.
+
+Ejemplo de alta de usuario recomendada:
+
+```json
+{
+    "username": "juan",
+    "email": "juan@example.com",
+    "fullName": "Juan Perez",
+    "status": "active",
+    "access": {
+        "companyId": "company-id",
+        "roleId": "role-id"
+    }
+}
+```
+
+## Reglas CRUD
+
+### Crear
+
+- Renderiza solo campos que el usuario debe decidir.
+- Prellena defaults seguros del backend cuando ayuden a la UI, pero no es obligatorio enviarlos.
+- Deriva `companyId` desde la compania seleccionada cuando el flujo ya este en contexto.
+- Usa selects para relaciones (`roleId`, `subCompanyId`, `vehicleId`, `driverId`, `stationId`, `fuelId`, `assignedCardId`).
+- No uses inputs de texto libre para UUIDs.
+- Despues de crear, refresca el listado del modulo actual usando los mismos filtros y `X-Company-Id`.
+
+### Editar y actualizar
+
+- El formulario de edicion debe cargar el registro actual y permitir solo campos documentados en la seccion `Actualizar` del modulo.
+- No permitas editar IDs principales, `companyId`, relaciones no mutables o campos derivados si el endpoint no los acepta.
+- Para relaciones editables, usa selects filtrados por la compania y alcance actual.
+- Envia solo campos modificados cuando sea practico; tambien es valido enviar todos los campos editables si respetan el contrato.
+- Si un campo se limpia y el contrato permite `null`, envia `null`; si se omite, el backend conserva el valor actual.
+- Despues de actualizar, refresca el detalle o listado visible.
+
+### Eliminar o desactivar
+
+- Cuando el endpoint `DELETE` devuelve `status: "inactive"`, tratalo como desactivacion, no como borrado fisico.
+- Cuando el endpoint devuelve `deleted: true`, tratalo como eliminacion logica o remocion del recurso desde la UI.
+- Pide confirmacion antes de acciones destructivas.
+- Despues de eliminar/desactivar, refresca el listado o quita el registro de la tabla actual.
+- No muestres acciones de eliminar/desactivar si `capabilities.permissions` no contiene el permiso requerido.
+
+### Acciones especiales
+
+- Usa botones o menus de accion para operaciones dedicadas como asignar conductor, asignar tarjeta, quitar asignacion, marcar notificacion como leida o descargar documento.
+- No mezcles acciones especiales dentro de formularios generales si el endpoint dedicado expresa mejor la intencion.
+- Valida en UI lo basico para ergonomia, pero deja que el backend sea la fuente de verdad para relaciones, permisos y alcance.
+
+## Tablas y columnas
+
+En tablas, prioriza nombres legibles sobre UUIDs:
+
+- Para compania usa `company.name` o `company.key`.
+- Para subcompania usa `subCompany.name` o `subCompany.key`.
+- Para rol usa `role.name` o `role.code`.
+- Para relaciones operativas usa nombres ya incluidos en la respuesta cuando existan.
+
+Los IDs deben conservarse internamente para acciones, edicion y payloads, pero no mostrarse como columna principal salvo en vistas tecnicas.
+
+## Headers
+
+El frontend debe enviar `X-Company-Id` cuando:
+
+- El modulo sea operativo y dependa de compania.
+- El endpoint sea mixto y se este trabajando dentro de una compania, como usuarios.
+
+No enviar `X-Company-Id` para administracion global pura, como roles, permisos o mutaciones globales de companias y combustibles.
