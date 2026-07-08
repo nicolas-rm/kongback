@@ -11,7 +11,7 @@ Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado des
 
 ## Alcance por compania
 
-Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. `subCompanyId`, `vehicleId` y la tarjeta consultada deben pertenecer a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, `subCompanyId`, `vehicleId` y la tarjeta consultada tambien deben pertenecer a una de esas subcompanias.
 
 ## Modelo
 

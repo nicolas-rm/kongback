@@ -11,7 +11,7 @@ Todos los endpoints requieren autenticacion y permisos `cardcloud-card-stock.*`.
 
 ## Alcance por compania
 
-Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. El stock queda asociado directamente a `companyId`; si `assignedCardId` se envia, debe pertenecer a una tarjeta activa de esa misma compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. El stock queda asociado directamente a `companyId`; si `assignedCardId` se envia, debe pertenecer a una tarjeta activa de esa misma compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, solo puede operar stock asignado a tarjetas de esas subcompanias.
 
 ## Modelo
 

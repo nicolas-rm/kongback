@@ -11,7 +11,7 @@ Todos los endpoints requieren autenticacion y permisos `station-fuels.*`. El bor
 
 ## Alcance por compania
 
-Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. `stationId` y la relacion consultada deben pertenecer a esa compania.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, `stationId` y la relacion consultada tambien deben pertenecer a una de esas subcompanias.
 
 ## Modelo
 

@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentCompanyId, Permissions, RequireCompany } from '@/decorators';
+import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateStationDto, FindStationsDto, UpdateStationDto } from '@/modules/business/dto';
 import { StationsService } from '@/modules/business/services/stations.service';
 
@@ -10,31 +11,31 @@ export class StationsController {
 
     @Post()
     @Permissions('stations.create')
-    create(@CurrentCompanyId() companyId: string | undefined, @Body() dto: CreateStationDto) {
-        return this.stationsService.create(dto, companyId);
+    create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateStationDto) {
+        return this.stationsService.create(dto, scope);
     }
 
     @Get()
     @Permissions('stations.read-list')
-    findAll(@CurrentCompanyId() companyId: string | undefined, @Query() dto: FindStationsDto) {
-        return this.stationsService.findAll(dto, companyId);
+    findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindStationsDto) {
+        return this.stationsService.findAll(dto, scope);
     }
 
     @Get(':id')
     @Permissions('stations.read-one')
-    findOne(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.stationsService.findOne(id, companyId);
+    findOne(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.stationsService.findOne(id, scope);
     }
 
     @Patch(':id')
     @Permissions('stations.update')
-    update(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateStationDto) {
-        return this.stationsService.update(id, dto, companyId);
+    update(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateStationDto) {
+        return this.stationsService.update(id, dto, scope);
     }
 
     @Delete(':id')
     @Permissions('stations.delete')
-    remove(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.stationsService.deactivate(id, companyId);
+    remove(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.stationsService.deactivate(id, scope);
     }
 }

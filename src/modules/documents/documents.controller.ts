@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { CurrentCompanyId, CurrentUser, Permissions, RequireCompany } from '@/decorators';
+import { CurrentCompanyScope, CurrentUser, Permissions, RequireCompany } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
 import { DocumentsService } from '@/modules/documents/services/documents.service';
 import type { UploadedFile as AppUploadedFile } from '@/modules/documents/types/uploaded-file.type';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @RequireCompany()
 @Controller('documents')
@@ -15,21 +16,21 @@ export class DocumentsController {
     @Post()
     @Permissions('documents.create')
     @UseInterceptors(FileInterceptor('file'))
-    create(@CurrentCompanyId() companyId: string | undefined, @Body() dto: CreateDocumentDto, @UploadedFile() file: AppUploadedFile, @CurrentUser() user: RequestUser) {
-        return this.documentsService.create(dto, file, user.id, companyId);
+    create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateDocumentDto, @UploadedFile() file: AppUploadedFile, @CurrentUser() user: RequestUser) {
+        return this.documentsService.create(dto, file, user.id, scope);
     }
 
     @Get()
     @Permissions('documents.read-list')
-    findAll(@CurrentCompanyId() companyId: string | undefined, @Query() dto: FindDocumentsDto) {
-        return this.documentsService.findAll(dto, companyId);
+    findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindDocumentsDto) {
+        return this.documentsService.findAll(dto, scope);
     }
 
     @Get(':id/download')
     @Permissions('documents.download')
     @Header('Content-Type', 'application/octet-stream')
-    async download(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Res() response: Response) {
-        const { document, stream } = await this.documentsService.download(id, companyId);
+    async download(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Res() response: Response) {
+        const { document, stream } = await this.documentsService.download(id, scope);
         response.setHeader('Content-Type', document.mimeType);
         response.setHeader('Content-Disposition', this.buildAttachmentDisposition(document.originalName));
         stream.pipe(response);
@@ -37,20 +38,20 @@ export class DocumentsController {
 
     @Get(':id')
     @Permissions('documents.read-one')
-    findOne(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.documentsService.findOne(id, companyId);
+    findOne(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.documentsService.findOne(id, scope);
     }
 
     @Patch(':id')
     @Permissions('documents.update')
-    update(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDocumentDto, @CurrentUser() user: RequestUser) {
-        return this.documentsService.update(id, dto, user.id, companyId);
+    update(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDocumentDto, @CurrentUser() user: RequestUser) {
+        return this.documentsService.update(id, dto, user.id, scope);
     }
 
     @Delete(':id')
     @Permissions('documents.delete')
-    remove(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
-        return this.documentsService.remove(id, user.id, companyId);
+    remove(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: RequestUser) {
+        return this.documentsService.remove(id, user.id, scope);
     }
 
     private buildAttachmentDisposition(filename: string): string {

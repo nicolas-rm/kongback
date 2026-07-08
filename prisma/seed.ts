@@ -57,7 +57,7 @@ type UserSeed = {
     accessScope?: DemoAccessScope;
 };
 
-type DemoAccessScope = 'global' | 'company';
+type DemoAccessScope = 'global' | 'company' | 'subCompany';
 
 type DemoUserDefinition = {
     username: string;
@@ -81,6 +81,13 @@ const DEMO_USER_DEFINITIONS = [
         fullName: 'Demo Company Viewer',
         roleCode: 'demo-company-viewer',
         accessScope: 'company',
+    },
+    {
+        username: 'demo.subcompany.manager',
+        email: 'demo.subcompany.manager@example.com',
+        fullName: 'Demo Subcompany Manager',
+        roleCode: 'demo-company-manager',
+        accessScope: 'subCompany',
     },
     {
         username: 'demo.cards.manager',
@@ -358,7 +365,7 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             code: 'demo-company-manager',
             name: 'Demo Operador de compania',
             description: 'Administra los modulos operativos principales dentro de una compania.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.'],
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.', 'users.'],
             extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
             excludePermissionCodes: ['companies.create', 'companies.update', 'companies.delete'],
         },
@@ -366,7 +373,7 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             code: 'demo-company-viewer',
             name: 'Demo Consulta de compania',
             description: 'Consulta los modulos operativos principales dentro de una compania sin permisos de escritura.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.', 'notifications.'],
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'cardcloud-card-stock.', 'documents.', 'notifications.', 'users.'],
             readOnly: true,
         },
         {
@@ -500,8 +507,9 @@ async function seedDemoUsers(): Promise<UserSeed[]> {
     return users;
 }
 
-async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies: CompanySeed[]): Promise<void> {
+async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies: CompanySeed[], subCompanies: SubCompanySeed[]): Promise<void> {
     const company = companies[0];
+    const subCompany = subCompanies[0];
     const rolesByCode = new Map(roles.map((role) => [role.code, role]));
 
     for (const user of users) {
@@ -510,15 +518,17 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies:
         const role = rolesByCode.get(user.roleCode);
         if (!role) throw new Error(`Rol demo no encontrado para ${user.username}: ${user.roleCode}`);
 
-        const companyId = user.accessScope === 'company' ? company.id : null;
+        const companyId = user.accessScope === 'global' ? null : company.id;
+        const scopeKey = user.accessScope === 'subCompany' ? 'subCompanyId' : null;
+        const scopeId = user.accessScope === 'subCompany' ? subCompany.id : null;
 
         const existing = await prisma.userAccess.findFirst({
             where: {
                 userId: user.id,
                 roleId: role.id,
                 companyId,
-                scopeKey: null,
-                scopeId: null,
+                scopeKey,
+                scopeId,
             },
             select: { id: true },
         });
@@ -530,8 +540,8 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies:
                 userId: user.id,
                 roleId: role.id,
                 companyId,
-                scopeKey: null,
-                scopeId: null,
+                scopeKey,
+                scopeId,
             },
         });
     }
@@ -1017,10 +1027,10 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     const users = await seedDemoUsers();
     const companies = await seedCompanies();
 
-    await seedUserAccesses(users, demoRoles, companies);
     await seedSettings(adminUser.id);
 
     const subCompanies = await seedSubCompanies(companies);
+    await seedUserAccesses(users, demoRoles, companies, subCompanies);
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);
     const vehicles = await seedVehicles(subCompanies, fuels, drivers);

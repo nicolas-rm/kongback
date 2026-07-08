@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import type { AddressData } from '@/modules/business/business.helpers';
 import { BusinessAddressRepository } from '@/modules/business/repositories/business-address.repository';
 
@@ -26,33 +27,27 @@ export class DriversRepository {
         return this.prisma.driver.count({ where });
     }
 
-    findById(id: string, companyId?: string) {
-        return this.prisma.driver.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+    findById(id: string, scope?: CompanyScope) {
+        return this.prisma.driver.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.DriverUncheckedUpdateInput, address?: AddressData, companyId?: string) {
+    update(id: string, data: Prisma.DriverUncheckedUpdateInput, address?: AddressData, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const current = await tx.driver.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: { id: true, addressId: true } });
+            const current = await tx.driver.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: { id: true, addressId: true } });
             if (!current) return null;
 
             const addressId = await this.addresses.upsert(tx, current.addressId, address);
             await tx.driver.update({ where: { id: current.id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
-            return tx.driver.findFirst({ where: { id: current.id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+            return tx.driver.findFirst({ where: { id: current.id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
         });
     }
 
-    deactivate(id: string, companyId?: string) {
+    deactivate(id: string, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.driver.updateMany({ where: { id, subCompany: { company: this.companyScope(companyId) } }, data: { status: Status.inactive } });
+            const result = await tx.driver.updateMany({ where: { id, subCompany: subCompanyScopeWhere(scope) }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.driver.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+            return tx.driver.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
         });
-    }
-
-    private companyScope(companyId?: string): Prisma.CompanyWhereInput {
-        return {
-            ...(companyId ? { id: companyId } : {}),
-        };
     }
 
     private select(): Prisma.DriverSelect {

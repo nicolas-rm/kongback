@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class VehiclesRepository {
@@ -18,30 +19,24 @@ export class VehiclesRepository {
         return this.prisma.vehicle.count({ where });
     }
 
-    findById(id: string, companyId?: string) {
-        return this.prisma.vehicle.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+    findById(id: string, scope?: CompanyScope) {
+        return this.prisma.vehicle.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
     }
 
-    update(id: string, data: Prisma.VehicleUncheckedUpdateInput, companyId?: string) {
+    update(id: string, data: Prisma.VehicleUncheckedUpdateInput, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.vehicle.updateMany({ where: { id, subCompany: { company: this.companyScope(companyId) } }, data });
+            const result = await tx.vehicle.updateMany({ where: { id, subCompany: subCompanyScopeWhere(scope) }, data });
             if (result.count === 0) return null;
-            return tx.vehicle.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+            return tx.vehicle.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
         });
     }
 
-    deactivate(id: string, companyId?: string) {
+    deactivate(id: string, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.vehicle.updateMany({ where: { id, subCompany: { company: this.companyScope(companyId) } }, data: { status: Status.inactive } });
+            const result = await tx.vehicle.updateMany({ where: { id, subCompany: subCompanyScopeWhere(scope) }, data: { status: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.vehicle.findFirst({ where: { id, subCompany: { company: this.companyScope(companyId) } }, select: this.select() });
+            return tx.vehicle.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
         });
-    }
-
-    private companyScope(companyId?: string): Prisma.CompanyWhereInput {
-        return {
-            ...(companyId ? { id: companyId } : {}),
-        };
     }
 
     private select(): Prisma.VehicleSelect {

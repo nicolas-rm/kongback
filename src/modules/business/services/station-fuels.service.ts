@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, notFound } from '@/modules/business/business.helpers';
 import { CreateStationFuelDto, FindStationFuelsDto, UpdateStationFuelDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
@@ -13,9 +14,9 @@ export class StationFuelsService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateStationFuelDto, companyId?: string) {
+    async create(dto: CreateStationFuelDto, scope?: CompanyScope) {
         await assertActive([
-            { ids: [dto.stationId], count: (ids) => this.relations.countActiveStations(ids, companyId) },
+            { ids: [dto.stationId], count: (ids) => this.relations.countActiveStations(ids, scope) },
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
         ]);
 
@@ -26,10 +27,10 @@ export class StationFuelsService {
         });
     }
 
-    async findAll(dto: FindStationFuelsDto, companyId?: string) {
+    async findAll(dto: FindStationFuelsDto, scope?: CompanyScope) {
         const where: Prisma.StationFuelWhereInput = {
             stationId: dto.stationId,
-            station: { subCompany: { company: { ...(companyId ? { id: companyId } : {}) } } },
+            station: { subCompany: subCompanyScopeWhere(scope) },
             fuelId: dto.fuelId,
             status: dto.status,
         };
@@ -37,26 +38,26 @@ export class StationFuelsService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string, companyId?: string) {
-        const stationFuel = await this.repository.findById(id, companyId);
+    async findOne(id: string, scope?: CompanyScope) {
+        const stationFuel = await this.repository.findById(id, scope);
         if (!stationFuel) throw notFound();
         return stationFuel;
     }
 
-    async update(id: string, dto: UpdateStationFuelDto, companyId?: string) {
+    async update(id: string, dto: UpdateStationFuelDto, scope?: CompanyScope) {
         const stationFuel = await this.repository.update(
             id,
             {
                 status: dto.status,
             },
-            companyId
+            scope
         );
         if (!stationFuel) throw notFound();
         return stationFuel;
     }
 
-    async deactivate(id: string, companyId?: string) {
-        const stationFuel = await this.repository.deactivate(id, companyId);
+    async deactivate(id: string, scope?: CompanyScope) {
+        const stationFuel = await this.repository.deactivate(id, scope);
         if (!stationFuel) throw notFound();
         return { id: stationFuel.id, status: stationFuel.status };
     }

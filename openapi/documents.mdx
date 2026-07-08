@@ -11,7 +11,7 @@ Todos los endpoints requieren autenticacion y permisos `documents.*`. `DELETE` a
 
 ## Alcance por compania
 
-Requiere header `X-Company-Id: <companyId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado a esa compania. Crear documentos fuerza `scopeKey: "companyId"` y `scopeId: <companyId>`.
+Requiere header `X-Company-Id: <companyId>`. Crear, listar, descargar, actualizar y eliminar documentos queda limitado a esa compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, solo opera documentos con `scopeKey: "subCompanyId"` y `scopeId` dentro de sus subcompanias permitidas.
 
 ## Modelo
 
@@ -76,7 +76,7 @@ MIME permitidos por defecto: `application/pdf`, `image/jpeg`, `image/png`, `imag
 
 Tamano maximo por defecto: `20 MB`.
 
-El backend valida que el contenido real coincida con el MIME declarado. Si se envia `X-Company-Id`, `scopeKey` y `scopeId` pueden omitirse; si se envian, deben coincidir con `companyId` y el backend guarda el documento bajo esa compania.
+El backend valida que el contenido real coincida con el MIME declarado. Si el usuario tiene alcance completo de compania, `scopeKey` y `scopeId` pueden omitirse y se guarda como `scopeKey: "companyId"`, `scopeId: <companyId>`. Si el usuario esta limitado por subcompania, el documento se guarda como `scopeKey: "subCompanyId"`; si tiene varias subcompanias permitidas, debe enviar el `scopeId` de la subcompania.
 
 Response `201`: `Document`.
 

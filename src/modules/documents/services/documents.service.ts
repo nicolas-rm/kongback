@@ -3,6 +3,9 @@ import { Prisma } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { assertActive } from '@/modules/business/business.helpers';
+import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
 import { DocumentsRepository } from '@/modules/documents/repositories/documents.repository';
 import { DocumentResponse } from '@/modules/documents/responses';
@@ -14,12 +17,13 @@ export class DocumentsService {
     constructor(
         private readonly config: AppConfigService,
         private readonly repository: DocumentsRepository,
+        private readonly relations: BusinessRelationsRepository,
         private readonly storage: DocumentsStorageService
     ) {}
 
-    async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, companyId?: string) {
+    async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, scope?: CompanyScope) {
         this.assertAllowedFile(file);
-        this.assertCompanyScope(dto.scopeKey, dto.scopeId, companyId);
+        const documentScope = await this.resolveDocumentScope(dto.scopeKey, dto.scopeId, scope);
 
         const storedFile = await this.storage.saveFile(file);
 
@@ -27,11 +31,11 @@ export class DocumentsService {
             title: dto.title,
             description: dto.description ?? null,
             category: dto.category ?? null,
-            companyId: companyId ?? null,
+            companyId: scope?.companyId ?? null,
             entityType: dto.entityType ?? null,
             entityId: dto.entityId ?? null,
-            scopeKey: 'companyId',
-            scopeId: companyId ?? dto.scopeId ?? null,
+            scopeKey: documentScope.scopeKey,
+            scopeId: documentScope.scopeId,
             originalName: file.originalname,
             mimeType: file.mimetype,
             uploadedByUserId: userId ?? null,
@@ -41,7 +45,7 @@ export class DocumentsService {
         return DocumentResponse.from(document);
     }
 
-    async findAll(dto: FindDocumentsDto, companyId?: string) {
+    async findAll(dto: FindDocumentsDto, scope?: CompanyScope) {
         const and: Prisma.DocumentWhereInput[] = [];
         if (dto.search) {
             and.push({
@@ -56,7 +60,8 @@ export class DocumentsService {
         const where: Prisma.DocumentWhereInput = {
             deletedAt: null,
             category: dto.category,
-            companyId,
+            companyId: scope?.companyId,
+            ...(scope?.subCompanyIds ? { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds } } : {}),
             entityType: dto.entityType,
             entityId: dto.entityId,
             ...(and.length ? { AND: and } : {}),
@@ -69,32 +74,32 @@ export class DocumentsService {
         );
     }
 
-    async findOne(id: string, companyId?: string) {
-        const document = await this.repository.findById(id, companyId);
+    async findOne(id: string, scope?: CompanyScope) {
+        const document = await this.repository.findById(id, scope);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
         return DocumentResponse.from(document);
     }
 
-    async update(id: string, dto: UpdateDocumentDto, userId?: string | null, companyId?: string) {
-        const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null }, companyId);
+    async update(id: string, dto: UpdateDocumentDto, userId?: string | null, scope?: CompanyScope) {
+        const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null }, scope);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         return DocumentResponse.from(document);
     }
 
-    async download(id: string, companyId?: string) {
-        const document = await this.repository.findDownloadById(id, companyId);
+    async download(id: string, scope?: CompanyScope) {
+        const document = await this.repository.findDownloadById(id, scope);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
     }
 
-    async remove(id: string, userId?: string | null, companyId?: string) {
-        const document = await this.repository.findDownloadById(id, companyId);
+    async remove(id: string, userId?: string | null, scope?: CompanyScope) {
+        const document = await this.repository.findDownloadById(id, scope);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
-        const result = await this.repository.softDelete(id, userId, companyId);
+        const result = await this.repository.softDelete(id, userId, scope);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
 
         await this.storage.removeFile(document.storageKey);
@@ -124,10 +129,26 @@ export class DocumentsService {
         return Buffer.from(buffer.toString('utf8'), 'utf8').equals(buffer);
     }
 
-    private assertCompanyScope(scopeKey?: string | null, scopeId?: string | null, companyId?: string): void {
-        if (!companyId) return;
-        if ((scopeKey && scopeKey !== 'companyId') || (scopeId && scopeId !== companyId)) {
+    private async resolveDocumentScope(scopeKey?: string | null, scopeId?: string | null, scope?: CompanyScope): Promise<{ scopeKey: string; scopeId: string }> {
+        if (!scope?.companyId) {
             throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
         }
+
+        if (scope.subCompanyIds) {
+            if (scopeKey && scopeKey !== SUB_COMPANY_SCOPE_KEY) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            const subCompanyId = scopeId ?? (scope.subCompanyIds.length === 1 ? scope.subCompanyIds[0] : null);
+            if (!subCompanyId || !scope.subCompanyIds.includes(subCompanyId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            return { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: subCompanyId };
+        }
+
+        if (scopeKey === SUB_COMPANY_SCOPE_KEY) {
+            if (!scopeId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            await assertActive([{ ids: [scopeId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) }]);
+            return { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId };
+        }
+
+        if ((scopeKey && scopeKey !== 'companyId') || (scopeId && scopeId !== scope.companyId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+
+        return { scopeKey: 'companyId', scopeId: scope.companyId };
     }
 }

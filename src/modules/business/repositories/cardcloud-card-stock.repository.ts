@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class CardcloudCardStockRepository {
@@ -18,30 +19,31 @@ export class CardcloudCardStockRepository {
         return this.prisma.cardcloudCardStock.count({ where });
     }
 
-    findById(id: string, companyId?: string) {
-        return this.prisma.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
+    findById(id: string, scope?: CompanyScope) {
+        return this.prisma.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, scope), select: this.select() });
     }
 
-    update(id: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput, companyId?: string) {
+    update(id: string, data: Prisma.CardcloudCardStockUncheckedUpdateInput, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, companyId), data });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, scope), data });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, scope), select: this.select() });
         });
     }
 
-    deactivate(id: string, companyId?: string) {
+    deactivate(id: string, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, companyId), data: { providerStatus: Status.inactive } });
+            const result = await tx.cardcloudCardStock.updateMany({ where: this.scopeWhere(id, scope), data: { providerStatus: Status.inactive } });
             if (result.count === 0) return null;
-            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, companyId), select: this.select() });
+            return tx.cardcloudCardStock.findFirst({ where: this.scopeWhere(id, scope), select: this.select() });
         });
     }
 
-    private scopeWhere(id: string, companyId?: string): Prisma.CardcloudCardStockWhereInput {
+    private scopeWhere(id: string, scope?: CompanyScope): Prisma.CardcloudCardStockWhereInput {
         return {
             id,
-            ...(companyId ? { companyId } : {}),
+            ...(scope?.companyId ? { companyId: scope.companyId } : {}),
+            ...(scope?.subCompanyIds ? { assignedCard: { subCompanyId: { in: scope.subCompanyIds } } } : {}),
         };
     }
 

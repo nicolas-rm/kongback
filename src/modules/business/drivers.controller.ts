@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentCompanyId, Permissions, RequireCompany } from '@/decorators';
+import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateDriverDto, FindDriversDto, UpdateDriverDto } from '@/modules/business/dto';
 import { DriversService } from '@/modules/business/services/drivers.service';
 
@@ -10,31 +11,31 @@ export class DriversController {
 
     @Post()
     @Permissions('drivers.create')
-    create(@CurrentCompanyId() companyId: string | undefined, @Body() dto: CreateDriverDto) {
-        return this.driversService.create(dto, companyId);
+    create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateDriverDto) {
+        return this.driversService.create(dto, scope);
     }
 
     @Get()
     @Permissions('drivers.read-list')
-    findAll(@CurrentCompanyId() companyId: string | undefined, @Query() dto: FindDriversDto) {
-        return this.driversService.findAll(dto, companyId);
+    findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindDriversDto) {
+        return this.driversService.findAll(dto, scope);
     }
 
     @Get(':id')
     @Permissions('drivers.read-one')
-    findOne(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.driversService.findOne(id, companyId);
+    findOne(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.driversService.findOne(id, scope);
     }
 
     @Patch(':id')
     @Permissions('drivers.update')
-    update(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDriverDto) {
-        return this.driversService.update(id, dto, companyId);
+    update(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDriverDto) {
+        return this.driversService.update(id, dto, scope);
     }
 
     @Delete(':id')
     @Permissions('drivers.delete')
-    remove(@CurrentCompanyId() companyId: string | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.driversService.deactivate(id, companyId);
+    remove(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
+        return this.driversService.deactivate(id, scope);
     }
 }

@@ -11,8 +11,9 @@ export class GetCapabilitiesUseCase {
     constructor(private readonly accessControlService: AccessControlService) {}
 
     async execute(user: RequestUser, companyId?: string) {
+        const contextCompanyId = companyId ?? null;
         const [contextPermissions, systemPermissions] = await Promise.all([
-            this.accessControlService.listUserPermissionCodes(user.id, companyId),
+            this.accessControlService.listUserPermissionCodes(user.id, contextCompanyId),
             this.accessControlService.listUserPermissionCodes(user.id, null),
         ]);
         const systemPermissionSet = new Set(systemPermissions);

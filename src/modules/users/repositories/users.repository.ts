@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
+import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class UsersRepository {
@@ -28,9 +29,12 @@ export class UsersRepository {
         return this.prisma.user.count({ where });
     }
 
-    findById(id: string) {
+    findById(id: string, scope?: CompanyScope) {
         return this.prisma.user.findFirst({
-            where: { id },
+            where: {
+                id,
+                ...this.userCompanyScope(scope),
+            },
             select: this.defaultSelect(),
         });
     }
@@ -100,36 +104,46 @@ export class UsersRepository {
         });
     }
 
-    replaceAccess(userId: string, data: Prisma.UserAccessUncheckedCreateInput[]) {
+    countActiveSubCompanyScopes(scopes: Array<{ companyId: string; subCompanyId: string }>): Promise<number> {
+        return this.prisma.subCompany.count({
+            where: {
+                OR: scopes.map((scope) => ({
+                    id: scope.subCompanyId,
+                    companyId: scope.companyId,
+                    status: 'active',
+                })),
+            },
+        });
+    }
+
+    replaceAccess(userId: string, data: Prisma.UserAccessUncheckedCreateInput[], scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            await tx.userAccess.deleteMany({ where: { userId } });
+            await tx.userAccess.deleteMany({ where: this.accessScopeWhere(userId, scope) });
 
             if (data.length > 0) {
                 await tx.userAccess.createMany({ data });
             }
 
             return tx.userAccess.findMany({
-                where: buildActiveUserAccessWhere({ userId }),
+                where: this.accessScopeWhere(userId, scope),
                 orderBy: { assignedAt: 'desc' },
                 select: this.accessSelect(),
             });
         });
     }
 
-    listAccess(userId: string) {
+    listAccess(userId: string, scope?: CompanyScope) {
         return this.prisma.userAccess.findMany({
-            where: buildActiveUserAccessWhere({ userId }),
+            where: this.accessScopeWhere(userId, scope),
             orderBy: { assignedAt: 'desc' },
             select: this.accessSelect(),
         });
     }
 
-    findPermissionCodes(userId: string) {
+    findPermissionCodes(userId: string, scope?: CompanyScope) {
         return this.prisma.rolePermission.findMany({
             where: {
-                role: {
-                    accesses: { some: buildActiveUserAccessWhere({ userId }) },
-                },
+                role: { accesses: { some: this.permissionAccessScopeWhere(userId, scope) } },
             },
             distinct: ['permissionId'],
             orderBy: { permission: { code: 'asc' } },
@@ -153,8 +167,39 @@ export class UsersRepository {
         });
     }
 
-    removeAccess(userId: string, id: string) {
-        return this.prisma.userAccess.deleteMany({ where: { id, userId } });
+    removeAccess(userId: string, id: string, scope?: CompanyScope) {
+        return this.prisma.userAccess.deleteMany({ where: { id, ...this.accessScopeWhere(userId, scope) } });
+    }
+
+    private userCompanyScope(scope?: CompanyScope): Prisma.UserWhereInput {
+        if (!scope?.companyId) return {};
+        if (scope.subCompanyIds) {
+            return { accesses: { some: { companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds }, company: { status: 'active' } } } };
+        }
+        return { accesses: { some: { companyId: scope.companyId, company: { status: 'active' } } } };
+    }
+
+    private accessScopeWhere(userId: string, scope?: CompanyScope): Prisma.UserAccessWhereInput {
+        if (!scope?.companyId) return buildActiveUserAccessWhere({ userId });
+        if (scope.subCompanyIds) return { userId, companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds }, company: { status: 'active' } };
+        return { userId, companyId: scope.companyId, company: { status: 'active' } };
+    }
+
+    private permissionAccessScopeWhere(userId: string, scope?: CompanyScope): Prisma.UserAccessWhereInput {
+        if (!scope?.companyId) return buildActiveUserAccessWhere({ userId });
+        if (!scope.subCompanyIds) return buildActiveUserAccessWhere({ userId }, scope.companyId);
+
+        return buildActiveUserAccessWhere(
+            {
+                userId,
+                OR: [
+                    { companyId: null },
+                    { companyId: scope.companyId, scopeKey: null, scopeId: null },
+                    { companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds } },
+                ],
+            },
+            scope.companyId
+        );
     }
 
     private defaultSelect(): Prisma.UserSelect {

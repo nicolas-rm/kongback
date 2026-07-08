@@ -9,7 +9,14 @@ Base path: `/api/users`
 
 Todos los endpoints requieren autenticacion y el permiso indicado en cada operacion. Las mutaciones aceptan JSON y las respuestas no exponen `passwordHash`, tokens, secretos 2FA ni recovery codes.
 
-Esta API es de administracion global. Los permisos `users.*` deben venir de un acceso global (`companyId: null`); los accesos limitados a compania no autorizan estos endpoints.
+Esta API es mixta:
+
+- Sin `X-Company-Id`, los endpoints requieren permisos desde un acceso global (`companyId: null`) y operan como administracion de sistema.
+- Con `X-Company-Id`, los endpoints mixtos operan dentro de la compania seleccionada. El backend valida que la compania exista, este activa y que el usuario autenticado tenga acceso a ella.
+- En contexto de compania, los listados y lecturas solo devuelven usuarios con acceso directo a esa compania. No mezclan usuarios de otras companias.
+- En contexto de compania, asignar/reemplazar/eliminar accesos solo afecta accesos de esa compania. No permite crear accesos globales ni accesos para otra compania.
+- Si el acceso del usuario autenticado esta limitado con `scopeKey: "subCompanyId"`, los endpoints mixtos solo muestran y administran accesos de esas subcompanias.
+- Crear usuarios, editar datos base, eliminar usuarios, cambiar contrasena, desvincular 2FA y reenviar credenciales siguen siendo operaciones globales.
 
 ## Modelos
 
@@ -86,21 +93,21 @@ Esta API es de administracion global. Los permisos `users.*` deben venir de un a
 
 ## Endpoints
 
-| Metodo   | Ruta                                | Permiso                    | Descripcion                                  |
-| -------- | ----------------------------------- | -------------------------- | -------------------------------------------- |
-| `POST`   | `/api/users`                        | `users.create`             | Crea un usuario.                             |
-| `GET`    | `/api/users`                        | `users.read-list`          | Lista usuarios con paginacion y filtros.     |
-| `GET`    | `/api/users/:id`                    | `users.read-one`           | Obtiene un usuario por ID.                   |
-| `PATCH`  | `/api/users/:id`                    | `users.update`             | Actualiza datos basicos del usuario.         |
-| `DELETE` | `/api/users/:id`                    | `users.delete`             | Elimina un usuario.                          |
-| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Lista accesos activos del usuario.           |
-| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Agrega un acceso al usuario.                 |
-| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Reemplaza todos los accesos del usuario.     |
-| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Elimina un acceso puntual del usuario.       |
-| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Lista permisos efectivos del usuario.        |
-| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Cambia la contrasena del usuario.            |
-| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Desvincula la configuracion 2FA del usuario. |
-| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Regenera y envia credenciales de acceso.     |
+| Metodo   | Ruta                                | Permiso                    | Alcance         | Descripcion                                  |
+| -------- | ----------------------------------- | -------------------------- | --------------- | -------------------------------------------- |
+| `POST`   | `/api/users`                        | `users.create`             | Global          | Crea un usuario.                             |
+| `GET`    | `/api/users`                        | `users.read-list`          | Global/compania | Lista usuarios con paginacion y filtros.     |
+| `GET`    | `/api/users/:id`                    | `users.read-one`           | Global/compania | Obtiene un usuario por ID.                   |
+| `PATCH`  | `/api/users/:id`                    | `users.update`             | Global          | Actualiza datos basicos del usuario.         |
+| `DELETE` | `/api/users/:id`                    | `users.delete`             | Global          | Elimina un usuario.                          |
+| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Global/compania | Lista accesos activos del usuario.           |
+| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Agrega un acceso al usuario.                 |
+| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Reemplaza accesos del usuario.               |
+| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Global/compania | Elimina un acceso puntual del usuario.       |
+| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Global/compania | Lista permisos efectivos del usuario.        |
+| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Global          | Cambia la contrasena del usuario.            |
+| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Global          | Desvincula la configuracion 2FA del usuario. |
+| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Global          | Regenera y envia credenciales de acceso.     |
 
 ## Crear usuario
 
@@ -140,6 +147,8 @@ Devuelve `User`.
 
 Requiere `users.read-list`.
 
+Si se envia `X-Company-Id`, lista solo usuarios con acceso directo a esa compania. Si se omite, requiere acceso global y lista usuarios del sistema.
+
 ### Query params
 
 | Parametro | Tipo                              | Reglas               | Descripcion                                                                          |
@@ -156,6 +165,11 @@ Requiere `users.read-list`.
 GET /api/users?page=1&limit=20&search=admin&status=active
 ```
 
+```http
+GET /api/users?page=1&limit=20
+X-Company-Id: c118d5f0-55c7-48f0-a17f-784909a61f97
+```
+
 ### Response `200`
 
 Devuelve `PaginatedUserResponse`.
@@ -165,6 +179,8 @@ Devuelve `PaginatedUserResponse`.
 `GET /api/users/:id`
 
 Requiere `users.read-one`.
+
+Si se envia `X-Company-Id`, el usuario solicitado debe tener acceso directo a esa compania; si no, devuelve `null`.
 
 ### Path params
 
@@ -233,6 +249,8 @@ Requiere `users.access.read`.
 
 Devuelve los accesos activos del usuario. El usuario debe existir y estar en estado `active`.
 
+Si se envia `X-Company-Id`, devuelve solo accesos activos de esa compania. Si se omite, requiere acceso global y devuelve todos los accesos activos.
+
 ### Response `200`
 
 ```json
@@ -259,6 +277,8 @@ Requiere `users.access.assign`.
 
 El usuario debe estar `active`. El rol debe existir. Si `companyId` se envia, la compania debe existir y estar `active`.
 
+Si se envia `X-Company-Id`, el acceso queda forzado a esa compania. En ese modo `companyId` puede omitirse en el body; si se envia, debe coincidir con `X-Company-Id`.
+
 ### Body
 
 ```json
@@ -278,7 +298,10 @@ El usuario debe estar `active`. El rol debe existir. Si `companyId` se envia, la
 Reglas de alcance:
 
 - `companyId: null`: acceso global.
-- `companyId`: acceso solo a esa compania.
+- `companyId` con `scopeKey: null` y `scopeId: null`: acceso a toda esa compania.
+- `companyId` con `scopeKey: "subCompanyId"` y `scopeId: <subCompanyId>`: acceso limitado a esa subcompania. La subcompania debe estar activa y pertenecer a `companyId`.
+
+Si el request envia `X-Company-Id` y el usuario autenticado esta limitado a una sola subcompania, el backend puede completar `scopeKey: "subCompanyId"` y `scopeId` automaticamente cuando se omiten. Si tiene varias subcompanias permitidas, el body debe indicar `scopeId`.
 
 ### Response `201`
 
@@ -291,6 +314,8 @@ Devuelve la lista completa de accesos activos del usuario.
 Requiere `users.access.assign`.
 
 Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses` puede estar vacio para dejar al usuario sin accesos.
+
+Si se envia `X-Company-Id`, reemplaza solo los accesos del usuario dentro de esa compania. No modifica accesos globales ni accesos de otras companias.
 
 ### Body
 
@@ -315,6 +340,8 @@ Devuelve `UserAccess[]`.
 
 Requiere `users.access.assign`.
 
+Si se envia `X-Company-Id`, solo puede eliminar un acceso de esa compania.
+
 ### Path params
 
 | Parametro  | Tipo   | Descripcion               |
@@ -338,6 +365,8 @@ Requiere `users.access.assign`.
 Requiere `users.permissions.read`.
 
 Devuelve permisos efectivos calculados desde los roles asignados al usuario. Los permisos se devuelven sin duplicados y ordenados por `code`.
+
+Si se envia `X-Company-Id`, devuelve los permisos efectivos del usuario dentro de esa compania.
 
 ### Response `200`
 

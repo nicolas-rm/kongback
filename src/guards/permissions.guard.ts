@@ -6,10 +6,11 @@ import { COMPANY_CONTEXT_REQUIRED_KEY, type CompanyRequest } from '@/decorators/
 import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
-import { SYSTEM_ACCESS_REQUIRED_KEY } from '@/decorators/system-access.decorator';
+import { SYSTEM_ACCESS_REQUIRED_KEY, SYSTEM_OR_COMPANY_ACCESS_REQUIRED_KEY } from '@/decorators/system-access.decorator';
 import { I18N_KEYS, I18nBadRequestException, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -26,6 +27,7 @@ export class PermissionsGuard implements CanActivate {
         const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [context.getHandler(), context.getClass()]) ?? [];
         const requiresCompany = this.reflector.getAllAndOverride<boolean>(COMPANY_CONTEXT_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
         const requiresSystemAccess = this.reflector.getAllAndOverride<boolean>(SYSTEM_ACCESS_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
+        const requiresSystemOrCompanyAccess = this.reflector.getAllAndOverride<boolean>(SYSTEM_OR_COMPANY_ACCESS_REQUIRED_KEY, [context.getHandler(), context.getClass()]) ?? false;
 
         const request = context.switchToHttp().getRequest<CompanyRequest & { user?: RequestUser }>();
         const user = request.user;
@@ -33,8 +35,7 @@ export class PermissionsGuard implements CanActivate {
 
         await this.resolveCompanyId(request, user, requiresCompany);
         const companyId = request.companyId;
-        const accessCompanyId = requiresSystemAccess ? null : companyId;
-        if (requiredPermissions.length === 0 && requiredRoles.length === 0) return true;
+        const accessCompanyId = requiresSystemAccess || (requiresSystemOrCompanyAccess && !companyId) ? null : companyId;
 
         if (requiredRoles.length > 0) {
             const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, accessCompanyId);
@@ -50,7 +51,22 @@ export class PermissionsGuard implements CanActivate {
             }
         }
 
+        if (companyId && !requiresSystemAccess) {
+            request.companyScope = await this.resolveCompanyScope(user, companyId, requiredPermissions, requiredRoles);
+        }
+
         return true;
+    }
+
+    private async resolveCompanyScope(user: RequestUser, companyId: string, requiredPermissions: string[], requiredRoles: string[]): Promise<CompanyScope> {
+        if (user.isGlobalAdmin) return { companyId };
+
+        const scope = await this.accessControl.resolveCompanyScope(user.id, companyId, requiredPermissions, requiredRoles);
+        if (!scope) {
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'Acceso denegado a esta compania');
+        }
+
+        return scope;
     }
 
     private async resolveCompanyId(request: Request, user: RequestUser, required: boolean): Promise<void> {

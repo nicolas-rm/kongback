@@ -11,7 +11,7 @@ Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El bor
 
 ## Alcance por compania
 
-Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. En create, el `companyId` del body debe coincidir con la compania seleccionada.
+Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limitadas a esa compania. Si el acceso del usuario tiene `scopeKey: "subCompanyId"`, solo ve y opera esas subcompanias. En create se requiere alcance completo de compania.
 
 ## Modelo
 

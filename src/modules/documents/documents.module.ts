@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { AppConfigModule } from '@/configurations/app-config.module';
 import { AppConfigService } from '@/configurations/app-config.service';
+import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { DocumentsController } from '@/modules/documents/documents.controller';
 import { DocumentsRepository } from '@/modules/documents/repositories/documents.repository';
 import { DocumentsStorageService } from '@/modules/documents/services/documents-storage.service';
@@ -23,7 +24,7 @@ import { DocumentsService } from '@/modules/documents/services/documents.service
         }),
     ],
     controllers: [DocumentsController],
-    providers: [DocumentsRepository, DocumentsStorageService, DocumentsService],
+    providers: [BusinessRelationsRepository, DocumentsRepository, DocumentsStorageService, DocumentsService],
     exports: [DocumentsStorageService, DocumentsService],
 })
 export class DocumentsModule {}

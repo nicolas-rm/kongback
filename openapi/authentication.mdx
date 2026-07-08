@@ -103,14 +103,14 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 
 ## Headers utiles
 
-| Header                                | Uso                                                                                                                                          |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados.                                                                             |
-| `X-Company-Id`                        | UUID de la compania seleccionada. Requerido por endpoints operativos como vehiculos, tarjetas, estaciones, subcompanias, stock y documentos. |
-| `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                                   |
-| `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                                       |
-| `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                                       |
-| `X-Request-Id`                        | ID de request opcional; el backend lo devuelve como response header.                                                                         |
+| Header                                | Uso                                                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Authorization: Bearer <accessToken>` | Alternativa a cookie `access_token` para endpoints autenticados.                                                                 |
+| `X-Company-Id`                        | UUID de la compania seleccionada. Requerido por endpoints operativos; opcional en endpoints mixtos como usuarios y capabilities. |
+| `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                       |
+| `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                           |
+| `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                           |
+| `X-Request-Id`                        | ID de request opcional; el backend lo devuelve como response header.                                                             |
 
 ## Endpoints
 
@@ -320,11 +320,13 @@ Devuelve `CompanyAccess[]`.
 
 Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
-Header opcional: `X-Company-Id: <companyId>`. Si se envia, el backend valida que la compania exista, este activa y sea accesible para el usuario antes de calcular permisos.
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, el backend valida que la compania exista, este activa y sea accesible para el usuario antes de calcular permisos. Si se omite, calcula solo permisos de acceso global (`companyId: null`).
 
-Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acciones dependientes de la compania seleccionada.
+Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acciones. Sin `X-Company-Id` representa modo global; con `X-Company-Id` representa la compania seleccionada.
 
-Los permisos de endpoints de sistema, como `companies.create`, `companies.update`, `users.*`, `roles.*`, `permissions.*` y mutaciones de `fuels`, solo se devuelven si el usuario los tiene en un acceso global (`companyId: null`).
+Si los permisos vienen de un acceso con `scopeKey: "subCompanyId"`, los endpoints operativos aplican ese scope al consultar, crear, actualizar o eliminar datos. `capabilities` devuelve permisos; el filtrado fino de datos se aplica en cada endpoint.
+
+Los permisos de endpoints de sistema, como `companies.create`, `companies.update`, acciones globales de `users`, `roles.*`, `permissions.*` y mutaciones de `fuels`, solo se devuelven si el usuario los tiene en un acceso global (`companyId: null`).
 
 ### Response `200`
 

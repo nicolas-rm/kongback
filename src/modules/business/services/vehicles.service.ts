@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
 import { CreateVehicleDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
@@ -13,11 +14,11 @@ export class VehiclesService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateVehicleDto, companyId?: string) {
+    async create(dto: CreateVehicleDto, scope?: CompanyScope) {
         await assertActive([
-            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, companyId) },
+            { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) },
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
-            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, dto.subCompanyId, companyId) },
+            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, dto.subCompanyId, scope) },
         ]);
 
         return this.repository.create({
@@ -34,10 +35,10 @@ export class VehiclesService {
         });
     }
 
-    async findAll(dto: FindVehiclesDto, companyId?: string) {
+    async findAll(dto: FindVehiclesDto, scope?: CompanyScope) {
         const where: Prisma.VehicleWhereInput = {
-            subCompanyId: dto.subCompanyId,
-            subCompany: { company: { ...(companyId ? { id: companyId } : {}) } },
+            subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope),
+            subCompany: subCompanyScopeWhere(scope),
             fuelId: dto.fuelId,
             driverId: dto.driverId,
             status: dto.status,
@@ -47,19 +48,19 @@ export class VehiclesService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string, companyId?: string) {
-        const vehicle = await this.repository.findById(id, companyId);
+    async findOne(id: string, scope?: CompanyScope) {
+        const vehicle = await this.repository.findById(id, scope);
         if (!vehicle) throw notFound();
         return vehicle;
     }
 
-    async update(id: string, dto: UpdateVehicleDto, companyId?: string) {
-        const current = dto.driverId ? await this.repository.findById(id, companyId) : null;
+    async update(id: string, dto: UpdateVehicleDto, scope?: CompanyScope) {
+        const current = dto.driverId ? await this.repository.findById(id, scope) : null;
         if (dto.driverId && !current) throw notFound();
 
         await assertActive([
             { ids: [dto.fuelId], count: (ids) => this.relations.countActiveFuels(ids) },
-            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current?.subCompanyId ?? '', companyId) },
+            { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current?.subCompanyId ?? '', scope) },
         ]);
 
         const vehicle = await this.repository.update(
@@ -75,26 +76,26 @@ export class VehiclesService {
                 odometerInitial: dto.odometerInitial,
                 status: dto.status,
             },
-            companyId
+            scope
         );
         if (!vehicle) throw notFound();
         return vehicle;
     }
 
-    async setDriver(id: string, dto: SetVehicleDriverDto, companyId?: string) {
-        const current = await this.repository.findById(id, companyId);
+    async setDriver(id: string, dto: SetVehicleDriverDto, scope?: CompanyScope) {
+        const current = await this.repository.findById(id, scope);
         if (!current) throw notFound();
         if (current.status !== Status.active) throw invalidRelation();
 
-        await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId, companyId) }]);
+        await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId, scope) }]);
 
-        const vehicle = await this.repository.update(id, { driverId: dto.driverId }, companyId);
+        const vehicle = await this.repository.update(id, { driverId: dto.driverId }, scope);
         if (!vehicle) throw notFound();
         return { id: vehicle.id, driverId: vehicle.driverId };
     }
 
-    async deactivate(id: string, companyId?: string) {
-        const vehicle = await this.repository.deactivate(id, companyId);
+    async deactivate(id: string, scope?: CompanyScope) {
+        const vehicle = await this.repository.deactivate(id, scope);
         if (!vehicle) throw notFound();
         return { id: vehicle.id, status: vehicle.status };
     }

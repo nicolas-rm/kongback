@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
 import { CreateCardcloudCardStockDto, FindCardcloudCardStockDto, UpdateCardcloudCardStockDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
@@ -13,9 +14,11 @@ export class CardcloudCardStockService {
         private readonly relations: BusinessRelationsRepository
     ) {}
 
-    async create(dto: CreateCardcloudCardStockDto, companyId?: string) {
+    async create(dto: CreateCardcloudCardStockDto, scope?: CompanyScope) {
+        const companyId = scope?.companyId;
         if (!companyId) throw invalidRelation();
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, companyId) }]);
+        if (scope?.subCompanyIds && !dto.assignedCardId) throw invalidRelation();
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, scope) }]);
 
         return this.repository.create({
             companyId,
@@ -29,10 +32,11 @@ export class CardcloudCardStockService {
         });
     }
 
-    async findAll(dto: FindCardcloudCardStockDto, companyId?: string) {
+    async findAll(dto: FindCardcloudCardStockDto, scope?: CompanyScope) {
         const where: Prisma.CardcloudCardStockWhereInput = {
-            companyId,
+            companyId: scope?.companyId,
             assignedCardId: dto.assignedCardId,
+            ...(scope?.subCompanyIds ? { assignedCard: { subCompanyId: { in: scope.subCompanyIds } } } : {}),
             providerStatus: dto.status,
             ...(dto.search ? { OR: textSearch<Prisma.CardcloudCardStockWhereInput>(dto.search, ['externalId', 'maskedPan', 'clientId']) } : {}),
         };
@@ -40,14 +44,15 @@ export class CardcloudCardStockService {
         return paginate(data, total, dto);
     }
 
-    async findOne(id: string, companyId?: string) {
-        const stock = await this.repository.findById(id, companyId);
+    async findOne(id: string, scope?: CompanyScope) {
+        const stock = await this.repository.findById(id, scope);
         if (!stock) throw notFound();
         return stock;
     }
 
-    async update(id: string, dto: UpdateCardcloudCardStockDto, companyId?: string) {
-        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, companyId) }]);
+    async update(id: string, dto: UpdateCardcloudCardStockDto, scope?: CompanyScope) {
+        if (scope?.subCompanyIds && dto.assignedCardId === null) throw invalidRelation();
+        await assertActive([{ ids: [dto.assignedCardId], count: (ids) => this.relations.countActiveCards(ids, scope) }]);
 
         const stock = await this.repository.update(
             id,
@@ -59,14 +64,14 @@ export class CardcloudCardStockService {
                 providerStatus: dto.providerStatus,
                 syncedAt: dto.syncedAt,
             },
-            companyId
+            scope
         );
         if (!stock) throw notFound();
         return stock;
     }
 
-    async deactivate(id: string, companyId?: string) {
-        const stock = await this.repository.deactivate(id, companyId);
+    async deactivate(id: string, scope?: CompanyScope) {
+        const stock = await this.repository.deactivate(id, scope);
         if (!stock) throw notFound();
         return { id: stock.id, status: stock.providerStatus };
     }
