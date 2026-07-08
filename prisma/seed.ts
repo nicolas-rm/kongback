@@ -372,9 +372,9 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
         {
             code: 'demo-driver-administrator',
             name: 'Demo Administracion de choferes',
-            description: 'Administra choferes y consulta las relaciones necesarias para asignarlos correctamente.',
+            description: 'Administra choferes y consulta subcompanias necesarias para asignarlos correctamente.',
             prefixes: ['drivers.'],
-            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one', 'users.read-list', 'users.read-one'],
+            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
         },
         {
             code: 'demo-vehicle-administrator',
