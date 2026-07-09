@@ -1,627 +1,627 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
+  provider = "postgresql"
 }
 
 enum Status {
-    active
-    inactive
-    suspended
+  active
+  inactive
+  suspended
 }
 
 enum CardAssignmentMode {
-    unassigned
-    vehicle
+  unassigned
+  vehicle
 }
 
 enum NotificationType {
-    info
-    warning
-    success
-    error
+  info
+  warning
+  success
+  error
 }
 
 enum EmailDispatchContext {
-    password_reset
-    welcome_credentials
-    verify_email
-    login_alert
-    custom
+  password_reset
+  welcome_credentials
+  verify_email
+  login_alert
+  custom
 }
 
 enum EmailDispatchStatus {
-    accepted
-    sent
-    failed
-    suppressed_rate_limit
+  accepted
+  sent
+  failed
+  suppressed_rate_limit
 }
 
 enum SettingScope {
-    global
+  global
 }
 
 model User {
-    id                        String                    @id @default(uuid())
-    username                  String                    @unique
-    email                     String                    @unique
-    fullName                  String
-    preferredLanguage         String                    @default("es")
-    passwordHash              String
-    status                    Status                    @default(active)
-    mustChangePassword        Boolean                   @default(false)
-    requiresEmailVerification Boolean                   @default(false)
-    emailVerifiedAt           DateTime?
-    failedLoginAttempts       Int                       @default(0)
-    lockedUntil               DateTime?
-    lastLoginAt               DateTime?
-    twoFactorEnabled          Boolean                   @default(false)
-    twoFactorSecret           String?
-    twoFactorPendingSecret    String?
-    twoFactorPendingCreatedAt DateTime?
-    twoFactorConfirmedAt      DateTime?
-    createdAt                 DateTime                  @default(now())
-    updatedAt                 DateTime                  @updatedAt
-    accesses                  UserAccess[]
-    emailDispatchesAsActor    EmailDispatch[]           @relation("EmailDispatchTriggeredByUser")
-    emailDispatchesAsTarget   EmailDispatch[]           @relation("EmailDispatchRecipientUser")
-    emailVerificationTokens   EmailVerificationToken[]
-    externalIdentities        ExternalIdentity[]
-    driver                    Driver?
-    notifications             Notification[]
-    passwordResetTokens       PasswordResetToken[]
-    refreshTokens             RefreshToken[]
-    sessions                  Session[]
-    settingsCreated           Setting[]                 @relation("SettingCreatedByUser")
-    settingsUpdated           Setting[]                 @relation("SettingUpdatedByUser")
-    twoFactorLoginChallenges  TwoFactorLoginChallenge[]
-    twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
-    rolesCreated              Role[]                    @relation("RoleCreatedByUser")
-    rolesUpdated              Role[]                    @relation("RoleUpdatedByUser")
-    permissionsCreated        Permission[]              @relation("PermissionCreatedByUser")
-    permissionsUpdated        Permission[]              @relation("PermissionUpdatedByUser")
-    documentsCreated          Document[]                @relation("DocumentCreatedByUser")
-    documentsDeleted          Document[]                @relation("DocumentDeletedByUser")
-    documentsUpdated          Document[]                @relation("DocumentUpdatedByUser")
-    uploadedDocuments         Document[]
-    notificationsCreated      Notification[]            @relation("NotificationCreatedByUser")
-    notificationsUpdated      Notification[]            @relation("NotificationUpdatedByUser")
+  id                        String                    @id @default(uuid())
+  username                  String                    @unique
+  email                     String                    @unique
+  fullName                  String
+  preferredLanguage         String                    @default("es")
+  passwordHash              String
+  status                    Status                    @default(active)
+  mustChangePassword        Boolean                   @default(false)
+  requiresEmailVerification Boolean                   @default(false)
+  emailVerifiedAt           DateTime?
+  failedLoginAttempts       Int                       @default(0)
+  lockedUntil               DateTime?
+  lastLoginAt               DateTime?
+  twoFactorEnabled          Boolean                   @default(false)
+  twoFactorSecret           String?
+  twoFactorPendingSecret    String?
+  twoFactorPendingCreatedAt DateTime?
+  twoFactorConfirmedAt      DateTime?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  accesses                  UserAccess[]
+  emailDispatchesAsActor    EmailDispatch[]           @relation("EmailDispatchTriggeredByUser")
+  emailDispatchesAsTarget   EmailDispatch[]           @relation("EmailDispatchRecipientUser")
+  emailVerificationTokens   EmailVerificationToken[]
+  externalIdentities        ExternalIdentity[]
+  driver                    Driver?
+  notifications             Notification[]
+  passwordResetTokens       PasswordResetToken[]
+  refreshTokens             RefreshToken[]
+  sessions                  Session[]
+  settingsCreated           Setting[]                 @relation("SettingCreatedByUser")
+  settingsUpdated           Setting[]                 @relation("SettingUpdatedByUser")
+  twoFactorLoginChallenges  TwoFactorLoginChallenge[]
+  twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
+  rolesCreated              Role[]                    @relation("RoleCreatedByUser")
+  rolesUpdated              Role[]                    @relation("RoleUpdatedByUser")
+  permissionsCreated        Permission[]              @relation("PermissionCreatedByUser")
+  permissionsUpdated        Permission[]              @relation("PermissionUpdatedByUser")
+  documentsCreated          Document[]                @relation("DocumentCreatedByUser")
+  documentsDeleted          Document[]                @relation("DocumentDeletedByUser")
+  documentsUpdated          Document[]                @relation("DocumentUpdatedByUser")
+  uploadedDocuments         Document[]
+  notificationsCreated      Notification[]            @relation("NotificationCreatedByUser")
+  notificationsUpdated      Notification[]            @relation("NotificationUpdatedByUser")
 
-    @@index([status])
-    @@index([twoFactorEnabled])
-    @@map("users")
+  @@index([status])
+  @@index([twoFactorEnabled])
+  @@map("users")
 }
 
 model ExternalIdentity {
-    id              String    @id @default(uuid())
-    userId          String
-    provider        String
-    issuer          String
-    providerSubject String
-    email           String?
-    emailVerified   Boolean   @default(false)
-    lastLoginAt     DateTime?
-    profile         Json?
-    createdAt       DateTime  @default(now())
-    updatedAt       DateTime  @updatedAt
-    user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id              String    @id @default(uuid())
+  userId          String
+  provider        String
+  issuer          String
+  providerSubject String
+  email           String?
+  emailVerified   Boolean   @default(false)
+  lastLoginAt     DateTime?
+  profile         Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@unique([provider, providerSubject])
-    @@index([userId])
-    @@index([provider, email])
-    @@map("external_identities")
+  @@unique([provider, providerSubject])
+  @@index([userId])
+  @@index([provider, email])
+  @@map("external_identities")
 }
 
 model RefreshToken {
-    id             String    @id @default(uuid())
-    userId         String
-    sessionId      String
-    tokenHash      String    @unique
-    expiresAt      DateTime
-    revokedAt      DateTime?
-    lastActivityAt DateTime  @default(now())
-    idleExpiresAt  DateTime
-    userAgent      String?
-    ipAddress      String?
-    createdAt      DateTime  @default(now())
-    updatedAt      DateTime  @updatedAt
-    user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id             String    @id @default(uuid())
+  userId         String
+  sessionId      String
+  tokenHash      String    @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastActivityAt DateTime  @default(now())
+  idleExpiresAt  DateTime
+  userAgent      String?
+  ipAddress      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId])
-    @@index([sessionId])
-    @@index([userId, revokedAt])
-    @@index([userId, lastActivityAt])
-    @@index([expiresAt])
-    @@index([idleExpiresAt])
-    @@map("refresh_tokens")
+  @@index([userId])
+  @@index([sessionId])
+  @@index([userId, revokedAt])
+  @@index([userId, lastActivityAt])
+  @@index([expiresAt])
+  @@index([idleExpiresAt])
+  @@map("refresh_tokens")
 }
 
 model Session {
-    id             String         @id @default(uuid())
-    userId         String
-    revokedAt      DateTime?
-    lastActivityAt DateTime       @default(now())
-    idleExpiresAt  DateTime
-    expiresAt      DateTime
-    userAgent      String?
-    ipAddress      String?
-    deviceName     String?
-    metadata       Json?
-    createdAt      DateTime       @default(now())
-    updatedAt      DateTime       @updatedAt
-    user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    refreshTokens  RefreshToken[]
+  id             String         @id @default(uuid())
+  userId         String
+  revokedAt      DateTime?
+  lastActivityAt DateTime       @default(now())
+  idleExpiresAt  DateTime
+  expiresAt      DateTime
+  userAgent      String?
+  ipAddress      String?
+  deviceName     String?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  refreshTokens  RefreshToken[]
 
-    @@index([userId])
-    @@index([userId, revokedAt])
-    @@index([lastActivityAt])
-    @@index([expiresAt])
-    @@index([idleExpiresAt])
-    @@map("sessions")
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@index([lastActivityAt])
+  @@index([expiresAt])
+  @@index([idleExpiresAt])
+  @@map("sessions")
 }
 
 model PasswordResetToken {
-    id        String    @id @default(uuid())
-    userId    String
-    tokenHash String    @unique
-    expiresAt DateTime
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId])
-    @@index([expiresAt])
-    @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model EmailVerificationToken {
-    id        String    @id @default(uuid())
-    userId    String
-    tokenHash String    @unique
-    expiresAt DateTime
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId])
-    @@index([expiresAt])
-    @@map("email_verification_tokens")
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 model TwoFactorLoginChallenge {
-    id            String    @id @default(uuid())
-    userId        String
-    challengeHash String    @unique
-    expiresAt     DateTime
-    consumedAt    DateTime?
-    attemptCount  Int       @default(0)
-    userAgent     String?
-    ipAddress     String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
-    user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id            String    @id @default(uuid())
+  userId        String
+  challengeHash String    @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  attemptCount  Int       @default(0)
+  userAgent     String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId, createdAt])
-    @@index([expiresAt])
-    @@index([consumedAt])
-    @@map("two_factor_login_challenges")
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@index([consumedAt])
+  @@map("two_factor_login_challenges")
 }
 
 model TwoFactorRecoveryCode {
-    id        String    @id @default(uuid())
-    userId    String
-    codeHash  String    @unique
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId, usedAt, createdAt])
-    @@map("two_factor_recovery_codes")
+  @@index([userId, usedAt, createdAt])
+  @@map("two_factor_recovery_codes")
 }
 
 model Role {
-    id              String           @id @default(uuid())
-    code            String           @unique
-    name            String
-    description     String?
-    createdByUserId String?
-    updatedByUserId String?
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
-    createdByUser   User?            @relation("RoleCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    updatedByUser   User?            @relation("RoleUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    accesses        UserAccess[]
-    permissions     RolePermission[]
+  id              String           @id @default(uuid())
+  code            String           @unique
+  name            String
+  description     String?
+  createdByUserId String?
+  updatedByUserId String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  createdByUser   User?            @relation("RoleCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedByUser   User?            @relation("RoleUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  accesses        UserAccess[]
+  permissions     RolePermission[]
 
-    @@index([createdByUserId])
-    @@index([updatedByUserId])
-    @@map("roles")
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("roles")
 }
 
 model Permission {
-    id              String           @id @default(uuid())
-    code            String           @unique
-    name            String?
-    description     String?
-    createdByUserId String?
-    updatedByUserId String?
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
-    createdByUser   User?            @relation("PermissionCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    updatedByUser   User?            @relation("PermissionUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    roles           RolePermission[]
+  id              String           @id @default(uuid())
+  code            String           @unique
+  name            String?
+  description     String?
+  createdByUserId String?
+  updatedByUserId String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  createdByUser   User?            @relation("PermissionCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedByUser   User?            @relation("PermissionUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  roles           RolePermission[]
 
-    @@index([createdByUserId])
-    @@index([updatedByUserId])
-    @@map("permissions")
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("permissions")
 }
 
 model RolePermission {
-    roleId       String
-    permissionId String
-    createdAt    DateTime   @default(now())
-    role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@id([roleId, permissionId])
-    @@map("role_permissions")
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
 }
 
 model UserAccess {
-    id         String   @id @default(uuid())
-    userId     String
-    roleId     String
-    companyId  String?
-    scopeKey   String?
-    scopeId    String?
-    assignedAt DateTime @default(now())
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
-    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    role       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-    company    Company? @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id         String   @id @default(uuid())
+  userId     String
+  roleId     String
+  companyId  String?
+  scopeKey   String?
+  scopeId    String?
+  assignedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@index([userId])
-    @@index([roleId])
-    @@index([companyId])
-    @@index([userId, companyId])
-    @@index([scopeKey, scopeId])
-    @@index([userId, roleId, scopeKey, scopeId])
-    @@map("user_accesses")
+  @@index([userId])
+  @@index([roleId])
+  @@index([companyId])
+  @@index([userId, companyId])
+  @@index([scopeKey, scopeId])
+  @@index([userId, roleId, scopeKey, scopeId])
+  @@map("user_accesses")
 }
 
 model Address {
-    id             String      @id @default(uuid())
-    street         String?
-    exteriorNumber String?
-    interiorNumber String?
-    neighborhood   String?
-    municipality   String?
-    city           String?
-    state          String?
-    country        String?
-    postalCode     String?
-    references     String?
-    createdAt      DateTime    @default(now())
-    updatedAt      DateTime    @updatedAt
-    company        Company?
-    driver         Driver?
-    station        Station?
-    subCompany     SubCompany?
+  id             String      @id @default(uuid())
+  street         String?
+  exteriorNumber String?
+  interiorNumber String?
+  neighborhood   String?
+  municipality   String?
+  city           String?
+  state          String?
+  country        String?
+  postalCode     String?
+  references     String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  company        Company?
+  driver         Driver?
+  station        Station?
+  subCompany     SubCompany?
 
-    @@map("addresses")
+  @@map("addresses")
 }
 
 model Notification {
-    id              String           @id @default(uuid())
-    userId          String
-    createdByUserId String?
-    updatedByUserId String?
-    title           String
-    message         String
-    detail          String?
-    type            NotificationType @default(info)
-    link            String?
-    isRead          Boolean          @default(false)
-    readAt          DateTime?
-    createdAt       DateTime         @default(now())
-    updatedAt       DateTime         @updatedAt
-    user            User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    createdByUser   User?            @relation("NotificationCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    updatedByUser   User?            @relation("NotificationUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id              String           @id @default(uuid())
+  userId          String
+  createdByUserId String?
+  updatedByUserId String?
+  title           String
+  message         String
+  detail          String?
+  type            NotificationType @default(info)
+  link            String?
+  isRead          Boolean          @default(false)
+  readAt          DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdByUser   User?            @relation("NotificationCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedByUser   User?            @relation("NotificationUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([userId])
-    @@index([createdByUserId])
-    @@index([updatedByUserId])
-    @@index([userId, isRead])
-    @@index([userId, createdAt])
-    @@index([userId, isRead, createdAt])
-    @@map("notifications")
+  @@index([userId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
 }
 
 model Document {
-    id               String    @id @default(uuid())
-    uploadedByUserId String?
-    companyId        String?
-    createdByUserId  String?
-    updatedByUserId  String?
-    deletedByUserId  String?
-    title            String
-    description      String?
-    category         String?
-    entityType       String?
-    entityId         String?
-    scopeKey         String?
-    scopeId          String?
-    originalName     String
-    storageKey       String    @unique
-    mimeType         String
-    extension        String?
-    sizeBytes        Int
-    checksumSha256   String?
-    createdAt        DateTime  @default(now())
-    updatedAt        DateTime  @updatedAt
-    deletedAt        DateTime?
-    uploadedByUser   User?     @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    createdByUser    User?     @relation("DocumentCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    updatedByUser    User?     @relation("DocumentUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    deletedByUser    User?     @relation("DocumentDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    company          Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id               String    @id @default(uuid())
+  uploadedByUserId String?
+  companyId        String?
+  createdByUserId  String?
+  updatedByUserId  String?
+  deletedByUserId  String?
+  title            String
+  description      String?
+  category         String?
+  entityType       String?
+  entityId         String?
+  scopeKey         String?
+  scopeId          String?
+  originalName     String
+  storageKey       String    @unique
+  mimeType         String
+  extension        String?
+  sizeBytes        Int
+  checksumSha256   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  uploadedByUser   User?     @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdByUser    User?     @relation("DocumentCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedByUser    User?     @relation("DocumentUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  deletedByUser    User?     @relation("DocumentDeletedByUser", fields: [deletedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  company          Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([uploadedByUserId])
-    @@index([createdByUserId])
-    @@index([updatedByUserId])
-    @@index([deletedByUserId])
-    @@index([companyId])
-    @@index([entityType, entityId])
-    @@index([scopeKey, scopeId])
-    @@index([category])
-    @@index([mimeType])
-    @@index([deletedAt, createdAt])
-    @@map("documents")
+  @@index([uploadedByUserId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@index([deletedByUserId])
+  @@index([companyId])
+  @@index([entityType, entityId])
+  @@index([scopeKey, scopeId])
+  @@index([category])
+  @@index([mimeType])
+  @@index([deletedAt, createdAt])
+  @@map("documents")
 }
 
 model Setting {
-    id              String       @id @default(uuid())
-    key             String
-    value           Json
-    description     String?
-    scope           SettingScope @default(global)
-    createdByUserId String?
-    updatedByUserId String?
-    createdAt       DateTime     @default(now())
-    updatedAt       DateTime     @updatedAt
-    createdByUser   User?        @relation("SettingCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    updatedByUser   User?        @relation("SettingUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id              String       @id @default(uuid())
+  key             String
+  value           Json
+  description     String?
+  scope           SettingScope @default(global)
+  createdByUserId String?
+  updatedByUserId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  createdByUser   User?        @relation("SettingCreatedByUser", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  updatedByUser   User?        @relation("SettingUpdatedByUser", fields: [updatedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([key])
-    @@index([scope])
-    @@index([createdByUserId])
-    @@index([updatedByUserId])
-    @@map("settings")
+  @@index([key])
+  @@index([scope])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("settings")
 }
 
 model Company {
-    id              String       @id @default(uuid())
-    key             String       @unique
-    externalId      String?      @unique @map("external_id")
-    name            String
-    tradeName       String?
-    status          Status       @default(active)
-    addressId       String?      @unique
-    createdAt       DateTime     @default(now())
-    updatedAt       DateTime     @updatedAt
-    address         Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    cardcloudStocks Cardcloud[]
-    documents       Document[]
-    subCompanies    SubCompany[]
-    userAccesses    UserAccess[]
+  id           String       @id @default(uuid())
+  key          String       @unique
+  externalId   String?      @unique @map("external_id")
+  name         String
+  tradeName    String?
+  status       Status       @default(active)
+  addressId    String?      @unique
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  address      Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  documents    Document[]
+  subCompanies SubCompany[]
+  userAccesses UserAccess[]
 
-    @@index([name])
-    @@index([status])
-    @@map("companies")
+  @@index([name])
+  @@index([status])
+  @@map("companies")
 }
 
 model SubCompany {
-    id         String    @id @default(uuid())
-    companyId  String
-    key        String
-    externalId String?   @unique @map("external_id")
-    name       String
-    status     Status    @default(active)
-    addressId  String?   @unique
-    isDefault  Boolean   @default(false)
-    createdAt  DateTime  @default(now())
-    updatedAt  DateTime  @updatedAt
-    address    Address?  @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    cards      Card[]
-    company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    drivers    Driver[]
-    stations   Station[]
-    vehicles   Vehicle[]
+  id               String      @id @default(uuid())
+  companyId        String
+  key              String
+  externalId       String?     @unique @map("external_id")
+  name             String
+  status           Status      @default(active)
+  addressId        String?     @unique
+  isDefault        Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  address          Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  cards            Card[]
+  cardcloudRecords Cardcloud[]
+  company          Company     @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  drivers          Driver[]
+  stations         Station[]
+  vehicles         Vehicle[]
 
-    @@unique([companyId, key])
-    @@index([companyId])
-    @@index([status])
-    @@index([name])
-    @@map("sub_companies")
+  @@unique([companyId, key])
+  @@index([companyId])
+  @@index([status])
+  @@index([name])
+  @@map("sub_companies")
 }
 
 model Driver {
-    id                String     @id @default(uuid())
-    subCompanyId      String
-    userId            String?    @unique
-    addressId         String?    @unique
-    name              String
-    externalReference String?
-    status            Status     @default(active)
-    createdAt         DateTime   @default(now())
-    updatedAt         DateTime   @updatedAt
-    address           Address?   @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    subCompany        SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    vehicles          Vehicle[]
+  id                String     @id @default(uuid())
+  subCompanyId      String
+  userId            String?    @unique
+  addressId         String?    @unique
+  name              String
+  externalReference String?
+  status            Status     @default(active)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  address           Address?   @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  subCompany        SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user              User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  vehicles          Vehicle[]
 
-    @@unique([subCompanyId, externalReference])
-    @@index([subCompanyId])
-    @@index([status])
-    @@index([name])
-    @@map("drivers")
+  @@unique([subCompanyId, externalReference])
+  @@index([subCompanyId])
+  @@index([status])
+  @@index([name])
+  @@map("drivers")
 }
 
 model Fuel {
-    id           String        @id @default(uuid())
-    code         String        @unique
-    name         String        @unique
-    status       Status        @default(active)
-    createdAt    DateTime      @default(now())
-    updatedAt    DateTime      @updatedAt
-    designCards  Card[]
-    stationFuels StationFuel[]
-    vehicles     Vehicle[]
+  id           String        @id @default(uuid())
+  code         String        @unique
+  name         String        @unique
+  status       Status        @default(active)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  designCards  Card[]
+  stationFuels StationFuel[]
+  vehicles     Vehicle[]
 
-    @@index([status])
-    @@map("fuels")
+  @@index([status])
+  @@map("fuels")
 }
 
 model Vehicle {
-    id              String     @id @default(uuid())
-    subCompanyId    String
-    fuelId          String
-    driverId        String?
-    plates          String
-    economicNumber  String?
-    model           String?
-    year            Int?
-    odometerControl Boolean    @default(false)
-    odometerInitial Int?
-    status          Status     @default(active)
-    createdAt       DateTime   @default(now())
-    updatedAt       DateTime   @updatedAt
-    card            Card?
-    driver          Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    fuel            Fuel       @relation(fields: [fuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-    subCompany      SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id              String     @id @default(uuid())
+  subCompanyId    String
+  fuelId          String
+  driverId        String?
+  plates          String
+  economicNumber  String?
+  model           String?
+  year            Int?
+  odometerControl Boolean    @default(false)
+  odometerInitial Int?
+  status          Status     @default(active)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  card            Card?
+  driver          Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  fuel            Fuel       @relation(fields: [fuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  subCompany      SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@unique([subCompanyId, plates])
-    @@unique([subCompanyId, economicNumber])
-    @@index([subCompanyId])
-    @@index([fuelId])
-    @@index([driverId])
-    @@index([status])
-    @@map("vehicles")
+  @@unique([subCompanyId, plates])
+  @@unique([subCompanyId, economicNumber])
+  @@index([subCompanyId])
+  @@index([fuelId])
+  @@index([driverId])
+  @@index([status])
+  @@map("vehicles")
 }
 
 model Card {
-    id             String             @id @default(uuid())
-    subCompanyId   String
-    vehicleId      String?            @unique
-    designFuelId   String?
-    externalId     String?            @unique @map("card_external_id")
-    assignmentMode CardAssignmentMode @default(unassigned)
-    status         Status             @default(active)
-    assignedAt     DateTime?
-    createdAt      DateTime           @default(now())
-    updatedAt      DateTime           @updatedAt
-    designFuel     Fuel?              @relation(fields: [designFuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-    stock          Cardcloud?
-    subCompany     SubCompany         @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    vehicle        Vehicle?           @relation(fields: [vehicleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id             String             @id @default(uuid())
+  subCompanyId   String
+  vehicleId      String?            @unique
+  designFuelId   String?
+  externalId     String?            @unique @map("card_external_id")
+  assignmentMode CardAssignmentMode @default(unassigned)
+  status         Status             @default(active)
+  assignedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  designFuel     Fuel?              @relation(fields: [designFuelId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  stock          Cardcloud?
+  subCompany     SubCompany         @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vehicle        Vehicle?           @relation(fields: [vehicleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([subCompanyId])
-    @@index([designFuelId])
-    @@index([assignmentMode])
-    @@index([status])
-    @@map("cards")
+  @@index([subCompanyId])
+  @@index([designFuelId])
+  @@index([assignmentMode])
+  @@index([status])
+  @@map("cards")
 }
 
 model Station {
-    id            String        @id @default(uuid())
-    subCompanyId  String
-    stationNumber String
-    name          String
-    addressId     String?       @unique
-    lat           Decimal?      @db.Decimal(10, 7)
-    lon           Decimal?      @db.Decimal(10, 7)
-    status        Status        @default(active)
-    createdAt     DateTime      @default(now())
-    updatedAt     DateTime      @updatedAt
-    address       Address?      @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    stationFuels  StationFuel[]
-    subCompany    SubCompany    @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id            String        @id @default(uuid())
+  subCompanyId  String
+  stationNumber String
+  name          String
+  addressId     String?       @unique
+  lat           Decimal?      @db.Decimal(10, 7)
+  lon           Decimal?      @db.Decimal(10, 7)
+  status        Status        @default(active)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  address       Address?      @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  stationFuels  StationFuel[]
+  subCompany    SubCompany    @relation(fields: [subCompanyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@unique([subCompanyId, stationNumber])
-    @@index([subCompanyId])
-    @@index([name])
-    @@index([status])
-    @@map("stations")
+  @@unique([subCompanyId, stationNumber])
+  @@index([subCompanyId])
+  @@index([name])
+  @@index([status])
+  @@map("stations")
 }
 
 model StationFuel {
-    id        String   @id @default(uuid())
-    stationId String
-    fuelId    String
-    status    Status   @default(active)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    fuel      Fuel     @relation(fields: [fuelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    station   Station  @relation(fields: [stationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id        String   @id @default(uuid())
+  stationId String
+  fuelId    String
+  status    Status   @default(active)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fuel      Fuel     @relation(fields: [fuelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  station   Station  @relation(fields: [stationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
-    @@unique([stationId, fuelId])
-    @@index([stationId])
-    @@index([fuelId])
-    @@index([status])
-    @@map("station_fuels")
+  @@unique([stationId, fuelId])
+  @@index([stationId])
+  @@index([fuelId])
+  @@index([status])
+  @@map("station_fuels")
 }
 
 model Cardcloud {
-    id             String    @id @default(uuid())
-    companyId      String
-    externalId     String    @unique @map("card_external_id")
-    assignedCardId String?   @unique
-    maskedPan      String?
-    clientId       String?
-    balance        Decimal?  @db.Decimal(14, 2)
-    providerStatus Status    @default(active) @map("cardcloud_status")
-    syncedAt       DateTime?
-    createdAt      DateTime  @default(now())
-    updatedAt      DateTime  @updatedAt
-    assignedCard   Card?     @relation(fields: [assignedCardId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id             String      @id @default(uuid())
+  subCompanyId   String?
+  externalId     String      @unique @map("card_external_id")
+  assignedCardId String?     @unique
+  maskedPan      String?
+  clientId       String?
+  balance        Decimal?    @db.Decimal(14, 2)
+  providerStatus Status      @default(active) @map("cardcloud_status")
+  syncedAt       DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  assignedCard   Card?       @relation(fields: [assignedCardId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  subCompany     SubCompany? @relation(fields: [subCompanyId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([companyId])
-    @@index([providerStatus, assignedCardId])
-    @@map("cardcloud_card_stock")
+  @@index([subCompanyId])
+  @@index([providerStatus, assignedCardId])
+  @@map("cardcloud_card_stock")
 }
 
 model EmailDispatch {
-    id                String               @id @default(uuid())
-    context           EmailDispatchContext
-    status            EmailDispatchStatus
-    recipientEmail    String?
-    recipientUserId   String?
-    triggeredByUserId String?
-    ipAddress         String?
-    reason            String?
-    retryAfterSeconds Int?
-    errorMessage      String?
-    metadata          Json?
-    createdAt         DateTime             @default(now())
-    updatedAt         DateTime             @updatedAt
-    recipientUser     User?                @relation("EmailDispatchRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-    triggeredByUser   User?                @relation("EmailDispatchTriggeredByUser", fields: [triggeredByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  id                String               @id @default(uuid())
+  context           EmailDispatchContext
+  status            EmailDispatchStatus
+  recipientEmail    String?
+  recipientUserId   String?
+  triggeredByUserId String?
+  ipAddress         String?
+  reason            String?
+  retryAfterSeconds Int?
+  errorMessage      String?
+  metadata          Json?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  recipientUser     User?                @relation("EmailDispatchRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  triggeredByUser   User?                @relation("EmailDispatchTriggeredByUser", fields: [triggeredByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-    @@index([context, createdAt])
-    @@index([context, status, createdAt])
-    @@index([recipientEmail, createdAt])
-    @@index([recipientUserId, createdAt])
-    @@index([triggeredByUserId, createdAt])
-    @@index([ipAddress, createdAt])
-    @@map("email_dispatches")
+  @@index([context, createdAt])
+  @@index([context, status, createdAt])
+  @@index([recipientEmail, createdAt])
+  @@index([recipientUserId, createdAt])
+  @@index([triggeredByUserId, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("email_dispatches")
 }

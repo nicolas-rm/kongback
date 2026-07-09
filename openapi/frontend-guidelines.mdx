@@ -36,7 +36,7 @@ Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu,
 | `fuels`               | Catalogo global de combustibles                             | Opcional                    | Puede ser pantalla global o solo fuente de selects; no es catalogo por compania.      |
 | `stations`            | Catalogo de estaciones                                      | Si                          | Combustibles disponibles se administran dentro de la estacion con `station-fuels`.    |
 | `station-fuels`       | Seccion `Combustibles disponibles` dentro de estacion       | No                          | Modulo tecnico de relacion; no crear menu ni CRUD principal.                          |
-| `cardcloud`           | Cardcloud y sincronizacion de stock                         | No como CRUD principal      | Acciones tecnicas del proveedor; `sync` puede ser boton dentro de tarjetas/stock.     |
+| `cardcloud`           | Cardcloud, sync global y asignacion de stock a subcompania  | No como CRUD principal      | No editar datos sincronizados; asignacion local va como accion dentro de tarjetas/stock. |
 | `documents`           | Documentos y adjuntos                                       | Si/Opcional                 | Puede ser pagina general y tambien secciones anidadas en entidades.                   |
 | `notifications`       | Campana, bandeja personal y acciones administrativas        | No como CRUD principal      | `/api/me/notifications` va en topbar/inbox; `POST /notifications` es accion admin.    |
 | `health`              | Diagnostico tecnico                                         | No                          | Usarlo para monitoreo o pantalla tecnica interna, no como modulo de operacion.        |
@@ -53,7 +53,8 @@ Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu,
 - `/api/cards/by-design-fuel/:designFuelId`: listado filtrado o fuente de seleccion, no pagina propia.
 - `/api/cards/:id/assign-vehicle` y `/api/cards/:id/unassign`: acciones de tarjeta.
 - `/api/station-fuels/*`: seccion `Combustibles disponibles` dentro de estaciones.
-- `/api/cardcloud/sync`: accion para sincronizar el espejo local; no pagina propia.
+- `/api/cardcloud/sync`: accion global para sincronizar el espejo local; no pagina propia ni accion por compania.
+- `/api/cardcloud/:id/assign-sub-company` y `/api/cardcloud/:id/unassign-sub-company`: acciones locales del stock Cardcloud; no formulario CRUD completo.
 - `/api/cardcloud/*`: endpoints externos de proveedor; no generar CRUD automatico ni menu principal por cada ruta.
 - `/api/documents/:id/download`: accion de descarga.
 - `/api/me/notifications/*`: campana, contador, bandeja personal y acciones de lectura.
@@ -180,7 +181,7 @@ Ejemplo de alta de usuario recomendada:
 - Vehiculos y conductores: usa `PATCH /api/vehicles/:id/driver` para asignar o quitar conductor cuando esa sea la unica accion. No obligues a abrir el formulario completo del vehiculo.
 - Tarjetas y vehiculos: usa `PATCH /api/cards/:id/assign-vehicle` y `PATCH /api/cards/:id/unassign` para asignar o quitar tarjeta. `assignmentMode` es derivado por backend.
 - Documentos: cuando el documento pertenezca a una entidad, abre el alta desde el detalle de esa entidad y deriva `entityType`, `entityId`, `scopeKey` y `scopeId`.
-- Cardcloud: usa `POST /api/cardcloud/sync` como accion para refrescar el espejo local. No generes CRUD manual de `CardcloudCardStock`.
+- Cardcloud: usa `POST /api/cardcloud/sync` como accion global para refrescar el espejo local. Para ubicar una tarjeta en la operacion, usa `PATCH /api/cardcloud/:id/assign-sub-company` con una subcompania seleccionada desde el contexto de compania; no permitas editar manualmente datos sincronizados.
 
 ## Tablas y columnas
 
@@ -199,5 +200,6 @@ El frontend debe enviar `X-Company-Id` cuando:
 
 - El modulo sea operativo y dependa de compania.
 - El endpoint sea mixto y se este trabajando dentro de una compania, como usuarios.
+- El endpoint de Cardcloud administre asignacion local de stock a subcompania.
 
-No enviar `X-Company-Id` para administracion global pura, como roles, permisos o mutaciones globales de companias y combustibles.
+No enviar `X-Company-Id` para administracion global pura, como roles, permisos, mutaciones globales de companias, combustibles o `POST /api/cardcloud/sync`.
