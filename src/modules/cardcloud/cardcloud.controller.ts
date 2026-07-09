@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
-import { CurrentCompanyScope, Permissions, RequestConfig, RequireCompany, RequireSystemAccess } from '@/decorators';
+import { Permissions, RequestConfig, RequireSystemAccess } from '@/decorators';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import {
     AssignCardcloudCardsBulkDto,
@@ -8,16 +8,23 @@ import {
     CardcloudDateRangeQueryDto,
     CardcloudPageQueryDto,
     CreateCardcloudSubaccountDto,
+    FindCardcloudStockDto,
     TransferCardcloudFundsBulkDto,
     TransferCardcloudFundsDto,
     UpdateCardcloudCardNipDto,
     ValidateCardcloudCardDto,
 } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
-import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Controller('cardcloud')
 export class CardcloudController {
     constructor(private readonly cardcloudService: CardcloudService) {}
+
+    @Get()
+    @RequireSystemAccess()
+    @Permissions('cardcloud.read-list')
+    findStock(@Query() dto: FindCardcloudStockDto) {
+        return this.cardcloudService.findStock(dto);
+    }
 
     @Post('sync')
     @RequireSystemAccess()
@@ -28,26 +35,22 @@ export class CardcloudController {
     }
 
     @Patch(':id/assign-sub-company')
-    @RequireCompany()
+    @RequireSystemAccess()
     @Permissions('cardcloud.sub-company.assign')
     @RequestConfig({ statusCode: HttpStatus.OK })
     assignSubCompany(
         @Param('id') id: string,
-        @Body() dto: AssignCardcloudSubCompanyDto,
-        @CurrentCompanyScope() scope: CompanyScope | undefined
+        @Body() dto: AssignCardcloudSubCompanyDto
     ) {
-        return this.cardcloudService.assignSubCompany(id, dto, scope);
+        return this.cardcloudService.assignSubCompany(id, dto);
     }
 
     @Patch(':id/unassign-sub-company')
-    @RequireCompany()
+    @RequireSystemAccess()
     @Permissions('cardcloud.sub-company.unassign')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    unassignSubCompany(
-        @Param('id') id: string,
-        @CurrentCompanyScope() scope: CompanyScope | undefined
-    ) {
-        return this.cardcloudService.unassignSubCompany(id, scope);
+    unassignSubCompany(@Param('id') id: string) {
+        return this.cardcloudService.unassignSubCompany(id);
     }
 
     @Get('cards/movement/:uuid')

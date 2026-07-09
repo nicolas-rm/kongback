@@ -10,12 +10,13 @@ import {
     CardcloudDateRangeQueryDto,
     CardcloudPageQueryDto,
     CreateCardcloudSubaccountDto,
+    FindCardcloudStockDto,
     TransferCardcloudFundsBulkDto,
     TransferCardcloudFundsDto,
     UpdateCardcloudCardNipDto,
     ValidateCardcloudCardDto,
 } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
-import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { paginate } from '@/utilities/pagination/pagination.dto';
 
 type SyncCardcloudStockResult = {
     synced: number;
@@ -158,6 +159,27 @@ export class CardcloudService {
         return this.external.get('/v1/account/movements', this.dateRangeParams(query));
     }
 
+    async findStock(dto: FindCardcloudStockDto) {
+        const where: Prisma.CardcloudWhereInput = {
+            subCompanyId: dto.subCompanyId,
+            providerStatus: dto.providerStatus,
+            ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
+        };
+
+        const [data, total] = await Promise.all([
+            this.prisma.cardcloud.findMany({
+                where,
+                skip: dto.skip,
+                take: dto.actualLimit,
+                orderBy: [{ syncedAt: 'desc' }, { createdAt: 'desc' }],
+                select: this.localStockSelect(),
+            }),
+            this.prisma.cardcloud.count({ where }),
+        ]);
+
+        return paginate(data, total, dto);
+    }
+
     async syncStock(): Promise<SyncCardcloudStockResult> {
         const fetchedCards = await this.fetchAllFromCardcloud();
         const deduped = this.dedupeCards(fetchedCards);
@@ -185,11 +207,11 @@ export class CardcloudService {
         return { synced, skipped, removed: removed.count };
     }
 
-    async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto, scope?: CompanyScope) {
-        await this.assertSubCompanyAccess(dto.subCompanyId, scope);
+    async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto) {
+        await this.assertActiveSubCompany(dto.subCompanyId);
 
         const updated = await this.prisma.cardcloud.updateMany({
-            where: this.assignableStockWhere(id, scope),
+            where: { id },
             data: { subCompanyId: dto.subCompanyId },
         });
 
@@ -197,9 +219,9 @@ export class CardcloudService {
         return this.findLocalStock(id);
     }
 
-    async unassignSubCompany(id: string, scope?: CompanyScope) {
+    async unassignSubCompany(id: string) {
         const updated = await this.prisma.cardcloud.updateMany({
-            where: this.scopedStockWhere(id, scope),
+            where: { id },
             data: { subCompanyId: null },
         });
 
@@ -290,10 +312,9 @@ export class CardcloudService {
         });
     }
 
-    private async assertSubCompanyAccess(subCompanyId: string, scope?: CompanyScope): Promise<void> {
+    private async assertActiveSubCompany(subCompanyId: string): Promise<void> {
         const count = await this.prisma.subCompany.count({
             where: {
-                ...this.subCompanyScopeWhere(scope),
                 id: subCompanyId,
                 status: Status.active,
             },
@@ -301,62 +322,53 @@ export class CardcloudService {
         if (count !== 1) throw invalidRelation();
     }
 
-    private assignableStockWhere(id: string, scope?: CompanyScope): Prisma.CardcloudWhereInput {
-        return {
-            id,
-            OR: [{ subCompanyId: null }, { subCompany: this.subCompanyScopeWhere(scope) }],
-        };
-    }
-
-    private scopedStockWhere(id: string, scope?: CompanyScope): Prisma.CardcloudWhereInput {
-        return {
-            id,
-            subCompany: this.subCompanyScopeWhere(scope),
-        };
-    }
-
-    private subCompanyScopeWhere(scope?: CompanyScope): Prisma.SubCompanyWhereInput {
-        if (!scope?.companyId) throw invalidRelation();
-
-        return {
-            companyId: scope.companyId,
-            ...(scope.subCompanyIds ? { id: { in: scope.subCompanyIds } } : {}),
-        };
+    private stockSearch(search: string): Prisma.CardcloudWhereInput[] {
+        return [
+            { externalId: { contains: search, mode: 'insensitive' } },
+            { maskedPan: { contains: search, mode: 'insensitive' } },
+            { clientId: { contains: search, mode: 'insensitive' } },
+            { subCompany: { key: { contains: search, mode: 'insensitive' } } },
+            { subCompany: { name: { contains: search, mode: 'insensitive' } } },
+        ];
     }
 
     private async findLocalStock(id: string) {
         const stock = await this.prisma.cardcloud.findUnique({
             where: { id },
-            select: {
-                id: true,
-                subCompanyId: true,
-                externalId: true,
-                assignedCardId: true,
-                maskedPan: true,
-                clientId: true,
-                balance: true,
-                providerStatus: true,
-                syncedAt: true,
-                assignedCard: {
-                    select: {
-                        id: true,
-                        externalId: true,
-                        assignmentMode: true,
-                        status: true,
-                    },
-                },
-                subCompany: {
-                    select: {
-                        id: true,
-                        companyId: true,
-                        key: true,
-                        name: true,
-                    },
-                },
-            },
+            select: this.localStockSelect(),
         });
         if (!stock) throw notFound();
         return stock;
+    }
+
+    private localStockSelect(): Prisma.CardcloudSelect {
+        return {
+            id: true,
+            subCompanyId: true,
+            externalId: true,
+            assignedCardId: true,
+            maskedPan: true,
+            clientId: true,
+            balance: true,
+            providerStatus: true,
+            syncedAt: true,
+            assignedCard: {
+                select: {
+                    id: true,
+                    externalId: true,
+                    assignmentMode: true,
+                    status: true,
+                },
+            },
+            subCompany: {
+                select: {
+                    id: true,
+                    companyId: true,
+                    key: true,
+                    name: true,
+                },
+            },
+        };
     }
 
     private async fetchAllFromCardcloud(): Promise<CardcloudAccountCard[]> {

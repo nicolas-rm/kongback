@@ -1,6 +1,8 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsString, ValidateNested } from 'class-validator';
-import { ValidatorArray, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
+import { Status } from '@prisma/client';
+import { ValidatorArray, ValidatorEnum, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
+import { PaginationDto } from '@/utilities/pagination/pagination.dto';
 
 const TRANSFER_ENTITY_TYPES = ['account', 'subaccount', 'card'] as const;
 type TransferEntityType = (typeof TRANSFER_ENTITY_TYPES)[number];
@@ -16,6 +18,14 @@ export class CardcloudDateRangeQueryDto {
 export class CardcloudPageQueryDto {
     @ValidatorString({ optional: true })
     page?: string;
+}
+
+export class FindCardcloudStockDto extends PaginationDto {
+    @ValidatorEnum(Status, { optional: true })
+    providerStatus?: Status;
+
+    @ValidatorUUID({ optional: true })
+    subCompanyId?: string;
 }
 
 export class CreateCardcloudSubaccountDto {
