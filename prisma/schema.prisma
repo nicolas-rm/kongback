@@ -588,8 +588,7 @@ model Cardcloud {
   maskedPan      String?
   clientId       String?
   balance        Decimal?    @db.Decimal(14, 2)
-  providerStatus Status      @default(active) @map("cardcloud_status")
-  syncedAt       DateTime?
+  providerStatus String?     @map("cardcloud_status")
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   assignedCard   Card?       @relation(fields: [assignedCardId], references: [id], onDelete: SetNull, onUpdate: Cascade)
