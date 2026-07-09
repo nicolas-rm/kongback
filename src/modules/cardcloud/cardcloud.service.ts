@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
-import { invalidRelation } from '@/modules/business/business.helpers';
+import { invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external.service';
 import {
     AssignCardcloudCardsBulkDto,
     AssignCardcloudCardsDto,
+    AssignCardcloudSubCompanyDto,
     CardcloudDateRangeQueryDto,
     CardcloudPageQueryDto,
     CreateCardcloudSubaccountDto,
@@ -157,41 +158,53 @@ export class CardcloudService {
         return this.external.get('/v1/account/movements', this.dateRangeParams(query));
     }
 
-    async syncStock(scope?: CompanyScope): Promise<SyncCardcloudStockResult> {
-        const companyId = scope?.companyId;
-        if (!companyId || scope?.subCompanyIds) throw invalidRelation();
-
-        const company = await this.loadCompany(companyId);
+    async syncStock(): Promise<SyncCardcloudStockResult> {
         const fetchedCards = await this.fetchAllFromCardcloud();
         const deduped = this.dedupeCards(fetchedCards);
-        const fetchedExternalIds = deduped.cards.map((card) => this.resolveExternalId(card)!);
-        const externalToAssignedCardId = await this.loadAssignedCards(companyId, fetchedExternalIds);
-        const cards = this.filterCompanyCards(deduped.cards, company.externalId, externalToAssignedCardId);
-        const externalIds = cards.map((card) => this.resolveExternalId(card)!);
+        const externalIds = deduped.cards.map((card) => this.resolveExternalId(card)!);
         const syncedAt = new Date();
         let synced = 0;
-        let skipped = deduped.skipped + (deduped.cards.length - cards.length);
+        let skipped = deduped.skipped;
 
-        await this.clearStaleAssignments(companyId, externalToAssignedCardId);
-
-        for (let i = 0; i < cards.length; i += DB_CHUNK_SIZE) {
-            const chunk = cards.slice(i, i + DB_CHUNK_SIZE);
-            const result = await this.syncChunk(companyId, chunk, externalToAssignedCardId, syncedAt);
+        for (let i = 0; i < deduped.cards.length; i += DB_CHUNK_SIZE) {
+            const chunk = deduped.cards.slice(i, i + DB_CHUNK_SIZE);
+            const result = await this.syncChunk(chunk, syncedAt);
             synced += result.synced;
             skipped += result.skipped;
         }
 
-        const removed = await this.prisma.cardcloudCardStock.updateMany({
+        const removed = await this.prisma.cardcloud.updateMany({
             where: {
-                companyId,
                 ...(externalIds.length > 0 ? { externalId: { notIn: externalIds } } : {}),
                 providerStatus: { not: Status.inactive },
             },
             data: { providerStatus: Status.inactive, syncedAt },
         });
 
-        this.logger.log(`Cardcloud stock sync company=${companyId} synced=${synced} skipped=${skipped} removed=${removed.count}`);
+        this.logger.log(`Cardcloud stock sync global synced=${synced} skipped=${skipped} removed=${removed.count}`);
         return { synced, skipped, removed: removed.count };
+    }
+
+    async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto, scope?: CompanyScope) {
+        await this.assertSubCompanyAccess(dto.subCompanyId, scope);
+
+        const updated = await this.prisma.cardcloud.updateMany({
+            where: this.assignableStockWhere(id, scope),
+            data: { subCompanyId: dto.subCompanyId },
+        });
+
+        if (updated.count === 0) throw notFound();
+        return this.findLocalStock(id);
+    }
+
+    async unassignSubCompany(id: string, scope?: CompanyScope) {
+        const updated = await this.prisma.cardcloud.updateMany({
+            where: this.scopedStockWhere(id, scope),
+            data: { subCompanyId: null },
+        });
+
+        if (updated.count === 0) throw notFound();
+        return this.findLocalStock(id);
     }
 
     private dateRangeParams(query: CardcloudDateRangeQueryDto) {
@@ -224,15 +237,6 @@ export class CardcloudService {
         return 'Error desconocido';
     }
 
-    private async loadCompany(companyId: string): Promise<{ externalId: string | null }> {
-        const company = await this.prisma.company.findFirst({
-            where: { id: companyId, status: Status.active },
-            select: { externalId: true },
-        });
-        if (!company) throw invalidRelation();
-        return company;
-    }
-
     private dedupeCards(cards: CardcloudAccountCard[]): { cards: CardcloudAccountCard[]; skipped: number } {
         const uniqueCards = new Map<string, CardcloudAccountCard>();
         let skipped = 0;
@@ -249,17 +253,7 @@ export class CardcloudService {
         return { cards: [...uniqueCards.values()], skipped };
     }
 
-    private filterCompanyCards(cards: CardcloudAccountCard[], companyExternalId: string | null, externalToAssignedCardId: Map<string, string>): CardcloudAccountCard[] {
-        const normalizedCompanyExternalId = companyExternalId?.trim();
-        return cards.filter((card) => {
-            const externalId = this.resolveExternalId(card);
-            if (!externalId) return false;
-            if (externalToAssignedCardId.has(externalId)) return true;
-            return Boolean(normalizedCompanyExternalId && card.client_id?.trim() === normalizedCompanyExternalId);
-        });
-    }
-
-    private async syncChunk(companyId: string, cards: CardcloudAccountCard[], externalToAssignedCardId: Map<string, string>, syncedAt: Date): Promise<{ synced: number; skipped: number }> {
+    private async syncChunk(cards: CardcloudAccountCard[], syncedAt: Date): Promise<{ synced: number; skipped: number }> {
         return this.prisma.$transaction(async (tx) => {
             let synced = 0;
             let skipped = 0;
@@ -271,17 +265,12 @@ export class CardcloudService {
                     continue;
                 }
 
-                const existing = await tx.cardcloudCardStock.findUnique({
+                const existing = await tx.cardcloud.findUnique({
                     where: { externalId },
-                    select: { id: true, companyId: true },
+                    select: { id: true },
                 });
-                if (existing && existing.companyId !== companyId) {
-                    skipped++;
-                    continue;
-                }
 
                 const data = {
-                    assignedCardId: externalToAssignedCardId.get(externalId) ?? null,
                     maskedPan: card.masked_pan ?? null,
                     clientId: card.client_id ?? null,
                     balance: this.toDecimal(card.balance),
@@ -290,9 +279,9 @@ export class CardcloudService {
                 };
 
                 if (existing) {
-                    await tx.cardcloudCardStock.update({ where: { id: existing.id }, data });
+                    await tx.cardcloud.update({ where: { id: existing.id }, data });
                 } else {
-                    await tx.cardcloudCardStock.create({ data: { companyId, externalId, ...data } });
+                    await tx.cardcloud.create({ data: { externalId, ...data } });
                 }
                 synced++;
             }
@@ -301,29 +290,73 @@ export class CardcloudService {
         });
     }
 
-    private async loadAssignedCards(companyId: string, externalIds: string[]): Promise<Map<string, string>> {
-        if (externalIds.length === 0) return new Map();
-        const cards = await this.prisma.card.findMany({
+    private async assertSubCompanyAccess(subCompanyId: string, scope?: CompanyScope): Promise<void> {
+        const count = await this.prisma.subCompany.count({
             where: {
-                externalId: { in: externalIds },
+                ...this.subCompanyScopeWhere(scope),
+                id: subCompanyId,
                 status: Status.active,
-                subCompany: { companyId },
             },
-            select: { id: true, externalId: true },
         });
-        return new Map(cards.map((card) => [card.externalId!, card.id]));
+        if (count !== 1) throw invalidRelation();
     }
 
-    private async clearStaleAssignments(companyId: string, externalToAssignedCardId: Map<string, string>): Promise<void> {
-        if (externalToAssignedCardId.size === 0) return;
-        await this.prisma.cardcloudCardStock.updateMany({
-            where: {
-                companyId,
-                assignedCardId: { in: [...externalToAssignedCardId.values()] },
-                externalId: { notIn: [...externalToAssignedCardId.keys()] },
+    private assignableStockWhere(id: string, scope?: CompanyScope): Prisma.CardcloudWhereInput {
+        return {
+            id,
+            OR: [{ subCompanyId: null }, { subCompany: this.subCompanyScopeWhere(scope) }],
+        };
+    }
+
+    private scopedStockWhere(id: string, scope?: CompanyScope): Prisma.CardcloudWhereInput {
+        return {
+            id,
+            subCompany: this.subCompanyScopeWhere(scope),
+        };
+    }
+
+    private subCompanyScopeWhere(scope?: CompanyScope): Prisma.SubCompanyWhereInput {
+        if (!scope?.companyId) throw invalidRelation();
+
+        return {
+            companyId: scope.companyId,
+            ...(scope.subCompanyIds ? { id: { in: scope.subCompanyIds } } : {}),
+        };
+    }
+
+    private async findLocalStock(id: string) {
+        const stock = await this.prisma.cardcloud.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                subCompanyId: true,
+                externalId: true,
+                assignedCardId: true,
+                maskedPan: true,
+                clientId: true,
+                balance: true,
+                providerStatus: true,
+                syncedAt: true,
+                assignedCard: {
+                    select: {
+                        id: true,
+                        externalId: true,
+                        assignmentMode: true,
+                        status: true,
+                    },
+                },
+                subCompany: {
+                    select: {
+                        id: true,
+                        companyId: true,
+                        key: true,
+                        name: true,
+                    },
+                },
             },
-            data: { assignedCardId: null },
         });
+        if (!stock) throw notFound();
+        return stock;
     }
 
     private async fetchAllFromCardcloud(): Promise<CardcloudAccountCard[]> {

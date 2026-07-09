@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsString, ValidateNested } from 'class-validator';
-import { ValidatorArray, ValidatorNumber, ValidatorString } from '@/decorators';
+import { ValidatorArray, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
 
 const TRANSFER_ENTITY_TYPES = ['account', 'subaccount', 'card'] as const;
 type TransferEntityType = (typeof TRANSFER_ENTITY_TYPES)[number];
@@ -24,6 +24,11 @@ export class CreateCardcloudSubaccountDto {
 
     @ValidatorString()
     Description!: string;
+}
+
+export class AssignCardcloudSubCompanyDto {
+    @ValidatorUUID()
+    subCompanyId!: string;
 }
 
 export class AssignCardcloudCardsDto {

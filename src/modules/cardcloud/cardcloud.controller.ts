@@ -4,6 +4,7 @@ import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import {
     AssignCardcloudCardsBulkDto,
     AssignCardcloudCardsDto,
+    AssignCardcloudSubCompanyDto,
     CardcloudDateRangeQueryDto,
     CardcloudPageQueryDto,
     CreateCardcloudSubaccountDto,
@@ -19,11 +20,34 @@ export class CardcloudController {
     constructor(private readonly cardcloudService: CardcloudService) {}
 
     @Post('sync')
-    @RequireCompany()
+    @RequireSystemAccess()
     @Permissions('cardcloud.sync')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    sync(@CurrentCompanyScope() scope: CompanyScope | undefined) {
-        return this.cardcloudService.syncStock(scope);
+    sync() {
+        return this.cardcloudService.syncStock();
+    }
+
+    @Patch(':id/assign-sub-company')
+    @RequireCompany()
+    @Permissions('cardcloud.sub-company.assign')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    assignSubCompany(
+        @Param('id') id: string,
+        @Body() dto: AssignCardcloudSubCompanyDto,
+        @CurrentCompanyScope() scope: CompanyScope | undefined
+    ) {
+        return this.cardcloudService.assignSubCompany(id, dto, scope);
+    }
+
+    @Patch(':id/unassign-sub-company')
+    @RequireCompany()
+    @Permissions('cardcloud.sub-company.unassign')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    unassignSubCompany(
+        @Param('id') id: string,
+        @CurrentCompanyScope() scope: CompanyScope | undefined
+    ) {
+        return this.cardcloudService.unassignSubCompany(id, scope);
     }
 
     @Get('cards/movement/:uuid')

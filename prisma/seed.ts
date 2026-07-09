@@ -148,7 +148,7 @@ type VehicleSeed = {
 
 type CardSeed = {
     id: string;
-    companyId: string;
+    subCompanyId: string;
 };
 
 type StationSeed = {
@@ -367,7 +367,8 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             description: 'Administra los modulos operativos principales dentro de una compania.',
             prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'users.'],
             extraPermissionCodes: [
-                'cardcloud.sync',
+                'cardcloud.sub-company.assign',
+                'cardcloud.sub-company.unassign',
                 'fuels.read-list',
                 'fuels.read-one',
                 'notifications.read-list',
@@ -403,7 +404,16 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             name: 'Demo Administracion de tarjetas',
             description: 'Administra tarjetas, asignaciones a vehiculos y stock Cardcloud.',
             prefixes: ['cards.'],
-            extraPermissionCodes: ['cardcloud.sync', 'vehicles.read-list', 'vehicles.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
+            extraPermissionCodes: [
+                'cardcloud.sub-company.assign',
+                'cardcloud.sub-company.unassign',
+                'vehicles.read-list',
+                'vehicles.read-one',
+                'fuels.read-list',
+                'fuels.read-one',
+                'sub-companies.read-list',
+                'sub-companies.read-one',
+            ],
         },
         {
             code: 'demo-fuel-administrator',
@@ -821,10 +831,10 @@ async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]
                 status: Status.active,
                 assignedAt: new Date(),
             },
-            select: { id: true },
+            select: { id: true, subCompanyId: true },
         });
 
-        cards.push({ ...card, companyId: subCompany.companyId });
+        cards.push(card);
     }
 
     return cards;
@@ -890,15 +900,15 @@ async function seedStationFuels(stations: StationSeed[], fuels: FuelSeed[]): Pro
     }
 }
 
-async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
+async function seedCardcloudStockMirror(cards: CardSeed[]): Promise<void> {
     for (const index of seedIndexes()) {
         const suffix = pad(index);
         const card = cards[index - 1];
 
-        await prisma.cardcloudCardStock.upsert({
+        await prisma.cardcloud.upsert({
             where: { externalId: `DEMO-STOCK-${suffix}` },
             create: {
-                companyId: card.companyId,
+                subCompanyId: card.subCompanyId,
                 externalId: `DEMO-STOCK-${suffix}`,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
@@ -908,7 +918,7 @@ async function seedCardcloudCardStock(cards: CardSeed[]): Promise<void> {
                 syncedAt: new Date(),
             },
             update: {
-                companyId: card.companyId,
+                subCompanyId: card.subCompanyId,
                 assignedCardId: card.id,
                 maskedPan: `**** **** **** 10${suffix}`,
                 clientId: `DEMO-CLIENT-${suffix}`,
@@ -1046,7 +1056,7 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     const stations = await seedStations(subCompanies);
 
     await seedStationFuels(stations, fuels);
-    await seedCardcloudCardStock(cards);
+    await seedCardcloudStockMirror(cards);
     await seedDocuments(users, companies);
     await seedNotifications(users);
     await ensureGlobalAdminAccess(adminUser.id, adminRole.id);
