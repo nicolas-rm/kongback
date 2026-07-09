@@ -10,6 +10,7 @@ Base path: `/api/cardcloud`
 Este modulo concentra Cardcloud en una sola API local:
 
 - Endpoints proxy hacia la API externa de Cardcloud.
+- `GET /api/cardcloud` para listar el espejo local de stock.
 - `POST /api/cardcloud/sync` para sincronizar el espejo local global de stock.
 - Acciones locales para asignar o desasignar stock Cardcloud a subcompanias.
 
@@ -19,16 +20,17 @@ No existe un controller separado para stock. La tabla local se mantiene por sinc
 
 | Metodo  | Ruta                                         | Permiso                                     | Alcance  | Descripcion                        |
 | ------- | -------------------------------------------- | ------------------------------------------- | -------- | ---------------------------------- |
+| `GET`   | `/api/cardcloud`                             | `cardcloud.read-list`                       | Sistema  | Lista espejo local de stock.       |
 | `POST`  | `/api/cardcloud/sync`                        | `cardcloud.sync`                            | Sistema  | Sincroniza espejo local de stock.  |
-| `PATCH` | `/api/cardcloud/:id/assign-sub-company`      | `cardcloud.sub-company.assign`              | Compania | Asigna stock a una subcompania.    |
-| `PATCH` | `/api/cardcloud/:id/unassign-sub-company`    | `cardcloud.sub-company.unassign`            | Compania | Quita stock de una subcompania.    |
+| `PATCH` | `/api/cardcloud/:id/assign-sub-company`      | `cardcloud.sub-company.assign`              | Sistema  | Asigna stock a una subcompania.    |
+| `PATCH` | `/api/cardcloud/:id/unassign-sub-company`    | `cardcloud.sub-company.unassign`            | Sistema  | Quita stock de una subcompania.    |
 | `GET`   | `/api/cardcloud/account`                     | `cardcloud.account.read-one`                | Sistema  | Consulta la cuenta Cardcloud.      |
 | `GET`   | `/api/cardcloud/account/movements`           | `cardcloud.account.movements.read-list`     | Sistema  | Lista movimientos de cuenta.       |
 | `POST`  | `/api/cardcloud/account/transfer`            | `cardcloud.account.transfer`                | Sistema  | Ejecuta una transferencia.         |
 | `POST`  | `/api/cardcloud/account/transfer-bulk`       | `cardcloud.account.transfer.bulk`           | Sistema  | Ejecuta transferencias en lote.    |
 | `POST`  | `/api/cardcloud/account/cards/assign`        | `cardcloud.cards.assign`                    | Sistema  | Asigna tarjetas por tipo/cantidad. |
 | `POST`  | `/api/cardcloud/account/cards/assign-bulk`   | `cardcloud.cards.assign.bulk`               | Sistema  | Asigna tarjetas especificas.       |
-| `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema  | Consulta detalle de tarjeta.       |
+| `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema  | Consulta detalle externo.          |
 | `GET`   | `/api/cardcloud/cards/:uuid/movements`       | `cardcloud.cards.movements.read-list`       | Sistema  | Lista movimientos de tarjeta.      |
 | `GET`   | `/api/cardcloud/cards/movement/:uuid`        | `cardcloud.cards.movements.read-one`        | Sistema  | Consulta detalle de movimiento.    |
 | `GET`   | `/api/cardcloud/cards/:uuid/sensitive`       | `cardcloud.cards.sensitive.read-one`        | Sistema  | Consulta datos sensibles.          |
@@ -42,6 +44,61 @@ No existe un controller separado para stock. La tabla local se mantiene por sinc
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/cards`     | `cardcloud.subaccounts.cards.read-list`     | Sistema  | Lista tarjetas de subcuenta.       |
 | `POST`  | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.create`              | Sistema  | Crea subcuenta.                    |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/movements` | `cardcloud.subaccounts.movements.read-list` | Sistema  | Lista movimientos de subcuenta.    |
+
+## Listar stock local
+
+`GET /api/cardcloud`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.read-list`.
+
+Lista el espejo local global de stock Cardcloud. No llama a la API externa y no usa `X-Company-Id`. Devuelve todas las tarjetas sincronizadas desde Cardcloud, tengan o no subcompania asignada.
+
+Query params:
+
+| Campo            | Tipo     | Requerido | Descripcion                                      |
+| ---------------- | -------- | --------- | ------------------------------------------------ |
+| `page`           | `number` | No        | Pagina. Default `1`.                             |
+| `limit`          | `number` | No        | Registros por pagina. Maximo `100`.              |
+| `search`         | `string` | No        | Busca en `externalId`, `maskedPan`, `clientId` y subcompania. |
+| `providerStatus` | `Status` | No        | Filtra por `active`, `inactive` o `suspended`.   |
+| `subCompanyId`   | `string` | No        | Filtra por subcompania asignada.                     |
+
+Response `200`:
+
+```json
+{
+    "data": [
+        {
+            "id": "stock-id",
+            "subCompanyId": null,
+            "externalId": "CARD-001",
+            "assignedCardId": null,
+            "maskedPan": "**** **** **** 1001",
+            "clientId": "CLIENT-001",
+            "balance": "1000.00",
+            "providerStatus": "active",
+            "syncedAt": "2026-07-09T12:00:00.000Z",
+            "assignedCard": null,
+            "subCompany": null
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "page": 1,
+        "limit": 25,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
+Reglas:
+
+- Usa `GET /api/cardcloud?page=1&limit=25&search=` para la tabla global de stock.
+- No enviar `X-Company-Id`.
+- El listado es completo/global porque representa el espejo de las tarjetas que vienen de Cardcloud externo.
+- No permite crear, editar ni borrar datos sincronizados del proveedor.
 
 ## Sincronizar espejo local
 
@@ -77,7 +134,7 @@ Estas acciones no llaman a la API externa. Solo administran a que subcompania pe
 
 `PATCH /api/cardcloud/:id/assign-sub-company`
 
-Requiere `X-Company-Id` y permiso `cardcloud.sub-company.assign`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.sub-company.assign`.
 
 Body:
 
@@ -110,15 +167,14 @@ Response `200`:
 
 Reglas:
 
-- `subCompanyId` debe pertenecer a la compania seleccionada con `X-Company-Id`.
-- Si el usuario esta limitado a subcompanias, `subCompanyId` debe estar dentro de su alcance.
-- El stock puede estar sin subcompania o pertenecer a una subcompania dentro del mismo alcance. No se puede reasignar stock ya asociado a otra compania o subcompania fuera del alcance.
-- Si la subcompania no pertenece al alcance, devuelve `400`.
-- Si el stock no existe o no es reasignable dentro del alcance, devuelve `404`.
+- `subCompanyId` debe existir y estar activo.
+- No usa `X-Company-Id`; la subcompania determina a que compania queda asociado el stock.
+- Si la subcompania no existe o esta inactiva, devuelve `400`.
+- Si el stock no existe, devuelve `404`.
 
 `PATCH /api/cardcloud/:id/unassign-sub-company`
 
-Requiere `X-Company-Id` y permiso `cardcloud.sub-company.unassign`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.sub-company.unassign`.
 
 No recibe body.
 
@@ -126,8 +182,8 @@ Response `200`: mismo formato que asignacion, con `subCompanyId: null` y `subCom
 
 Reglas:
 
-- Solo puede quitar la asignacion de stock que actualmente pertenece a la compania/subcompania del alcance.
-- No puede quitar asignaciones de otra compania.
+- No usa `X-Company-Id`.
+- Quita la relacion local con subcompania; no modifica la tarjeta en Cardcloud externo.
 
 ## Cuenta
 
@@ -333,13 +389,16 @@ Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid/movemen
 - `CardcloudExternalService` es el unico servicio que se conecta a la API externa.
 - `CardcloudService` es el servicio local del modulo y coordina proxy, normalizacion de transferencias y sincronizacion del espejo.
 - Los endpoints con alcance `Sistema` no usan `X-Company-Id`; requieren acceso global de sistema y permisos `cardcloud.*`.
+- `GET /api/cardcloud` no usa `X-Company-Id`; lista el stock local global sincronizado desde Cardcloud.
 - `POST /api/cardcloud/sync` no usa `X-Company-Id`; requiere `RequireSystemAccess`.
-- Las acciones `assign-sub-company` y `unassign-sub-company` si usan `X-Company-Id` y validan pertenencia de la subcompania a la compania seleccionada.
+- Las acciones `assign-sub-company` y `unassign-sub-company` no usan `X-Company-Id`; requieren acceso de sistema.
 - No filtres datos sensibles solo en frontend. Los endpoints `sensitive`, `cvv` y `nip` deben mostrarse solo bajo accion explicita, con confirmacion, y nunca persistirse ni loguearse en frontend.
 
 ## Notas para frontend
 
 No generes una pagina CRUD nueva por cada endpoint de Cardcloud. Los endpoints externos son acciones tecnicas del proveedor y deben exponerse solo como herramientas puntuales para usuarios globales autorizados.
+
+Para mostrar el stock local, consume `GET /api/cardcloud?page=1&limit=25&search=` sin `X-Company-Id`. Esta tabla es global y puede vivir dentro de tarjetas/stock Cardcloud, pero no debe permitir editar campos sincronizados.
 
 La accion `Sincronizar Cardcloud` debe ser un boton/accion tecnica de administracion global, no una pagina separada ni una accion por compania. Solo mostrarla cuando `capabilities.permissions` incluya `cardcloud.sync` y el usuario tenga acceso de sistema.
 

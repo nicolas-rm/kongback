@@ -146,11 +146,6 @@ type VehicleSeed = {
     fuelId: string;
 };
 
-type CardSeed = {
-    id: string;
-    subCompanyId: string;
-};
-
 type StationSeed = {
     id: string;
 };
@@ -367,8 +362,6 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             description: 'Administra los modulos operativos principales dentro de una compania.',
             prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'users.'],
             extraPermissionCodes: [
-                'cardcloud.sub-company.assign',
-                'cardcloud.sub-company.unassign',
                 'fuels.read-list',
                 'fuels.read-one',
                 'notifications.read-list',
@@ -405,8 +398,6 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             description: 'Administra tarjetas, asignaciones a vehiculos y stock Cardcloud.',
             prefixes: ['cards.'],
             extraPermissionCodes: [
-                'cardcloud.sub-company.assign',
-                'cardcloud.sub-company.unassign',
                 'vehicles.read-list',
                 'vehicles.read-one',
                 'fuels.read-list',
@@ -805,14 +796,12 @@ async function seedVehicles(subCompanies: SubCompanySeed[], fuels: FuelSeed[], d
     return vehicles;
 }
 
-async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]): Promise<CardSeed[]> {
-    const cards: CardSeed[] = [];
-
+async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]): Promise<void> {
     for (const index of seedIndexes()) {
         const suffix = pad(index);
         const subCompany = subCompanies[index - 1];
         const vehicle = vehicles[index - 1];
-        const card = await prisma.card.upsert({
+        await prisma.card.upsert({
             where: { externalId: `DEMO-CARD-${suffix}` },
             create: {
                 subCompanyId: subCompany.id,
@@ -831,13 +820,8 @@ async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]
                 status: Status.active,
                 assignedAt: new Date(),
             },
-            select: { id: true, subCompanyId: true },
         });
-
-        cards.push(card);
     }
-
-    return cards;
 }
 
 async function seedStations(subCompanies: SubCompanySeed[]): Promise<StationSeed[]> {
@@ -895,36 +879,6 @@ async function seedStationFuels(stations: StationSeed[], fuels: FuelSeed[]): Pro
             },
             update: {
                 status: Status.active,
-            },
-        });
-    }
-}
-
-async function seedCardcloudStockMirror(cards: CardSeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const card = cards[index - 1];
-
-        await prisma.cardcloud.upsert({
-            where: { externalId: `DEMO-STOCK-${suffix}` },
-            create: {
-                subCompanyId: card.subCompanyId,
-                externalId: `DEMO-STOCK-${suffix}`,
-                assignedCardId: card.id,
-                maskedPan: `**** **** **** 10${suffix}`,
-                clientId: `DEMO-CLIENT-${suffix}`,
-                balance: 1000 + index * 100,
-                providerStatus: Status.active,
-                syncedAt: new Date(),
-            },
-            update: {
-                subCompanyId: card.subCompanyId,
-                assignedCardId: card.id,
-                maskedPan: `**** **** **** 10${suffix}`,
-                clientId: `DEMO-CLIENT-${suffix}`,
-                balance: 1000 + index * 100,
-                providerStatus: Status.active,
-                syncedAt: new Date(),
             },
         });
     }
@@ -1052,11 +1006,10 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);
     const vehicles = await seedVehicles(subCompanies, fuels, drivers);
-    const cards = await seedCards(subCompanies, vehicles);
+    await seedCards(subCompanies, vehicles);
     const stations = await seedStations(subCompanies);
 
     await seedStationFuels(stations, fuels);
-    await seedCardcloudStockMirror(cards);
     await seedDocuments(users, companies);
     await seedNotifications(users);
     await ensureGlobalAdminAccess(adminUser.id, adminRole.id);
