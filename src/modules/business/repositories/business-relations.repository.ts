@@ -11,6 +11,13 @@ export class BusinessRelationsRepository {
         return this.prisma.company.count({ where: this.companyWhere(ids, scope) });
     }
 
+    findActiveCompany(id: string, scope?: CompanyScope) {
+        return this.prisma.company.findFirst({
+            where: this.companyWhere([id], scope),
+            select: { id: true, key: true, name: true },
+        });
+    }
+
     countActiveSubCompanies(ids: string[], scope?: CompanyScope): Promise<number> {
         return this.prisma.subCompany.count({ where: { AND: [{ id: { in: ids } }, { status: Status.active }, subCompanyScopeWhere(scope)] } });
     }

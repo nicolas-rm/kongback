@@ -11,9 +11,6 @@ export class CreateSubCompanyDto {
     @ValidatorString()
     key!: string;
 
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    externalId?: string | null;
-
     @ValidatorString()
     name!: string;
 
@@ -34,7 +31,7 @@ export class UpdateSubCompanyDto {
     key?: string;
 
     @ValidatorString({ optional: true, emptyTo: 'null' })
-    externalId?: string | null;
+    cardcloudSubaccountId?: string | null;
 
     @ValidatorString({ optional: true })
     name?: string;
