@@ -1,13 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AccessControlModule } from '@/modules/access-control/access-control.module';
-import { CardcloudCardStockController } from '@/modules/business/cardcloud-card-stock.controller';
 import { CardsController } from '@/modules/business/cards.controller';
 import { CompaniesController } from '@/modules/business/companies.controller';
 import { DriversController } from '@/modules/business/drivers.controller';
 import { FuelsController } from '@/modules/business/fuels.controller';
 import { BusinessAddressRepository } from '@/modules/business/repositories/business-address.repository';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
-import { CardcloudCardStockRepository } from '@/modules/business/repositories/cardcloud-card-stock.repository';
 import { CardsRepository } from '@/modules/business/repositories/cards.repository';
 import { CompaniesRepository } from '@/modules/business/repositories/companies.repository';
 import { DriversRepository } from '@/modules/business/repositories/drivers.repository';
@@ -16,7 +14,6 @@ import { StationFuelsRepository } from '@/modules/business/repositories/station-
 import { StationsRepository } from '@/modules/business/repositories/stations.repository';
 import { SubCompaniesRepository } from '@/modules/business/repositories/sub-companies.repository';
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
-import { CardcloudCardStockService } from '@/modules/business/services/cardcloud-card-stock.service';
 import { CardsService } from '@/modules/business/services/cards.service';
 import { CompaniesService } from '@/modules/business/services/companies.service';
 import { DriversService } from '@/modules/business/services/drivers.service';
@@ -32,17 +29,7 @@ import { VehiclesController } from '@/modules/business/vehicles.controller';
 
 @Module({
     imports: [AccessControlModule],
-    controllers: [
-        CompaniesController,
-        SubCompaniesController,
-        DriversController,
-        FuelsController,
-        VehiclesController,
-        CardsController,
-        StationsController,
-        StationFuelsController,
-        CardcloudCardStockController,
-    ],
+    controllers: [CompaniesController, SubCompaniesController, DriversController, FuelsController, VehiclesController, CardsController, StationsController, StationFuelsController],
     providers: [
         BusinessAddressRepository,
         BusinessRelationsRepository,
@@ -54,7 +41,6 @@ import { VehiclesController } from '@/modules/business/vehicles.controller';
         CardsRepository,
         StationsRepository,
         StationFuelsRepository,
-        CardcloudCardStockRepository,
         CompaniesService,
         SubCompaniesService,
         DriversService,
@@ -63,8 +49,7 @@ import { VehiclesController } from '@/modules/business/vehicles.controller';
         CardsService,
         StationsService,
         StationFuelsService,
-        CardcloudCardStockService,
     ],
-    exports: [CompaniesService, SubCompaniesService, DriversService, FuelsService, VehiclesService, CardsService, StationsService, StationFuelsService, CardcloudCardStockService],
+    exports: [CompaniesService, SubCompaniesService, DriversService, FuelsService, VehiclesService, CardsService, StationsService, StationFuelsService],
 })
 export class BusinessModule {}

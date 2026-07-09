@@ -60,6 +60,11 @@ export default registerAs('app', () => ({
             .map((value) => value.trim().toLowerCase())
             .filter(Boolean),
     },
+    cardcloud: {
+        baseUrl: process.env.CARDCLOUD_BASE_URL ?? APP_DEFAULTS.cardcloud.baseUrl,
+        username: process.env.CARDCLOUD_USERNAME ?? '',
+        password: process.env.CARDCLOUD_PASSWORD ?? '',
+    },
     security: {
         allowedOrigins: (process.env.SECURITY_ALLOWED_ORIGINS ?? APP_DEFAULTS.security.allowedOrigins)
             .split(',')
