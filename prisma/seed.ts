@@ -670,13 +670,13 @@ async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySee
             create: {
                 companyId: company.id,
                 key: `DEMO-SUB-${suffix}`,
-                externalId: `DEMO-EXT-SUB-${suffix}`,
+                cardcloudSubaccountId: null,
                 name: `Demo Sub Company ${suffix}`,
                 status: Status.active,
                 isDefault: index === 1,
             },
             update: {
-                externalId: `DEMO-EXT-SUB-${suffix}`,
+                cardcloudSubaccountId: null,
                 name: `Demo Sub Company ${suffix}`,
                 status: Status.active,
                 isDefault: index === 1,

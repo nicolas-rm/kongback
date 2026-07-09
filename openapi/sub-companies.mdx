@@ -20,7 +20,7 @@ Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limita
     "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
     "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "key": "SUB001",
-    "externalId": "EXT-SUB-001",
+    "cardcloudSubaccountId": "019cd4ad-38dd-7125-a68a-209519d79869",
     "name": "Acme Norte",
     "status": "active",
     "isDefault": false,
@@ -62,7 +62,7 @@ En listados, `company` se devuelve como summary y `address` no se devuelve. `add
 
 Query params: `page`, `limit`, `search`, `all`, `status`, `companyId`.
 
-`search` busca por `key`, `externalId` y `name`.
+`search` busca por `key`, `cardcloudSubaccountId` y `name`.
 
 Para la columna Compania en front, usa `company.name` o `company.key + " · " + company.name`; no muestres `companyId` salvo en vistas tecnicas.
 
@@ -76,7 +76,6 @@ Response `200`: resultado paginado de `SubCompany` con `company` summary y sin `
 {
     "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
     "key": "SUB001",
-    "externalId": "EXT-SUB-001",
     "name": "Acme Norte",
     "status": "active",
     "isDefault": false,
@@ -90,7 +89,9 @@ Response `200`: resultado paginado de `SubCompany` con `company` summary y sin `
 
 Requeridos: `companyId`, `key`, `name`. `companyId` debe apuntar a la compania activa enviada en `X-Company-Id`.
 
-Opcionales: `externalId`, `status`, `isDefault`, `address`.
+Opcionales: `status`, `isDefault`, `address`.
+
+Al crear, el backend primero crea la subcuenta en Cardcloud con `ExternalId = company.key + "__" + key` y `Description = name`. Si Cardcloud falla o no devuelve un identificador de subcuenta valido, no se crea la `SubCompany` local. El `cardcloudSubaccountId` se guarda con el identificador devuelto por Cardcloud y no debe enviarse en el body de creacion.
 
 Response `201`: `SubCompany` con `company` summary y `address`.
 
@@ -106,7 +107,7 @@ Response `200`: `SubCompany` con `company` summary y `address`.
 
 `PATCH /api/sub-companies/:id`
 
-Acepta `key`, `externalId`, `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`.
+Acepta `key`, `cardcloudSubaccountId`, `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`.
 
 Response `200`: `SubCompany` actualizada con `company` summary y `address`.
 
@@ -133,7 +134,7 @@ Campos recomendados para formularios:
 
 - Clave: `key`.
 - Nombre: `name`.
-- ID externo: `externalId`, opcional.
+- Subcuenta Cardcloud: `cardcloudSubaccountId`, solo lectura en creacion. Lo genera backend al crear la subcuenta en Cardcloud.
 - Predeterminada: `isDefault`, checkbox.
 - Estado: `status`, con `active` como valor inicial.
 - Direccion: grupo colapsable u opcional basado en `address`.
@@ -149,3 +150,4 @@ En tablas, evita mostrar UUIDs. Usa `company.name`, `company.key`, `key` y `name
 | `403`  | Usuario autenticado sin el permiso requerido.    |
 | `404`  | Sub-compania no encontrada.                      |
 | `409`  | Conflictos de unicidad segun constraints Prisma. |
+| `502`  | Cardcloud no devolvio una subcuenta valida.      |

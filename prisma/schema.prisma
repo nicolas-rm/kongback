@@ -428,23 +428,23 @@ model Company {
 }
 
 model SubCompany {
-  id               String      @id @default(uuid())
-  companyId        String
-  key              String
-  externalId       String?     @unique @map("external_id")
-  name             String
-  status           Status      @default(active)
-  addressId        String?     @unique
-  isDefault        Boolean     @default(false)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  address          Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  cards            Card[]
-  cardcloudRecords Cardcloud[]
-  company          Company     @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  drivers          Driver[]
-  stations         Station[]
-  vehicles         Vehicle[]
+  id                    String      @id @default(uuid())
+  companyId             String
+  key                   String
+  cardcloudSubaccountId String?     @unique @map("cardcloud_subaccount_id")
+  name                  String
+  status                Status      @default(active)
+  addressId             String?     @unique
+  isDefault             Boolean     @default(false)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  address               Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  cards                 Card[]
+  cardcloudRecords      Cardcloud[]
+  company               Company     @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  drivers               Driver[]
+  stations              Station[]
+  vehicles              Vehicle[]
 
   @@unique([companyId, key])
   @@index([companyId])
@@ -587,7 +587,7 @@ model Cardcloud {
   assignedCardId String?     @unique
   maskedPan      String?
   clientId       String?
-  balance        Decimal?    @db.Decimal(14, 2)
+  balance        String?     @db.Text
   providerStatus String?     @map("cardcloud_status")
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt

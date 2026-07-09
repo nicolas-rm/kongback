@@ -27,6 +27,13 @@ export class SubCompaniesRepository {
         return this.prisma.subCompany.count({ where });
     }
 
+    async existsByCompanyKey(companyId: string, key: string, scope?: CompanyScope): Promise<boolean> {
+        const count = await this.prisma.subCompany.count({
+            where: { AND: [{ companyId, key }, subCompanyScopeWhere(scope)] },
+        });
+        return count > 0;
+    }
+
     findById(id: string, scope?: CompanyScope) {
         return this.prisma.subCompany.findFirst({ where: { AND: [{ id }, subCompanyScopeWhere(scope)] }, select: this.select() });
     }
@@ -55,7 +62,7 @@ export class SubCompaniesRepository {
             id: true,
             companyId: true,
             key: true,
-            externalId: true,
+            cardcloudSubaccountId: true,
             name: true,
             status: true,
             isDefault: true,
@@ -69,7 +76,7 @@ export class SubCompaniesRepository {
             id: true,
             companyId: true,
             key: true,
-            externalId: true,
+            cardcloudSubaccountId: true,
             name: true,
             status: true,
             isDefault: true,

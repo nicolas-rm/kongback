@@ -59,7 +59,7 @@ Query params:
 | ---------------- | -------- | --------- | ------------------------------------------------ |
 | `page`           | `number` | No        | Pagina. Default `1`.                             |
 | `limit`          | `number` | No        | Registros por pagina. Maximo `100`.              |
-| `search`         | `string` | No        | Busca en `externalId`, `maskedPan`, `clientId` y subcompania. |
+| `search`         | `string` | No        | Busca en id sincronizado del proveedor, `maskedPan`, `clientId` y subcompania. |
 | `providerStatus` | `string` | No        | Filtra por el status crudo recibido de Cardcloud. |
 | `subCompanyId`   | `string` | No        | Filtra por subcompania asignada.                     |
 
@@ -71,9 +71,8 @@ Response `200`:
         {
             "id": "stock-id",
             "subCompanyId": null,
-            "externalId": "CARD-001",
             "assignedCardId": null,
-            "maskedPan": "1001",
+            "maskedPan": "XXXXXXXXXXXX1001",
             "clientId": "CLIENT-001",
             "balance": "1000.00",
             "providerStatus": "blocked",
@@ -123,11 +122,12 @@ Reglas:
 
 - Si Cardcloud no esta configurado, devuelve `400`.
 - `providerStatus` se guarda como texto crudo recibido desde Cardcloud; no se normaliza al enum local.
-- `maskedPan` guarda solo los ultimos 4 digitos visibles de `masked_pan`. Ejemplo: `516152XXXXXX4398` se guarda como `4398`.
+- `maskedPan` guarda el PAN enmascarado con `X` y deja visibles solo los ultimos 4 digitos de `masked_pan`. Ejemplo: `516152XXXXXX4398` se guarda como `XXXXXXXXXXXX4398`.
 - `externalId` se toma solo de `card_id`; el campo externo `card_external_id` no se usa para crear o actualizar el espejo.
 - `skipped` cuenta tarjetas sin `card_id` util o duplicadas.
 - Las tarjetas que ya no vengan en Cardcloud se marcan como `inactive` en el espejo local.
-- El sync actualiza datos del proveedor (`externalId`, `maskedPan`, `clientId`, `balance`, `providerStatus`) sin cambiar la asignacion local a subcompania.
+- El sync actualiza datos del proveedor (`externalId`, `maskedPan`, `clientId`, `balance`, `providerStatus`) sin cambiar la asignacion local a subcompania. `externalId` se conserva solo para sincronizacion interna y no se devuelve en las respuestas del stock local.
+- `balance` se guarda cifrado en base de datos y se devuelve descifrado como string decimal.
 
 ## Asignacion local de stock
 
@@ -149,9 +149,8 @@ Response `200`:
 {
     "id": "stock-id",
     "subCompanyId": "sub-company-id",
-    "externalId": "CARD-001",
     "assignedCardId": null,
-    "maskedPan": "1001",
+    "maskedPan": "XXXXXXXXXXXX1001",
     "clientId": "CLIENT-001",
     "balance": "1000.00",
     "providerStatus": "blocked",
@@ -404,4 +403,4 @@ La accion `Sincronizar Cardcloud` debe ser un boton/accion tecnica de administra
 
 Para asignar stock a una subcompania, usa `PATCH /api/cardcloud/:id/assign-sub-company` desde una accion del inventario/stock. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual.
 
-No crees una pantalla CRUD manual para modificar datos sincronizados como `externalId`, `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra como ultimos 4 digitos.
+No crees una pantalla CRUD manual para modificar datos sincronizados como `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra enmascarado con `X` y solo los ultimos 4 digitos visibles. Usa `id` para identificar el stock local; no dependas de ids externos en la UI.

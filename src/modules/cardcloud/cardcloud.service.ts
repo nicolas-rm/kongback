@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { CryptoService } from '@/crypto/crypto.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import { invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external.service';
@@ -46,6 +47,33 @@ interface CardcloudAccountCardsRaw {
     total_records: number;
 }
 
+const LOCAL_STOCK_SELECT = {
+    id: true,
+    subCompanyId: true,
+    assignedCardId: true,
+    maskedPan: true,
+    clientId: true,
+    balance: true,
+    providerStatus: true,
+    assignedCard: {
+        select: {
+            id: true,
+            assignmentMode: true,
+            status: true,
+        },
+    },
+    subCompany: {
+        select: {
+            id: true,
+            companyId: true,
+            key: true,
+            name: true,
+        },
+    },
+} satisfies Prisma.CardcloudSelect;
+
+type LocalStockRecord = Prisma.CardcloudGetPayload<{ select: typeof LOCAL_STOCK_SELECT }>;
+
 const PAGE_BATCH_SIZE = 5;
 const DB_CHUNK_SIZE = 50;
 const PAGE_BATCH_DELAY_MS = 300;
@@ -56,7 +84,8 @@ export class CardcloudService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly external: CardcloudExternalService
+        private readonly external: CardcloudExternalService,
+        private readonly cryptoService: CryptoService
     ) {}
 
     getCardMovement(uuid: string) {
@@ -165,7 +194,7 @@ export class CardcloudService {
             ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
         };
 
-        const [data, total] = await Promise.all([
+        const [records, total] = await Promise.all([
             this.prisma.cardcloud.findMany({
                 where,
                 skip: dto.skip,
@@ -176,7 +205,7 @@ export class CardcloudService {
             this.prisma.cardcloud.count({ where }),
         ]);
 
-        return paginate(data, total, dto);
+        return paginate(records.map((record) => this.serializeLocalStock(record)), total, dto);
     }
 
     async syncStock(): Promise<SyncCardcloudStockResult> {
@@ -291,9 +320,9 @@ export class CardcloudService {
                 });
 
                 const data = {
-                    maskedPan: this.lastVisibleDigits(card.masked_pan),
+                    maskedPan: this.maskPanKeepingLastFour(card.masked_pan),
                     clientId: card.client_id ?? null,
-                    balance: this.toDecimal(card.balance),
+                    balance: this.encryptBalance(card.balance),
                     providerStatus: this.cleanText(card.status),
                 };
 
@@ -335,35 +364,18 @@ export class CardcloudService {
             select: this.localStockSelect(),
         });
         if (!stock) throw notFound();
-        return stock;
+        return this.serializeLocalStock(stock);
     }
 
     private localStockSelect(): Prisma.CardcloudSelect {
+        return LOCAL_STOCK_SELECT;
+    }
+
+    private serializeLocalStock(stock: LocalStockRecord) {
         return {
-            id: true,
-            subCompanyId: true,
-            externalId: true,
-            assignedCardId: true,
-            maskedPan: true,
-            clientId: true,
-            balance: true,
-            providerStatus: true,
-            assignedCard: {
-                select: {
-                    id: true,
-                    externalId: true,
-                    assignmentMode: true,
-                    status: true,
-                },
-            },
-            subCompany: {
-                select: {
-                    id: true,
-                    companyId: true,
-                    key: true,
-                    name: true,
-                },
-            },
+            ...stock,
+            maskedPan: this.maskPanKeepingLastFour(stock.maskedPan),
+            balance: this.decryptBalance(stock.balance),
         };
     }
 
@@ -392,16 +404,30 @@ export class CardcloudService {
         return clean || null;
     }
 
-    private lastVisibleDigits(value?: string | null): string | null {
-        const digits = value?.replace(/\D/g, '');
+    private maskPanKeepingLastFour(value?: string | null): string | null {
+        const token = value?.replace(/[^0-9Xx]/g, '');
+        const digits = token?.replace(/\D/g, '');
         if (!digits) return null;
-        return digits.slice(-4);
+        const lastFour = digits.slice(-4);
+        const maskedLength = Math.max((token?.length ?? 0) - lastFour.length, 12);
+        return `${'X'.repeat(maskedLength)}${lastFour}`;
     }
 
-    private toDecimal(value?: string | number | null): Prisma.Decimal | null {
+    private encryptBalance(value?: string | number | null): string | null {
+        const normalized = this.normalizeBalance(value);
+        return normalized ? this.cryptoService.encrypt(normalized) : null;
+    }
+
+    private decryptBalance(value?: string | Prisma.Decimal | null): string | null {
+        if (value === null || value === undefined) return null;
+        const plaintext = this.cryptoService.decrypt(String(value)) ?? String(value);
+        return this.normalizeBalance(plaintext);
+    }
+
+    private normalizeBalance(value?: string | number | Prisma.Decimal | null): string | null {
         if (value === null || value === undefined || value === '') return null;
         try {
-            return new Prisma.Decimal(String(value).replace(/,/g, '').trim());
+            return new Prisma.Decimal(String(value).replace(/,/g, '').trim()).toFixed(2);
         } catch {
             return null;
         }
