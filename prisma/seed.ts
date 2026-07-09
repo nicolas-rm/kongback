@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { CardAssignmentMode, NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
+import { NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
 import { Pool } from 'pg';
 import { ALL_PERMISSION_CODES, PERMISSION_CATALOG, type PermissionCode } from './permission-catalog';
 
@@ -796,32 +796,14 @@ async function seedVehicles(subCompanies: SubCompanySeed[], fuels: FuelSeed[], d
     return vehicles;
 }
 
-async function seedCards(subCompanies: SubCompanySeed[], vehicles: VehicleSeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const subCompany = subCompanies[index - 1];
-        const vehicle = vehicles[index - 1];
-        await prisma.card.upsert({
-            where: { externalId: `DEMO-CARD-${suffix}` },
-            create: {
-                subCompanyId: subCompany.id,
-                vehicleId: vehicle.id,
-                designFuelId: vehicle.fuelId,
-                externalId: `DEMO-CARD-${suffix}`,
-                assignmentMode: CardAssignmentMode.vehicle,
-                status: Status.active,
-                assignedAt: new Date(),
+async function removeDemoCards(): Promise<void> {
+    await prisma.card.deleteMany({
+        where: {
+            externalId: {
+                startsWith: 'DEMO-CARD-',
             },
-            update: {
-                subCompanyId: subCompany.id,
-                vehicleId: vehicle.id,
-                designFuelId: vehicle.fuelId,
-                assignmentMode: CardAssignmentMode.vehicle,
-                status: Status.active,
-                assignedAt: new Date(),
-            },
-        });
-    }
+        },
+    });
 }
 
 async function seedStations(subCompanies: SubCompanySeed[]): Promise<StationSeed[]> {
@@ -1005,8 +987,8 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     await seedUserAccesses(users, demoRoles, companies, subCompanies);
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);
-    const vehicles = await seedVehicles(subCompanies, fuels, drivers);
-    await seedCards(subCompanies, vehicles);
+    await removeDemoCards();
+    await seedVehicles(subCompanies, fuels, drivers);
     const stations = await seedStations(subCompanies);
 
     await seedStationFuels(stations, fuels);
@@ -1027,7 +1009,7 @@ async function main(): Promise<void> {
     console.log('Seed completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
     console.log(`Usuarios demo (${DEMO_PASSWORD}): ${DEMO_USER_DEFINITIONS.map((user) => user.username).join(', ')}`);
-    console.log(`Datos demo: ${DEMO_COUNT} registro por modulo principal.`);
+    console.log(`Datos demo: ${DEMO_COUNT} registro por modulo base. Tarjetas y stock Cardcloud no se siembran.`);
 }
 
 main()
