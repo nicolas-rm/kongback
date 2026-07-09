@@ -33,7 +33,6 @@ type TransferCardcloudFundsBulkItemResult = {
 
 interface CardcloudAccountCard {
     card_id?: string | null;
-    card_external_id?: string | null;
     client_id?: string | null;
     masked_pan?: string | null;
     balance?: string | number | null;
@@ -171,7 +170,7 @@ export class CardcloudService {
                 where,
                 skip: dto.skip,
                 take: dto.actualLimit,
-                orderBy: [{ syncedAt: 'desc' }, { createdAt: 'desc' }],
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
                 select: this.localStockSelect(),
             }),
             this.prisma.cardcloud.count({ where }),
@@ -184,13 +183,12 @@ export class CardcloudService {
         const fetchedCards = await this.fetchAllFromCardcloud();
         const deduped = this.dedupeCards(fetchedCards);
         const externalIds = deduped.cards.map((card) => this.resolveExternalId(card)!);
-        const syncedAt = new Date();
         let synced = 0;
         let skipped = deduped.skipped;
 
         for (let i = 0; i < deduped.cards.length; i += DB_CHUNK_SIZE) {
             const chunk = deduped.cards.slice(i, i + DB_CHUNK_SIZE);
-            const result = await this.syncChunk(chunk, syncedAt);
+            const result = await this.syncChunk(chunk);
             synced += result.synced;
             skipped += result.skipped;
         }
@@ -198,9 +196,9 @@ export class CardcloudService {
         const removed = await this.prisma.cardcloud.updateMany({
             where: {
                 ...(externalIds.length > 0 ? { externalId: { notIn: externalIds } } : {}),
-                providerStatus: { not: Status.inactive },
+                providerStatus: { not: 'inactive' },
             },
-            data: { providerStatus: Status.inactive, syncedAt },
+            data: { providerStatus: 'inactive' },
         });
 
         this.logger.log(`Cardcloud stock sync global synced=${synced} skipped=${skipped} removed=${removed.count}`);
@@ -275,7 +273,7 @@ export class CardcloudService {
         return { cards: [...uniqueCards.values()], skipped };
     }
 
-    private async syncChunk(cards: CardcloudAccountCard[], syncedAt: Date): Promise<{ synced: number; skipped: number }> {
+    private async syncChunk(cards: CardcloudAccountCard[]): Promise<{ synced: number; skipped: number }> {
         return this.prisma.$transaction(async (tx) => {
             let synced = 0;
             let skipped = 0;
@@ -293,11 +291,10 @@ export class CardcloudService {
                 });
 
                 const data = {
-                    maskedPan: card.masked_pan ?? null,
+                    maskedPan: this.lastVisibleDigits(card.masked_pan),
                     clientId: card.client_id ?? null,
                     balance: this.toDecimal(card.balance),
-                    providerStatus: this.toStatus(card.status),
-                    syncedAt,
+                    providerStatus: this.cleanText(card.status),
                 };
 
                 if (existing) {
@@ -351,7 +348,6 @@ export class CardcloudService {
             clientId: true,
             balance: true,
             providerStatus: true,
-            syncedAt: true,
             assignedCard: {
                 select: {
                     id: true,
@@ -388,14 +384,18 @@ export class CardcloudService {
     }
 
     private resolveExternalId(card: CardcloudAccountCard): string | null {
-        return card.card_id || card.card_external_id || null;
+        return this.cleanText(card.card_id);
     }
 
-    private toStatus(status?: string | null): Status {
-        const normalized = status?.toLowerCase();
-        if (normalized === Status.active) return Status.active;
-        if (normalized === Status.suspended || normalized === 'blocked') return Status.suspended;
-        return Status.inactive;
+    private cleanText(value?: string | null): string | null {
+        const clean = value?.trim();
+        return clean || null;
+    }
+
+    private lastVisibleDigits(value?: string | null): string | null {
+        const digits = value?.replace(/\D/g, '');
+        if (!digits) return null;
+        return digits.slice(-4);
     }
 
     private toDecimal(value?: string | number | null): Prisma.Decimal | null {
