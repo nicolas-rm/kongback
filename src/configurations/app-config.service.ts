@@ -44,6 +44,10 @@ export class AppConfigService {
         return this.config.documents;
     }
 
+    get cardcloud() {
+        return this.config.cardcloud;
+    }
+
     get security() {
         return this.config.security;
     }

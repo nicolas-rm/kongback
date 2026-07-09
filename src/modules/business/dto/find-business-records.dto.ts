@@ -57,8 +57,3 @@ export class FindStationFuelsDto extends FindStatusRecordsDto {
     @ValidatorUUID({ optional: true })
     fuelId?: string;
 }
-
-export class FindCardcloudCardStockDto extends FindStatusRecordsDto {
-    @ValidatorUUID({ optional: true })
-    assignedCardId?: string;
-}

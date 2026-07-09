@@ -1,6 +1,7 @@
 import { AccessControlModule } from '@/modules/access-control/access-control.module';
 import { AuthenticationModule } from '@/modules/authentication/authentication.module';
 import { BusinessModule } from '@/modules/business/business.module';
+import { CardcloudModule } from '@/modules/cardcloud/cardcloud.module';
 import { DocumentsModule } from '@/modules/documents/documents.module';
 import { HealthModule } from '@/modules/health/health.module';
 import { IntegrationsModule } from '@/modules/integrations/integrations.module';
@@ -16,6 +17,7 @@ export const APP_MODULES = [
     UsersModule,
     AccessControlModule,
     BusinessModule,
+    CardcloudModule,
     SessionsModule,
     DocumentsModule,
     NotificationsModule,
@@ -28,6 +30,7 @@ export {
     AccessControlModule,
     AuthenticationModule,
     BusinessModule,
+    CardcloudModule,
     DocumentsModule,
     HealthModule,
     IntegrationsModule,

@@ -38,6 +38,9 @@ export const APP_DEFAULTS = {
         maxFileSizeMb: 20,
         allowedMimeTypes: 'application/pdf,image/jpeg,image/png,image/webp,text/plain',
     },
+    cardcloud: {
+        baseUrl: 'https://cardcloud.setpay.net/api',
+    },
     security: {
         allowedOrigins: '',
     },

@@ -1,0 +1,289 @@
+---
+title: Cardcloud
+description: Endpoints propios de Cardcloud y proxy hacia la API externa.
+---
+
+# Cardcloud
+
+Base path: `/api/cardcloud`
+
+Este modulo concentra Cardcloud en una sola API local:
+
+- Endpoints proxy hacia la API externa de Cardcloud.
+- `POST /api/cardcloud/sync` para sincronizar el espejo local de stock.
+
+No existe un controller separado para stock. La tabla local se mantiene por sincronizacion y no expone CRUD manual.
+
+## Endpoints
+
+| Metodo  | Ruta                                         | Permiso                                     | Alcance  | Descripcion                        |
+| ------- | -------------------------------------------- | ------------------------------------------- | -------- | ---------------------------------- |
+| `POST`  | `/api/cardcloud/sync`                        | `cardcloud.sync`                            | Compania | Sincroniza espejo local de stock.  |
+| `GET`   | `/api/cardcloud/account`                     | `cardcloud.account.read-one`                | Sistema  | Consulta la cuenta Cardcloud.      |
+| `GET`   | `/api/cardcloud/account/movements`           | `cardcloud.account.movements.read-list`     | Sistema  | Lista movimientos de cuenta.       |
+| `POST`  | `/api/cardcloud/account/transfer`            | `cardcloud.account.transfer`                | Sistema  | Ejecuta una transferencia.         |
+| `POST`  | `/api/cardcloud/account/transfer-bulk`       | `cardcloud.account.transfer.bulk`           | Sistema  | Ejecuta transferencias en lote.    |
+| `POST`  | `/api/cardcloud/account/cards/assign`        | `cardcloud.cards.assign`                    | Sistema  | Asigna tarjetas por tipo/cantidad. |
+| `POST`  | `/api/cardcloud/account/cards/assign-bulk`   | `cardcloud.cards.assign.bulk`               | Sistema  | Asigna tarjetas especificas.       |
+| `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema  | Consulta detalle de tarjeta.       |
+| `GET`   | `/api/cardcloud/cards/:uuid/movements`       | `cardcloud.cards.movements.read-list`       | Sistema  | Lista movimientos de tarjeta.      |
+| `GET`   | `/api/cardcloud/cards/movement/:uuid`        | `cardcloud.cards.movements.read-one`        | Sistema  | Consulta detalle de movimiento.    |
+| `GET`   | `/api/cardcloud/cards/:uuid/sensitive`       | `cardcloud.cards.sensitive.read-one`        | Sistema  | Consulta datos sensibles.          |
+| `GET`   | `/api/cardcloud/cards/:uuid/cvv`             | `cardcloud.cards.cvv.read`                  | Sistema  | Consulta CVV temporal.             |
+| `PATCH` | `/api/cardcloud/cards/:uuid/nip`             | `cardcloud.cards.nip.update`                | Sistema  | Actualiza NIP de tarjeta.          |
+| `POST`  | `/api/cardcloud/cards/validate`              | `cardcloud.cards.validate`                  | Sistema  | Valida tarjeta.                    |
+| `POST`  | `/api/cardcloud/cards/:uuid/block`           | `cardcloud.cards.block`                     | Sistema  | Bloquea tarjeta.                   |
+| `POST`  | `/api/cardcloud/cards/:uuid/unblock`         | `cardcloud.cards.unblock`                   | Sistema  | Desbloquea tarjeta.                |
+| `GET`   | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.read-list`           | Sistema  | Lista subcuentas.                  |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid`           | `cardcloud.subaccounts.read-one`            | Sistema  | Consulta subcuenta.                |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/cards`     | `cardcloud.subaccounts.cards.read-list`     | Sistema  | Lista tarjetas de subcuenta.       |
+| `POST`  | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.create`              | Sistema  | Crea subcuenta.                    |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/movements` | `cardcloud.subaccounts.movements.read-list` | Sistema  | Lista movimientos de subcuenta.    |
+
+## Sincronizar espejo local
+
+`POST /api/cardcloud/sync`
+
+Requiere `cardcloud.sync` y header `X-Company-Id`.
+
+Sincroniza tarjetas desde Cardcloud hacia el espejo local de stock para la compania seleccionada. Si una tarjeta externa coincide con `Card.externalId` de una tarjeta activa de esa compania, queda relacionada en `assignedCardId`.
+
+Para evitar mezclar clientes, una tarjeta solo entra al espejo de la compania seleccionada cuando cumple al menos una condicion:
+
+- Coincide con una `Card.externalId` activa de la compania.
+- No tiene tarjeta local asignada, pero `client_id` de Cardcloud coincide con `Company.externalId`.
+
+No sincroniza datos sensibles como CVV, NIP o PAN completo.
+
+Response `200`:
+
+```json
+{
+    "synced": 20,
+    "skipped": 0,
+    "removed": 1
+}
+```
+
+Reglas:
+
+- Si Cardcloud no esta configurado, devuelve `400`.
+- Si el usuario esta limitado a subcompanias, devuelve `400`; la sincronizacion requiere alcance completo de compania.
+- `providerStatus` se normaliza a `active`, `inactive` o `suspended`.
+- `skipped` cuenta tarjetas sin ID externo util, duplicadas o que no pertenecen a la compania seleccionada.
+- Las tarjetas que ya no vengan en Cardcloud se marcan como `inactive` dentro de la compania seleccionada.
+
+## Cuenta
+
+`GET /api/cardcloud/account`
+
+Requiere `RequireSystemAccess`.
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/account`.
+
+`GET /api/cardcloud/account/movements`
+
+Requiere `RequireSystemAccess`.
+
+Query params opcionales:
+
+| Campo  | Tipo     | Descripcion                       |
+| ------ | -------- | --------------------------------- |
+| `from` | `string` | Timestamp Unix inicial, segundos. |
+| `to`   | `string` | Timestamp Unix final, segundos.   |
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/account/movements`.
+
+## Transferencias
+
+`POST /api/cardcloud/account/transfer`
+
+Requiere `RequireSystemAccess`.
+
+Body:
+
+| Campo             | Tipo                            | Requerido | Descripcion         |
+| ----------------- | ------------------------------- | --------- | ------------------- |
+| `sourceType`      | `account \| subaccount \| card` | Si        | Origen.             |
+| `source`          | `string`                        | Si        | ID externo origen.  |
+| `destinationType` | `account \| subaccount \| card` | Si        | Destino.            |
+| `destination`     | `string`                        | Si        | ID externo destino. |
+| `amount`          | `number`                        | Si        | Monto.              |
+| `description`     | `string`                        | Si        | Descripcion.        |
+
+Si `amount` es negativo, backend invierte origen/destino y envia el monto absoluto a Cardcloud, igual que BackendGas.
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/transfer`.
+
+`POST /api/cardcloud/account/transfer-bulk`
+
+Requiere `RequireSystemAccess`.
+
+Body:
+
+```json
+{
+    "transfers": [
+        {
+            "sourceType": "account",
+            "source": "ACCOUNT-ID",
+            "destinationType": "card",
+            "destination": "CARD-ID",
+            "amount": 100,
+            "description": "Carga inicial"
+        }
+    ]
+}
+```
+
+Response `200`:
+
+```json
+{
+    "results": [
+        {
+            "index": 0,
+            "success": true,
+            "data": {}
+        }
+    ],
+    "summary": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0
+    }
+}
+```
+
+## Tarjetas
+
+`GET /api/cardcloud/cards/:uuid`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid`.
+
+`GET /api/cardcloud/cards/:uuid/movements`
+
+Query params opcionales: `from`, `to`.
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/movements`.
+
+`GET /api/cardcloud/cards/movement/:uuid`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/movement/:uuid`.
+
+`GET /api/cardcloud/cards/:uuid/sensitive`
+
+Response `200`: datos sensibles devueltos por Cardcloud.
+
+`GET /api/cardcloud/cards/:uuid/cvv`
+
+Response `200`: CVV temporal devuelto por Cardcloud.
+
+`PATCH /api/cardcloud/cards/:uuid/nip`
+
+Body:
+
+| Campo     | Tipo     | Requerido |
+| --------- | -------- | --------- |
+| `old_nip` | `string` | Si        |
+| `new_nip` | `string` | Si        |
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/update_nip`.
+
+`POST /api/cardcloud/cards/validate`
+
+Body:
+
+| Campo  | Tipo     | Requerido | Descripcion                         |
+| ------ | -------- | --------- | ----------------------------------- |
+| `card` | `string` | Si        | Ultimos digitos requeridos por API. |
+| `pin`  | `string` | Si        | PIN.                                |
+| `moye` | `string` | Si        | Vencimiento en formato Cardcloud.   |
+
+Response `200`: respuesta cruda de Cardcloud para `/card/validate`.
+
+`POST /api/cardcloud/cards/:uuid/block`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/block`.
+
+`POST /api/cardcloud/cards/:uuid/unblock`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/unblock`.
+
+## Asignacion de tarjetas
+
+`POST /api/cardcloud/account/cards/assign`
+
+Body:
+
+| Campo           | Tipo     | Requerido |
+| --------------- | -------- | --------- |
+| `subaccount_id` | `string` | Si        |
+| `card_type`     | `string` | Si        |
+| `quantity`      | `number` | Si        |
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/account/cards/assign`.
+
+`POST /api/cardcloud/account/cards/assign-bulk`
+
+Body:
+
+| Campo           | Tipo       | Requerido |
+| --------------- | ---------- | --------- |
+| `subaccount_id` | `string`   | Si        |
+| `cards`         | `string[]` | Si        |
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/account/cards/assign_bulk`.
+
+## Subcuentas
+
+`GET /api/cardcloud/subaccounts`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts`.
+
+`GET /api/cardcloud/subaccounts/:uuid`
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid`.
+
+`GET /api/cardcloud/subaccounts/:uuid/cards`
+
+Query params opcionales:
+
+| Campo  | Tipo     | Descripcion |
+| ------ | -------- | ----------- |
+| `page` | `string` | Pagina.     |
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid/cards`.
+
+`POST /api/cardcloud/subaccounts`
+
+Body:
+
+| Campo         | Tipo     | Requerido |
+| ------------- | -------- | --------- |
+| `ExternalId`  | `string` | Si        |
+| `Description` | `string` | Si        |
+
+Response `201`: respuesta cruda de Cardcloud para `/v1/subaccounts`.
+
+`GET /api/cardcloud/subaccounts/:uuid/movements`
+
+Query params opcionales: `from`, `to`.
+
+Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid/movements`.
+
+## Reglas y seguridad
+
+- `CardcloudExternalService` es el unico servicio que se conecta a la API externa.
+- `CardcloudService` es el servicio local del modulo y coordina proxy, normalizacion de transferencias y sincronizacion del espejo.
+- Los endpoints con alcance `Sistema` no usan `X-Company-Id`; requieren acceso global de sistema y permisos `cardcloud.*`.
+- `POST /api/cardcloud/sync` si usa `X-Company-Id`; requiere permiso `cardcloud.sync` en la compania seleccionada.
+- No filtres datos sensibles solo en frontend. Los endpoints `sensitive`, `cvv` y `nip` deben mostrarse solo bajo accion explicita, con confirmacion, y nunca persistirse ni loguearse en frontend.
+
+## Notas para frontend
+
+No generes una pagina CRUD nueva por cada endpoint de Cardcloud. Los endpoints externos son acciones tecnicas del proveedor y deben exponerse solo como herramientas puntuales para usuarios globales autorizados.
+
+La accion `Sincronizar Cardcloud` debe ser un boton/accion de la pantalla de tarjetas o administracion Cardcloud, no una pagina separada. Solo mostrarla cuando `capabilities.permissions` incluya `cardcloud.sync`.
+
+Para que el stock no asignado de Cardcloud aparezca en una compania, `Company.externalId` debe guardar el mismo valor que `client_id` en Cardcloud. Si no se configura, el sync solo importara tarjetas que ya coincidan con una `Card.externalId` local de esa compania.

@@ -51,6 +51,10 @@ export const envSchema = z.object({
     DOCUMENTS_MAX_FILE_SIZE_MB: z.coerce.number().int().positive().default(APP_DEFAULTS.documents.maxFileSizeMb),
     DOCUMENTS_ALLOWED_MIME_TYPES: z.string().default(APP_DEFAULTS.documents.allowedMimeTypes),
 
+    CARDCLOUD_BASE_URL: z.string().url('CARDCLOUD_BASE_URL debe ser una URL valida').default(APP_DEFAULTS.cardcloud.baseUrl),
+    CARDCLOUD_USERNAME: z.string().default(''),
+    CARDCLOUD_PASSWORD: z.string().default(''),
+
     SECURITY_ALLOWED_ORIGINS: z.string().default(APP_DEFAULTS.security.allowedOrigins),
 });
 

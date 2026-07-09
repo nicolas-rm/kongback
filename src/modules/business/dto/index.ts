@@ -1,6 +1,5 @@
 export * from './address.dto';
 export * from './card.dto';
-export * from './cardcloud-card-stock.dto';
 export * from './company.dto';
 export * from './driver.dto';
 export * from './find-business-records.dto';

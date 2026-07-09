@@ -22,25 +22,25 @@ La documentacion de `openapi/` describe el contrato completo del backend. El fro
 
 Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu, boton y accion debe filtrarse con `GET /api/authentication/capabilities`.
 
-| API                    | UI recomendada                                              | Crear pagina/menu principal | Notas                                                                                 |
-| ---------------------- | ----------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- |
-| `authentication`       | Login, perfil, seguridad, sesiones y selector de compania   | No                          | Son flujos de sesion/configuracion, no un CRUD visible.                               |
-| `users`                | Administracion de usuarios                                  | Si                          | Accesos, permisos efectivos, password, 2FA y reenvio son secciones/acciones internas. |
-| `roles`                | Administracion de roles                                     | Si                          | Permisos del rol van dentro de detalle/edicion de rol.                                |
-| `permissions`          | Catalogo tecnico para super admin                           | Opcional                    | No mostrar a usuarios de compania; no crear permisos dinamicos desde el front.        |
-| `companies`            | Administracion global de clientes/tenants                   | Si, solo global             | No depende de `X-Company-Id`; no crear un modulo separado de workspace.               |
-| `sub-companies`        | Catalogo de subcompanias dentro de la compania seleccionada | Si                          | Siempre trabaja con `X-Company-Id`; `companyId` se deriva del contexto.               |
-| `drivers`              | Catalogo de choferes                                        | Si                          | Relacionado a subcompania; IDs por select, no texto libre.                            |
-| `vehicles`             | Catalogo de vehiculos                                       | Si                          | Asignar conductor puede ser accion rapida con endpoint dedicado.                      |
-| `cards`                | Catalogo de tarjetas                                        | Si                          | Asignar/quitar vehiculo son acciones dedicadas; `assignmentMode` no es editable.      |
-| `fuels`                | Catalogo global de combustibles                             | Opcional                    | Puede ser pantalla global o solo fuente de selects; no es catalogo por compania.      |
-| `stations`             | Catalogo de estaciones                                      | Si                          | Combustibles disponibles se administran dentro de la estacion con `station-fuels`.    |
-| `station-fuels`        | Seccion `Combustibles disponibles` dentro de estacion       | No                          | Modulo tecnico de relacion; no crear menu ni CRUD principal.                          |
-| `cardcloud-card-stock` | Stock de tarjetas externas                                  | Si, si el producto lo usa   | Etiquetar como `Stock` o `Stock de tarjetas`, no como nombre tecnico del endpoint.    |
-| `documents`            | Documentos y adjuntos                                       | Si/Opcional                 | Puede ser pagina general y tambien secciones anidadas en entidades.                   |
-| `notifications`        | Campana, bandeja personal y acciones administrativas        | No como CRUD principal      | `/api/me/notifications` va en topbar/inbox; `POST /notifications` es accion admin.    |
-| `health`               | Diagnostico tecnico                                         | No                          | Usarlo para monitoreo o pantalla tecnica interna, no como modulo de operacion.        |
-| `frontend-guidelines`  | Guia para generadores/front                                 | No                          | No es endpoint ni modulo de producto.                                                 |
+| API                   | UI recomendada                                              | Crear pagina/menu principal | Notas                                                                                 |
+| --------------------- | ----------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------- |
+| `authentication`      | Login, perfil, seguridad, sesiones y selector de compania   | No                          | Son flujos de sesion/configuracion, no un CRUD visible.                               |
+| `users`               | Administracion de usuarios                                  | Si                          | Accesos, permisos efectivos, password, 2FA y reenvio son secciones/acciones internas. |
+| `roles`               | Administracion de roles                                     | Si                          | Permisos del rol van dentro de detalle/edicion de rol.                                |
+| `permissions`         | Catalogo tecnico para super admin                           | Opcional                    | No mostrar a usuarios de compania; no crear permisos dinamicos desde el front.        |
+| `companies`           | Administracion global de clientes/tenants                   | Si, solo global             | No depende de `X-Company-Id`; no crear un modulo separado de workspace.               |
+| `sub-companies`       | Catalogo de subcompanias dentro de la compania seleccionada | Si                          | Siempre trabaja con `X-Company-Id`; `companyId` se deriva del contexto.               |
+| `drivers`             | Catalogo de choferes                                        | Si                          | Relacionado a subcompania; IDs por select, no texto libre.                            |
+| `vehicles`            | Catalogo de vehiculos                                       | Si                          | Asignar conductor puede ser accion rapida con endpoint dedicado.                      |
+| `cards`               | Catalogo de tarjetas                                        | Si                          | Asignar/quitar vehiculo son acciones dedicadas; `assignmentMode` no es editable.      |
+| `fuels`               | Catalogo global de combustibles                             | Opcional                    | Puede ser pantalla global o solo fuente de selects; no es catalogo por compania.      |
+| `stations`            | Catalogo de estaciones                                      | Si                          | Combustibles disponibles se administran dentro de la estacion con `station-fuels`.    |
+| `station-fuels`       | Seccion `Combustibles disponibles` dentro de estacion       | No                          | Modulo tecnico de relacion; no crear menu ni CRUD principal.                          |
+| `cardcloud`           | Cardcloud y sincronizacion de stock                         | No como CRUD principal      | Acciones tecnicas del proveedor; `sync` puede ser boton dentro de tarjetas/stock.     |
+| `documents`           | Documentos y adjuntos                                       | Si/Opcional                 | Puede ser pagina general y tambien secciones anidadas en entidades.                   |
+| `notifications`       | Campana, bandeja personal y acciones administrativas        | No como CRUD principal      | `/api/me/notifications` va en topbar/inbox; `POST /notifications` es accion admin.    |
+| `health`              | Diagnostico tecnico                                         | No                          | Usarlo para monitoreo o pantalla tecnica interna, no como modulo de operacion.        |
+| `frontend-guidelines` | Guia para generadores/front                                 | No                          | No es endpoint ni modulo de producto.                                                 |
 
 ## Endpoints que no son paginas
 
@@ -53,6 +53,8 @@ Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu,
 - `/api/cards/by-design-fuel/:designFuelId`: listado filtrado o fuente de seleccion, no pagina propia.
 - `/api/cards/:id/assign-vehicle` y `/api/cards/:id/unassign`: acciones de tarjeta.
 - `/api/station-fuels/*`: seccion `Combustibles disponibles` dentro de estaciones.
+- `/api/cardcloud/sync`: accion para sincronizar el espejo local; no pagina propia.
+- `/api/cardcloud/*`: endpoints externos de proveedor; no generar CRUD automatico ni menu principal por cada ruta.
 - `/api/documents/:id/download`: accion de descarga.
 - `/api/me/notifications/*`: campana, contador, bandeja personal y acciones de lectura.
 - `/api/health`: monitoreo tecnico.
@@ -178,7 +180,7 @@ Ejemplo de alta de usuario recomendada:
 - Vehiculos y conductores: usa `PATCH /api/vehicles/:id/driver` para asignar o quitar conductor cuando esa sea la unica accion. No obligues a abrir el formulario completo del vehiculo.
 - Tarjetas y vehiculos: usa `PATCH /api/cards/:id/assign-vehicle` y `PATCH /api/cards/:id/unassign` para asignar o quitar tarjeta. `assignmentMode` es derivado por backend.
 - Documentos: cuando el documento pertenezca a una entidad, abre el alta desde el detalle de esa entidad y deriva `entityType`, `entityId`, `scopeKey` y `scopeId`.
-- Stock Cardcloud: administra el stock desde `cardcloud-card-stock` y conserva sus IDs solo para acciones internas o asignaciones posteriores.
+- Cardcloud: usa `POST /api/cardcloud/sync` como accion para refrescar el espejo local. No generes CRUD manual de `CardcloudCardStock`.
 
 ## Tablas y columnas
 
