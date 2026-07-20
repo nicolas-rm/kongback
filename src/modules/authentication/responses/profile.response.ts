@@ -58,10 +58,12 @@ export class UpdateProfileResponse {
         public username: string,
         public email: string,
         public fullName: string,
-        public preferredLanguage: string
+        public preferredLanguage: string,
+        public emailVerified: boolean,
+        public requiresEmailVerification: boolean
     ) {}
 
-    static from(data: { id: string; username: string; email: string; fullName: string; preferredLanguage: string }): UpdateProfileResponse {
-        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage);
+    static from(data: { id: string; username: string; email: string; fullName: string; preferredLanguage: string; emailVerifiedAt: Date | null; requiresEmailVerification: boolean }): UpdateProfileResponse {
+        return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, Boolean(data.emailVerifiedAt), data.requiresEmailVerification);
     }
 }
