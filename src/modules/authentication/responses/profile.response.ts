@@ -1,12 +1,19 @@
+import type { Status } from '@prisma/client';
+
 type ProfileResponseData = {
     id: string;
     username: string;
     email: string;
     fullName?: string | null;
     preferredLanguage?: string | null;
+    status?: Status;
+    emailVerified?: boolean;
+    requiresEmailVerification?: boolean;
+    twoFactorEnabled?: boolean;
     mustChangePassword?: boolean;
     isGlobalAdmin?: boolean;
     companyIds?: string[];
+    sessionId?: string | null;
 };
 
 export class ProfileResponse {
@@ -16,9 +23,14 @@ export class ProfileResponse {
         public email: string,
         public fullName: string | null,
         public preferredLanguage: string,
+        public status: Status | null,
+        public emailVerified: boolean,
+        public requiresEmailVerification: boolean,
+        public twoFactorEnabled: boolean,
         public mustChangePassword: boolean,
         public isGlobalAdmin: boolean,
-        public companyIds: string[]
+        public companyIds: string[],
+        public sessionId: string | null
     ) {}
 
     static from(data: ProfileResponseData): ProfileResponse {
@@ -28,9 +40,14 @@ export class ProfileResponse {
             data.email,
             data.fullName ?? null,
             data.preferredLanguage ?? 'es',
+            data.status ?? null,
+            data.emailVerified ?? false,
+            data.requiresEmailVerification ?? false,
+            data.twoFactorEnabled ?? false,
             data.mustChangePassword ?? false,
             data.isGlobalAdmin ?? false,
-            data.companyIds ?? []
+            data.companyIds ?? [],
+            data.sessionId ?? null
         );
     }
 }

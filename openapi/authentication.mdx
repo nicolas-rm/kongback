@@ -47,11 +47,32 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
     "email": "admin@example.com",
     "fullName": "Admin User",
     "preferredLanguage": "es",
+    "status": "active",
+    "emailVerified": true,
+    "requiresEmailVerification": false,
+    "twoFactorEnabled": false,
     "mustChangePassword": false,
     "isGlobalAdmin": true,
-    "companyIds": []
+    "companyIds": [],
+    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086"
 }
 ```
+
+| Campo                       | Tipo                              | Descripcion                                                                 |
+| --------------------------- | --------------------------------- | --------------------------------------------------------------------------- |
+| `id`                        | `string`                          | UUID v4 del usuario autenticado.                                            |
+| `username`                  | `string`                          | Nombre de usuario.                                                          |
+| `email`                     | `string`                          | Correo del usuario.                                                         |
+| `fullName`                  | `string \| null`                  | Nombre completo.                                                            |
+| `preferredLanguage`         | `string`                          | Idioma preferido para UI y correos.                                         |
+| `status`                    | `active \| inactive \| suspended` | Estado operativo del usuario; en `/me` normalmente sera `active`.           |
+| `emailVerified`             | `boolean`                         | Indica si el correo ya fue confirmado; derivado de `emailVerifiedAt`.       |
+| `requiresEmailVerification` | `boolean`                         | Indica si la cuenta requiere verificacion antes de poder iniciar sesion.    |
+| `twoFactorEnabled`          | `boolean`                         | Indica si el usuario tiene 2FA activo.                                      |
+| `mustChangePassword`        | `boolean`                         | Indica si debe cambiar contrasena antes de usar endpoints protegidos.       |
+| `isGlobalAdmin`             | `boolean`                         | Indica si tiene acceso admin global.                                        |
+| `companyIds`                | `string[]`                        | Companias a las que tiene acceso directo.                                   |
+| `sessionId`                 | `string \| null`                  | UUID v4 de la sesion activa cuando el token fue emitido con sesion.         |
 
 ### Session
 

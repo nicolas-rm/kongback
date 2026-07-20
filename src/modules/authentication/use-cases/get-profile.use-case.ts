@@ -11,9 +11,14 @@ export class GetProfileUseCase {
             email: user.email,
             fullName: user.fullName,
             preferredLanguage: user.preferredLanguage,
+            status: user.status,
+            emailVerified: user.emailVerified,
+            requiresEmailVerification: user.requiresEmailVerification,
+            twoFactorEnabled: user.twoFactorEnabled,
             mustChangePassword: user.mustChangePassword,
             isGlobalAdmin: user.isGlobalAdmin,
             companyIds: user.companyIds ?? [],
+            sessionId: user.sessionId ?? null,
         });
     }
 }

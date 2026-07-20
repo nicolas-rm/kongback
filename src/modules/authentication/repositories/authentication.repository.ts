@@ -39,6 +39,10 @@ export class AuthenticationRepository {
                 email: true,
                 fullName: true,
                 preferredLanguage: true,
+                status: true,
+                requiresEmailVerification: true,
+                emailVerifiedAt: true,
+                twoFactorEnabled: true,
                 mustChangePassword: true,
                 accesses: {
                     where: buildActiveUserAccessWhere({}),
