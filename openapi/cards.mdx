@@ -52,6 +52,8 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 | Metodo   | Ruta                                      | Permiso                  | Descripcion                               |
 | -------- | ----------------------------------------- | ------------------------ | ----------------------------------------- |
 | `POST`   | `/api/cards`                              | `cards.create`           | Crea una tarjeta.                         |
+| `POST`   | `/api/cards/assign-sub-company`           | `cards.create`           | Asigna tarjetas Cardcloud a subcompania.  |
+| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`             | Sincroniza tarjetas de una subcompania.   |
 | `GET`    | `/api/cards`                              | `cards.read-list`        | Lista tarjetas.                           |
 | `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read` | Lista tarjetas por combustible de diseno. |
 | `GET`    | `/api/cards/:id`                          | `cards.read-one`         | Obtiene una tarjeta.                      |
@@ -104,6 +106,71 @@ Requerido: `subCompanyId`. Debe estar activo y pertenecer a la compania enviada 
 Opcionales: `vehicleId`, `designFuelId`, `externalId`, `status`, `assignedAt`. Si se envia `vehicleId`, la tarjeta queda en `assignmentMode: vehicle`; si no, queda `unassigned`.
 
 Response `201`: `Card`.
+
+## Asignar tarjetas a subcompania
+
+`POST /api/cards/assign-sub-company`
+
+```json
+{
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "cards": ["019cd4ad-38dd-7125-a68a-209519d79869"]
+}
+```
+
+Requeridos: `subCompanyId`, `cards`.
+
+Flujo:
+
+- Valida que la subcompania este activa, pertenezca al `X-Company-Id` y tenga `cardcloudSubaccountId`.
+- Llama primero a Cardcloud `/v1/account/cards/assign_bulk` usando `subaccount_id = subCompany.cardcloudSubaccountId`.
+- Si Cardcloud confirma, crea o mueve las `Card` locales por `externalId`.
+- Si existe el registro en el espejo `Cardcloud`, actualiza `subCompanyId` y `assignedCardId`.
+
+Response `201`:
+
+```json
+{
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "cardcloudSubaccountId": "019cd4ad-38dd-7125-a68a-209519d79869",
+    "requested": 1,
+    "unique": 1,
+    "created": 1,
+    "updated": 0,
+    "unchanged": 0,
+    "cards": []
+}
+```
+
+## Sincronizar tarjetas de subcompania
+
+`POST /api/cards/sync-sub-company`
+
+```json
+{
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992"
+}
+```
+
+Requerido: `subCompanyId`.
+
+El backend consulta Cardcloud `/v1/subaccounts/:cardcloudSubaccountId/cards` y sincroniza las tarjetas locales por `card_id` o `card_external_id`. No es un job automatico; es una accion manual.
+
+Response `201`:
+
+```json
+{
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "cardcloudSubaccountId": "019cd4ad-38dd-7125-a68a-209519d79869",
+    "fetched": 10,
+    "requested": 10,
+    "unique": 10,
+    "created": 2,
+    "updated": 1,
+    "unchanged": 7,
+    "cards": []
+}
+```
 
 ## Obtener
 
@@ -191,6 +258,8 @@ Campos recomendados para formularios:
 No muestres `assignmentMode` como campo editable. Es un estado derivado por backend: queda `vehicle` si hay vehiculo asignado y `unassigned` si no lo hay.
 
 Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcompania. Para quitar asignacion, usa la accion dedicada `PATCH /api/cards/:id/unassign`.
+
+Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`.
 
 Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignacion como accion posterior. Si se crea desde el detalle de un vehiculo, deriva `vehicleId`, `subCompanyId` y `assignedAt` desde ese contexto cuando aplique.
 

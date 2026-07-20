@@ -56,44 +56,14 @@ export class SubCompaniesService {
     }
 
     private async createCardcloudSubaccount(companyKey: string, subCompanyKey: string, name: string): Promise<string> {
-        const response = await this.cardcloud.createSubaccount({
+        return this.cardcloud.createSubaccountAndResolveId({
             ExternalId: this.buildCardcloudExternalId(companyKey, subCompanyKey),
             Description: name,
         });
-        const subaccountId = this.resolveCardcloudSubaccountId(response);
-        if (!subaccountId) {
-            throw new I18nHttpException(HttpStatus.BAD_GATEWAY, I18N_KEYS.errors.internal.unprocessed, 'Cardcloud no devolvio un identificador de subcuenta valido');
-        }
-
-        return subaccountId;
     }
 
     private buildCardcloudExternalId(companyKey: string, subCompanyKey: string): string {
         return `${companyKey}__${subCompanyKey}`;
-    }
-
-    private resolveCardcloudSubaccountId(response: unknown): string | null {
-        const direct = this.extractStringField(response, ['subaccount_id', 'uuid', 'id']);
-        if (direct) return direct;
-
-        if (!this.isRecord(response)) return null;
-
-        return this.resolveCardcloudSubaccountId(response.data) ?? this.resolveCardcloudSubaccountId(response.subaccount);
-    }
-
-    private extractStringField(value: unknown, fields: string[]): string | null {
-        if (!this.isRecord(value)) return null;
-
-        for (const field of fields) {
-            const fieldValue = value[field];
-            if (typeof fieldValue === 'string' && fieldValue.trim()) return fieldValue.trim();
-        }
-
-        return null;
-    }
-
-    private isRecord(value: unknown): value is Record<string, unknown> {
-        return typeof value === 'object' && value !== null && !Array.isArray(value);
     }
 
     async findAll(dto: FindSubCompaniesDto, scope?: CompanyScope) {
@@ -115,8 +85,6 @@ export class SubCompaniesService {
         const subCompany = await this.repository.update(
             id,
             {
-                key: dto.key,
-                cardcloudSubaccountId: dto.cardcloudSubaccountId,
                 name: dto.name,
                 status: dto.status,
                 isDefault: dto.isDefault,

@@ -16,7 +16,7 @@ Esta API es mixta:
 - En contexto de compania, los listados y lecturas solo devuelven usuarios con acceso directo a esa compania. No mezclan usuarios de otras companias.
 - En contexto de compania, asignar/reemplazar/eliminar accesos solo afecta accesos de esa compania. No permite crear accesos globales ni accesos para otra compania.
 - Si el acceso del usuario autenticado esta limitado con `scopeKey: "subCompanyId"`, los endpoints mixtos solo muestran y administran accesos de esas subcompanias.
-- Crear usuarios, editar datos base, eliminar usuarios, cambiar contrasena, desvincular 2FA y reenviar credenciales siguen siendo operaciones globales. Al crear usuario se puede enviar un acceso inicial opcional para relacionarlo con una compania desde el alta.
+- Crear usuarios es mixto: sin `X-Company-Id` requiere acceso global; con `X-Company-Id` crea el usuario dentro de la compania seleccionada y exige acceso inicial. Editar datos base, eliminar usuarios, cambiar contrasena, desvincular 2FA y reenviar credenciales siguen siendo operaciones globales.
 
 ## Modelos
 
@@ -95,7 +95,7 @@ Esta API es mixta:
 
 | Metodo   | Ruta                                | Permiso                    | Alcance         | Descripcion                                  |
 | -------- | ----------------------------------- | -------------------------- | --------------- | -------------------------------------------- |
-| `POST`   | `/api/users`                        | `users.create`             | Global          | Crea un usuario.                             |
+| `POST`   | `/api/users`                        | `users.create`             | Global/compania | Crea un usuario.                             |
 | `GET`    | `/api/users`                        | `users.read-list`          | Global/compania | Lista usuarios con paginacion y filtros.     |
 | `GET`    | `/api/users/:id`                    | `users.read-one`           | Global/compania | Obtiene un usuario por ID.                   |
 | `PATCH`  | `/api/users/:id`                    | `users.update`             | Global          | Actualiza datos basicos del usuario.         |
@@ -113,7 +113,7 @@ Esta API es mixta:
 
 `POST /api/users`
 
-Requiere `users.create`.
+Requiere `users.create`. Si se envia `X-Company-Id`, el permiso puede venir del acceso de esa compania y el usuario se crea con acceso inicial dentro de esa misma compania. Si se omite `X-Company-Id`, requiere acceso global.
 
 ### Body
 
@@ -138,9 +138,11 @@ Requiere `users.create`.
 | `password`          | `string`                          | No        | Minimo 8 caracteres, una minuscula, una mayuscula y un numero. Si se omite, backend genera una contrasena temporal segura. |
 | `status`            | `active \| inactive \| suspended` | No        | Si se omite, usa `active`.                                                                                                 |
 | `preferredLanguage` | `string`                          | No        | Se normaliza a minusculas; si se omite, usa `es`.                                                                          |
-| `access`            | `object`                          | No        | Acceso inicial del usuario. Usa el mismo contrato de asignacion de acceso.                                                 |
+| `access`            | `object`                          | No/Si     | Acceso inicial del usuario. Es opcional en modo global y obligatorio cuando se envia `X-Company-Id`. Usa el mismo contrato de asignacion de acceso. |
 
 Si `access` se envia, el backend crea el usuario y el acceso en una sola transaccion. `access.roleId` es requerido dentro de ese objeto. `access.companyId` puede ser `null` para acceso global o el UUID de una compania activa. Para limitarlo a una subcompania, usa `scopeKey: "subCompanyId"` y `scopeId` con el UUID de una subcompania activa perteneciente a esa compania.
+
+Si el request envia `X-Company-Id`, `access.companyId` puede omitirse; backend lo fuerza a la compania seleccionada. Si se envia, debe coincidir con `X-Company-Id`. En usuarios autenticados con alcance a una sola subcompania, backend puede completar `access.scopeKey: "subCompanyId"` y `access.scopeId` automaticamente cuando se omiten. Si el usuario autenticado tiene varias subcompanias permitidas, el front debe enviar `access.scopeId`.
 
 Si `password` se omite, el usuario queda con `mustChangePassword: true` y el backend envia correo de bienvenida con credenciales temporales usando `preferredLanguage` o `es` por defecto.
 

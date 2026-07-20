@@ -364,6 +364,9 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             extraPermissionCodes: [
                 'fuels.read-list',
                 'fuels.read-one',
+                'cardcloud.read-list',
+                'cardcloud.sub-company.assign',
+                'cardcloud.sub-company.unassign',
                 'notifications.read-list',
                 'notifications.unread-count.read',
                 'notifications.mark-read',
@@ -404,6 +407,9 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
                 'fuels.read-one',
                 'sub-companies.read-list',
                 'sub-companies.read-one',
+                'cardcloud.read-list',
+                'cardcloud.sub-company.assign',
+                'cardcloud.sub-company.unassign',
             ],
         },
         {

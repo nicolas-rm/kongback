@@ -9,7 +9,7 @@ Base paths: `/api/notifications` y `/api/me/notifications`
 
 Todos los endpoints requieren autenticacion. Las notificaciones creadas por API se emiten tambien por Socket.IO mediante el gateway de notificaciones.
 
-`POST /api/notifications` es una accion administrativa global y requiere un acceso global con `notifications.create`. Los endpoints `/api/me/notifications` son personales: operan solo sobre la bandeja del usuario autenticado y pueden autorizarse con permisos efectivos del usuario.
+`POST /api/notifications` es una accion administrativa mixta. Sin `X-Company-Id`, requiere un acceso global con `notifications.create`; con `X-Company-Id`, crea notificaciones solo para usuarios visibles dentro de esa compania y alcance. Los endpoints `/api/me/notifications` son personales: operan solo sobre la bandeja del usuario autenticado y pueden autorizarse con permisos efectivos del usuario.
 
 ## Modelo
 
@@ -57,6 +57,8 @@ Todos los endpoints requieren autenticacion. Las notificaciones creadas por API 
 Requeridos: `userId`, `title`, `message`.
 
 Opcionales: `detail`, `type`, `link`. Si `type` se omite, usa `info`.
+
+Si se envia `X-Company-Id`, `userId` debe pertenecer a un usuario activo visible dentro de esa compania. Si el usuario autenticado esta limitado a subcompanias, el usuario destino debe tener acceso activo a una de esas subcompanias.
 
 ## Listar mis notificaciones
 
@@ -114,7 +116,7 @@ Para la bandeja de notificaciones:
 - Usa `PATCH /api/me/notifications/:id/read` al abrir una notificacion.
 - Usa `PATCH /api/me/notifications/read-all` para la accion global de marcar todas.
 
-No expongas `POST /api/notifications` como flujo normal de usuario final. Es una accion administrativa/global para crear notificaciones dirigidas a otro usuario.
+No expongas `POST /api/notifications` como flujo normal de usuario final. Es una accion administrativa para crear notificaciones dirigidas a otro usuario. En administracion global no envies `X-Company-Id`; en administracion dentro de una compania, envialo para limitar los usuarios destino.
 
 En tablas o listas, muestra `title`, `message`, `type`, `isRead` y fecha formateada desde `createdAt`. Usa `link` solo para navegacion interna si apunta a una ruta permitida del front.
 

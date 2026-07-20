@@ -4,6 +4,7 @@ import { I18nService } from 'nestjs-i18n';
 import { I18N_KEYS, I18nNotFoundException } from '@/i18n';
 import type { I18nKey } from '@/i18n';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
 import { NotificationResponse } from '@/modules/notifications/responses';
@@ -51,8 +52,8 @@ export class NotificationsService {
         return this.repository.countUnreadForUser(userId);
     }
 
-    async create(dto: CreateNotificationDto) {
-        const notification = await this.repository.createForUser(dto.userId, dto);
+    async create(dto: CreateNotificationDto, scope?: CompanyScope) {
+        const notification = await this.repository.createForUser(dto.userId, dto, scope);
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
 
         return {

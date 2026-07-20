@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentUser, Permissions, RequireSystemAccess } from '@/decorators';
+import { CurrentCompanyScope, CurrentUser, Permissions, RequireSystemOrCompanyAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsGateway } from '@/modules/notifications/notifications.gateway';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 @Controller('notifications')
-@RequireSystemAccess()
 export class NotificationsController {
     constructor(
         private readonly notificationsService: NotificationsService,
@@ -14,9 +14,10 @@ export class NotificationsController {
     ) {}
 
     @Post()
+    @RequireSystemOrCompanyAccess()
     @Permissions('notifications.create')
-    async create(@Body() dto: CreateNotificationDto) {
-        const { notification, response } = await this.notificationsService.create(dto);
+    async create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateNotificationDto) {
+        const { notification, response } = await this.notificationsService.create(dto, scope);
         await this.notificationsGateway.emitNotificationCreated(notification);
         return response;
     }

@@ -18,6 +18,33 @@ export class CompaniesRepository {
         });
     }
 
+    createWithDefaultSubCompany(data: Prisma.CompanyUncheckedCreateInput, defaultSubCompany: Pick<Prisma.SubCompanyUncheckedCreateInput, 'key' | 'cardcloudSubaccountId' | 'name' | 'status' | 'isDefault'>, address?: AddressData) {
+        return this.prisma.$transaction(async (tx) => {
+            const companyAddressId = await this.addresses.create(tx, address);
+            const company = await tx.company.create({ data: { ...data, addressId: companyAddressId }, select: this.select() });
+
+            const subCompanyAddressId = await this.addresses.create(tx, address);
+            const createdDefaultSubCompany = await tx.subCompany.create({
+                data: {
+                    ...defaultSubCompany,
+                    companyId: company.id,
+                    addressId: subCompanyAddressId,
+                },
+                select: this.defaultSubCompanySelect(),
+            });
+
+            return { company, defaultSubCompany: createdDefaultSubCompany };
+        });
+    }
+
+    async countCreateConflicts(key: string, externalId?: string | null): Promise<number> {
+        return this.prisma.company.count({
+            where: {
+                OR: [{ key }, ...(externalId ? [{ externalId }] : [])],
+            },
+        });
+    }
+
     findMany(where: Prisma.CompanyWhereInput, skip: number, take?: number) {
         return this.prisma.company.findMany({ where, skip, take, orderBy: { name: 'asc' }, select: this.listSelect() });
     }
@@ -89,6 +116,19 @@ export class CompaniesRepository {
             name: true,
             tradeName: true,
             status: true,
+        };
+    }
+
+    private defaultSubCompanySelect(): Prisma.SubCompanySelect {
+        return {
+            id: true,
+            companyId: true,
+            key: true,
+            cardcloudSubaccountId: true,
+            name: true,
+            status: true,
+            isDefault: true,
+            address: { select: this.addresses.select() },
         };
     }
 }

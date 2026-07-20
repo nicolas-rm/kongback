@@ -27,9 +27,6 @@ export class CreateCompanyDto {
 }
 
 export class UpdateCompanyDto {
-    @ValidatorString({ optional: true })
-    key?: string;
-
     @ValidatorString({ optional: true, emptyTo: 'null' })
     externalId?: string | null;
 

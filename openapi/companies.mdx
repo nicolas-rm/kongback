@@ -95,7 +95,45 @@ Opcionales: `externalId`, `tradeName`, `status`, `address`. Strings vacios opcio
 
 Requiere acceso global. No requiere `X-Company-Id`.
 
-Response `201`: `Company` con `address`.
+Al crear, el backend primero crea una subcuenta en Cardcloud con `ExternalId = key` y `Description = tradeName ?? name`. Si Cardcloud falla o no devuelve un identificador valido, no se crea la compania local. Con el identificador devuelto se crea tambien una subcompania principal (`isDefault: true`) ligada por `cardcloudSubaccountId`.
+
+Response `201`:
+
+```json
+{
+    "company": {
+        "id": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+        "key": "COMPANY001",
+        "externalId": "EXT-001",
+        "name": "Acme Logistics",
+        "tradeName": "Acme",
+        "status": "active",
+        "address": {
+            "street": "Main St",
+            "city": "Monterrey",
+            "state": "Nuevo Leon",
+            "country": "MX",
+            "postalCode": "64000"
+        }
+    },
+    "defaultSubCompany": {
+        "id": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "companyId": "0ed7e7e1-2b6d-45cf-94c7-79bf03bbaf02",
+        "key": "COMPANY001",
+        "cardcloudSubaccountId": "019cd4ad-38dd-7125-a68a-209519d79869",
+        "name": "Acme",
+        "status": "active",
+        "isDefault": true,
+        "address": {
+            "street": "Main St",
+            "city": "Monterrey",
+            "state": "Nuevo Leon",
+            "country": "MX",
+            "postalCode": "64000"
+        }
+    }
+}
+```
 
 ## Obtener
 
@@ -109,7 +147,7 @@ Response `200`: `Company` con `address`.
 
 `PATCH /api/companies/:id`
 
-Acepta los mismos campos que crear, todos opcionales.
+Acepta `externalId`, `name`, `tradeName`, `status` y `address`, todos opcionales. `key` no es editable porque se usa como referencia externa de la subcuenta Cardcloud principal.
 
 Response `200`: `Company` actualizada con `address`.
 
@@ -147,6 +185,8 @@ Campos que pueden omitirse si el negocio no los usa en pantalla:
 - `externalId`: mostrar como `ID externo` solo si hay integracion o migracion que lo requiera.
 - `address`: no pedirlo en alta rapida; puede capturarse despues desde editar.
 
+No permitas editar `key` despues de crear. Si se requiere corregir una clave, debe manejarse como proceso operativo porque existe una subcuenta Cardcloud ligada.
+
 Para selector de compania del usuario autenticado, usa `GET /api/authentication/companies`. Usa `GET /api/companies` para administracion/catalogo de companias.
 
 ## Errores comunes
@@ -158,3 +198,4 @@ Para selector de compania del usuario autenticado, usa `GET /api/authentication/
 | `403`  | Usuario autenticado sin el permiso requerido o sin alcance suficiente para crear companias. |
 | `404`  | Compania no encontrada.                                                                     |
 | `409`  | Conflictos de unicidad segun constraints Prisma.                                            |
+| `502`  | Cardcloud no devolvio una subcuenta valida.                                                 |

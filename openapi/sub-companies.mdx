@@ -107,7 +107,9 @@ Response `200`: `SubCompany` con `company` summary y `address`.
 
 `PATCH /api/sub-companies/:id`
 
-Acepta `key`, `cardcloudSubaccountId`, `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`.
+Acepta `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`, `key` ni `cardcloudSubaccountId`.
+
+`key` y `cardcloudSubaccountId` no son editables porque forman el vínculo con la subcuenta Cardcloud creada para la subcompania.
 
 Response `200`: `SubCompany` actualizada con `company` summary y `address`.
 
@@ -134,12 +136,14 @@ Campos recomendados para formularios:
 
 - Clave: `key`.
 - Nombre: `name`.
-- Subcuenta Cardcloud: `cardcloudSubaccountId`, solo lectura en creacion. Lo genera backend al crear la subcuenta en Cardcloud.
+- Subcuenta Cardcloud: `cardcloudSubaccountId`, siempre solo lectura. Lo genera backend al crear la subcuenta en Cardcloud.
 - Predeterminada: `isDefault`, checkbox.
 - Estado: `status`, con `active` como valor inicial.
 - Direccion: grupo colapsable u opcional basado en `address`.
 
 En tablas, evita mostrar UUIDs. Usa `company.name`, `company.key`, `key` y `name`. Conserva `id` y `companyId` solo para acciones, filtros y payloads.
+
+No permitas editar `key` ni `cardcloudSubaccountId` desde el formulario. Si se necesita corregir esa relacion, debe hacerse como proceso operativo controlado.
 
 ## Errores comunes
 

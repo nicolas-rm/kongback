@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
-import { Permissions, RequestConfig, RequireSystemAccess } from '@/decorators';
+import { CurrentCompanyScope, Permissions, RequestConfig, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import {
     AssignCardcloudCardsBulkDto,
@@ -20,10 +21,10 @@ export class CardcloudController {
     constructor(private readonly cardcloudService: CardcloudService) {}
 
     @Get()
-    @RequireSystemAccess()
+    @RequireSystemOrCompanyAccess()
     @Permissions('cardcloud.read-list')
-    findStock(@Query() dto: FindCardcloudStockDto) {
-        return this.cardcloudService.findStock(dto);
+    findStock(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardcloudStockDto) {
+        return this.cardcloudService.findStock(dto, scope);
     }
 
     @Post('sync')
@@ -35,22 +36,23 @@ export class CardcloudController {
     }
 
     @Patch(':id/assign-sub-company')
-    @RequireSystemAccess()
+    @RequireSystemOrCompanyAccess()
     @Permissions('cardcloud.sub-company.assign')
     @RequestConfig({ statusCode: HttpStatus.OK })
     assignSubCompany(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
         @Param('id') id: string,
         @Body() dto: AssignCardcloudSubCompanyDto
     ) {
-        return this.cardcloudService.assignSubCompany(id, dto);
+        return this.cardcloudService.assignSubCompany(id, dto, scope);
     }
 
     @Patch(':id/unassign-sub-company')
-    @RequireSystemAccess()
+    @RequireSystemOrCompanyAccess()
     @Permissions('cardcloud.sub-company.unassign')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    unassignSubCompany(@Param('id') id: string) {
-        return this.cardcloudService.unassignSubCompany(id);
+    unassignSubCompany(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id') id: string) {
+        return this.cardcloudService.unassignSubCompany(id, scope);
     }
 
     @Get('cards/movement/:uuid')

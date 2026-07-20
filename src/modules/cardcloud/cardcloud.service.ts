@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { CryptoService } from '@/crypto/crypto.service';
+import { I18N_KEYS, I18nHttpException } from '@/i18n';
 import { PrismaService } from '@/prisma/prisma.service';
 import { invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external.service';
+import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import {
     AssignCardcloudCardsBulkDto,
     AssignCardcloudCardsDto,
@@ -140,6 +142,16 @@ export class CardcloudService {
         return this.external.post('/v1/subaccounts', dto);
     }
 
+    async createSubaccountAndResolveId(dto: CreateCardcloudSubaccountDto): Promise<string> {
+        const response = await this.createSubaccount(dto);
+        const subaccountId = this.resolveSubaccountId(response);
+        if (!subaccountId) {
+            throw new I18nHttpException(HttpStatus.BAD_GATEWAY, I18N_KEYS.errors.internal.unprocessed, 'Cardcloud no devolvio un identificador de subcuenta valido');
+        }
+
+        return subaccountId;
+    }
+
     getSubaccountMovements(uuid: string, query: CardcloudDateRangeQueryDto) {
         return this.external.get(`/v1/subaccounts/${uuid}/movements`, this.dateRangeParams(query));
     }
@@ -187,11 +199,16 @@ export class CardcloudService {
         return this.external.get('/v1/account/movements', this.dateRangeParams(query));
     }
 
-    async findStock(dto: FindCardcloudStockDto) {
+    async findStock(dto: FindCardcloudStockDto, scope?: CompanyScope) {
         const where: Prisma.CardcloudWhereInput = {
-            subCompanyId: dto.subCompanyId,
-            providerStatus: dto.providerStatus,
-            ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
+            AND: [
+                this.stockScopeWhere(scope, true),
+                {
+                    subCompanyId: dto.subCompanyId,
+                    providerStatus: dto.providerStatus,
+                    ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
+                },
+            ],
         };
 
         const [records, total] = await Promise.all([
@@ -234,26 +251,30 @@ export class CardcloudService {
         return { synced, skipped, removed: removed.count };
     }
 
-    async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto) {
-        await this.assertActiveSubCompany(dto.subCompanyId);
+    async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto, scope?: CompanyScope) {
+        await this.assertActiveSubCompany(dto.subCompanyId, scope);
 
         const updated = await this.prisma.cardcloud.updateMany({
-            where: { id },
+            where: {
+                AND: [{ id }, this.stockScopeWhere(scope, true)],
+            },
             data: { subCompanyId: dto.subCompanyId },
         });
 
         if (updated.count === 0) throw notFound();
-        return this.findLocalStock(id);
+        return this.findLocalStock(id, scope);
     }
 
-    async unassignSubCompany(id: string) {
+    async unassignSubCompany(id: string, scope?: CompanyScope) {
         const updated = await this.prisma.cardcloud.updateMany({
-            where: { id },
+            where: {
+                AND: [{ id }, this.stockScopeWhere(scope, false)],
+            },
             data: { subCompanyId: null },
         });
 
         if (updated.count === 0) throw notFound();
-        return this.findLocalStock(id);
+        return this.findLocalStock(id, scope);
     }
 
     private dateRangeParams(query: CardcloudDateRangeQueryDto) {
@@ -338,14 +359,26 @@ export class CardcloudService {
         });
     }
 
-    private async assertActiveSubCompany(subCompanyId: string): Promise<void> {
+    private async assertActiveSubCompany(subCompanyId: string, scope?: CompanyScope): Promise<void> {
         const count = await this.prisma.subCompany.count({
             where: {
-                id: subCompanyId,
-                status: Status.active,
+                AND: [{ id: subCompanyId }, { status: Status.active }, subCompanyScopeWhere(scope)],
             },
         });
         if (count !== 1) throw invalidRelation();
+    }
+
+    private stockScopeWhere(scope: CompanyScope | undefined, includeUnassigned: boolean): Prisma.CardcloudWhereInput {
+        if (!scope?.companyId) return {};
+
+        const assignedToScope: Prisma.CardcloudWhereInput = {
+            subCompany: {
+                ...subCompanyScopeWhere(scope),
+                status: Status.active,
+            },
+        };
+
+        return includeUnassigned ? { OR: [{ subCompanyId: null }, assignedToScope] } : assignedToScope;
     }
 
     private stockSearch(search: string): Prisma.CardcloudWhereInput[] {
@@ -358,9 +391,11 @@ export class CardcloudService {
         ];
     }
 
-    private async findLocalStock(id: string) {
-        const stock = await this.prisma.cardcloud.findUnique({
-            where: { id },
+    private async findLocalStock(id: string, scope?: CompanyScope) {
+        const stock = await this.prisma.cardcloud.findFirst({
+            where: {
+                AND: [{ id }, this.stockScopeWhere(scope, true)],
+            },
             select: this.localStockSelect(),
         });
         if (!stock) throw notFound();
@@ -397,6 +432,30 @@ export class CardcloudService {
 
     private resolveExternalId(card: CardcloudAccountCard): string | null {
         return this.cleanText(card.card_id);
+    }
+
+    private resolveSubaccountId(response: unknown): string | null {
+        const direct = this.extractStringField(response, ['subaccount_id', 'uuid', 'id']);
+        if (direct) return direct;
+
+        if (!this.isRecord(response)) return null;
+
+        return this.resolveSubaccountId(response.data) ?? this.resolveSubaccountId(response.subaccount);
+    }
+
+    private extractStringField(value: unknown, fields: string[]): string | null {
+        if (!this.isRecord(value)) return null;
+
+        for (const field of fields) {
+            const fieldValue = value[field];
+            if (typeof fieldValue === 'string' && fieldValue.trim()) return fieldValue.trim();
+        }
+
+        return null;
+    }
+
+    private isRecord(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
     }
 
     private cleanText(value?: string | null): string | null {

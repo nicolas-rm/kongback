@@ -19,8 +19,12 @@ export class UsersService {
         private readonly mailerService: AppMailerService
     ) {}
 
-    async create(dto: CreateUserDto) {
-        const access = dto.access ? this.resolveAccessInput(dto.access) : undefined;
+    async create(dto: CreateUserDto, contextScope?: CompanyScope) {
+        if (contextScope?.companyId && !dto.access) {
+            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        }
+
+        const access = dto.access ? this.resolveAccessInput(dto.access, contextScope) : undefined;
         if (access) await this.assertAccessTargetsActive([access]);
 
         const password = dto.password ?? generateSecurePassword();

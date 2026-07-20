@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
-import { AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, UpdateCardDto } from '@/modules/business/dto';
+import { AssignCardsToSubCompanyDto, AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, SyncSubCompanyCardsDto, UpdateCardDto } from '@/modules/business/dto';
 import { CardsService } from '@/modules/business/services/cards.service';
 
 @RequireCompany()
@@ -25,6 +25,18 @@ export class CardsController {
     @Permissions('cards.design-fuel.read')
     findByDesignFuel(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('designFuelId', ParseUUIDPipe) designFuelId: string, @Query() dto: FindStatusRecordsDto) {
         return this.cardsService.findByDesignFuel(designFuelId, dto, scope);
+    }
+
+    @Post('assign-sub-company')
+    @Permissions('cards.create')
+    assignCardsToSubCompany(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: AssignCardsToSubCompanyDto) {
+        return this.cardsService.assignCardsToSubCompany(dto, scope);
+    }
+
+    @Post('sync-sub-company')
+    @Permissions('cards.sync')
+    syncSubCompanyCards(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: SyncSubCompanyCardsDto) {
+        return this.cardsService.syncSubCompanyCards(dto, scope);
     }
 
     @Get(':id')

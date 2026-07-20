@@ -22,6 +22,13 @@ export class BusinessRelationsRepository {
         return this.prisma.subCompany.count({ where: { AND: [{ id: { in: ids } }, { status: Status.active }, subCompanyScopeWhere(scope)] } });
     }
 
+    findActiveSubCompanyCardcloudTarget(id: string, scope?: CompanyScope) {
+        return this.prisma.subCompany.findFirst({
+            where: { AND: [{ id }, { status: Status.active }, subCompanyScopeWhere(scope)] },
+            select: { id: true, cardcloudSubaccountId: true },
+        });
+    }
+
     countActiveUsers(ids: string[]): Promise<number> {
         return this.prisma.user.count({ where: { id: { in: ids }, status: Status.active } });
     }

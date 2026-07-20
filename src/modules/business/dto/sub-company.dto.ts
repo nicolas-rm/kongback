@@ -28,12 +28,6 @@ export class CreateSubCompanyDto {
 
 export class UpdateSubCompanyDto {
     @ValidatorString({ optional: true })
-    key?: string;
-
-    @ValidatorString({ optional: true, emptyTo: 'null' })
-    cardcloudSubaccountId?: string | null;
-
-    @ValidatorString({ optional: true })
     name?: string;
 
     @ValidatorEnum(Status, { optional: true })

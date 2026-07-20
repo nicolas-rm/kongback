@@ -3,17 +3,29 @@ import { CardAssignmentMode, Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
-import { AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, UpdateCardDto } from '@/modules/business/dto';
+import { AssignCardsToSubCompanyDto, AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, SyncSubCompanyCardsDto, UpdateCardDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { CardsRepository } from '@/modules/business/repositories/cards.repository';
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
+import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
+
+type CardcloudSubaccountCard = {
+    card_id?: string | null;
+    card_external_id?: string | null;
+};
+
+type CardcloudSubaccountCardsRaw = {
+    cards?: CardcloudSubaccountCard[];
+    total_pages?: string | number | null;
+};
 
 @Injectable()
 export class CardsService {
     constructor(
         private readonly repository: CardsRepository,
         private readonly relations: BusinessRelationsRepository,
-        private readonly vehicles: VehiclesRepository
+        private readonly vehicles: VehiclesRepository,
+        private readonly cardcloud: CardcloudService
     ) {}
 
     async create(dto: CreateCardDto, scope?: CompanyScope) {
@@ -72,6 +84,36 @@ export class CardsService {
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
+    }
+
+    async assignCardsToSubCompany(dto: AssignCardsToSubCompanyDto, scope?: CompanyScope) {
+        const target = await this.resolveCardcloudTarget(dto.subCompanyId, scope);
+        const response = await this.cardcloud.assignCardsBulk({
+            subaccount_id: target.cardcloudSubaccountId,
+            cards: dto.cards,
+        });
+        const externalIds = this.resolveCardIdsFromResponse(response, dto.cards);
+        const result = await this.repository.syncExternalCardsToSubCompany(target.id, externalIds);
+
+        return {
+            subCompanyId: target.id,
+            cardcloudSubaccountId: target.cardcloudSubaccountId,
+            ...result,
+        };
+    }
+
+    async syncSubCompanyCards(dto: SyncSubCompanyCardsDto, scope?: CompanyScope) {
+        const target = await this.resolveCardcloudTarget(dto.subCompanyId, scope);
+        const cards = await this.fetchAllSubaccountCards(target.cardcloudSubaccountId);
+        const externalIds = cards.map((card) => this.resolveCardExternalId(card)).filter((externalId): externalId is string => Boolean(externalId));
+        const result = await this.repository.syncExternalCardsToSubCompany(target.id, externalIds);
+
+        return {
+            subCompanyId: target.id,
+            cardcloudSubaccountId: target.cardcloudSubaccountId,
+            fetched: cards.length,
+            ...result,
+        };
     }
 
     async update(id: string, dto: UpdateCardDto, scope?: CompanyScope) {
@@ -143,5 +185,52 @@ export class CardsService {
         );
         if (!card) throw notFound();
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
+    }
+
+    private async resolveCardcloudTarget(subCompanyId: string, scope?: CompanyScope): Promise<{ id: string; cardcloudSubaccountId: string }> {
+        const target = await this.relations.findActiveSubCompanyCardcloudTarget(subCompanyId, scope);
+        if (!target?.cardcloudSubaccountId) throw invalidRelation();
+
+        return { id: target.id, cardcloudSubaccountId: target.cardcloudSubaccountId };
+    }
+
+    private resolveCardIdsFromResponse(response: unknown, fallback: string[]): string[] {
+        if (!this.isRecord(response) || !Array.isArray(response.cards)) return fallback;
+
+        const resolved = response.cards.map((card) => this.resolveCardExternalId(card)).filter((externalId): externalId is string => Boolean(externalId));
+        return resolved.length > 0 ? resolved : fallback;
+    }
+
+    private async fetchAllSubaccountCards(subaccountId: string): Promise<CardcloudSubaccountCard[]> {
+        const first = (await this.cardcloud.getSubaccountCards(subaccountId, { page: '1' })) as CardcloudSubaccountCardsRaw;
+        const all = [...(first.cards ?? [])];
+        const totalPages = this.resolveTotalPages(first.total_pages);
+
+        for (let page = 2; page <= totalPages; page++) {
+            const current = (await this.cardcloud.getSubaccountCards(subaccountId, { page: String(page) })) as CardcloudSubaccountCardsRaw;
+            all.push(...(current.cards ?? []));
+        }
+
+        return all;
+    }
+
+    private resolveTotalPages(value: string | number | null | undefined): number {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) return 1;
+        return Math.floor(parsed);
+    }
+
+    private resolveCardExternalId(card: unknown): string | null {
+        if (!this.isRecord(card)) return null;
+
+        const id = card.card_id ?? card.card_external_id;
+        if (typeof id !== 'string') return null;
+
+        const clean = id.trim();
+        return clean || null;
+    }
+
+    private isRecord(value: unknown): value is Record<string, unknown> {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
     }
 }

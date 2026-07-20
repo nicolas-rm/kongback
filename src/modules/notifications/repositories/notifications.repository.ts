@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class NotificationsRepository {
     constructor(protected readonly prisma: PrismaService) {}
 
-    createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
+    createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const user = await tx.user.findFirst({ where: { id: userId, status: 'active' }, select: { id: true } });
+            const user = await tx.user.findFirst({ where: { id: userId, status: 'active', ...this.userCompanyScope(scope) }, select: { id: true } });
             if (!user) return null;
 
             return tx.notification.create({
@@ -67,6 +68,14 @@ export class NotificationsRepository {
 
     findOne(where: Prisma.NotificationWhereInput) {
         return this.prisma.notification.findFirst({ where, select: this.publicSelect() });
+    }
+
+    private userCompanyScope(scope?: CompanyScope): Prisma.UserWhereInput {
+        if (!scope?.companyId) return {};
+        if (scope.subCompanyIds) {
+            return { accesses: { some: { companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds }, company: { status: 'active' } } } };
+        }
+        return { accesses: { some: { companyId: scope.companyId, company: { status: 'active' } } } };
     }
 
     private publicSelect(): Prisma.NotificationSelect {
