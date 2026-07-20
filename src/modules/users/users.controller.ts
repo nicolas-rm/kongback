@@ -10,9 +10,9 @@ export class UsersController {
 
     @Post()
     @Permissions('users.create')
-    @RequireSystemAccess()
-    create(@Body() dto: CreateUserDto) {
-        return this.usersService.create(dto);
+    @RequireSystemOrCompanyAccess()
+    create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateUserDto) {
+        return this.usersService.create(dto, scope);
     }
 
     @Get()

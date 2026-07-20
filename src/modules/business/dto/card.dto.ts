@@ -1,5 +1,6 @@
 import { Status } from '@prisma/client';
-import { ValidatorDate, ValidatorEnum, ValidatorString, ValidatorUUID } from '@/decorators';
+import { IsString } from 'class-validator';
+import { ValidatorArray, ValidatorDate, ValidatorEnum, ValidatorString, ValidatorUUID } from '@/decorators';
 
 export class CreateCardDto {
     @ValidatorUUID()
@@ -38,4 +39,18 @@ export class AssignCardVehicleDto {
 
     @ValidatorDate({ optional: true, emptyTo: 'null', mode: 'date', toDate: true })
     assignedAt?: Date | null;
+}
+
+export class AssignCardsToSubCompanyDto {
+    @ValidatorUUID()
+    subCompanyId!: string;
+
+    @ValidatorArray({ minSize: 1, maxSize: 100, unique: true })
+    @IsString({ each: true })
+    cards!: string[];
+}
+
+export class SyncSubCompanyCardsDto {
+    @ValidatorUUID()
+    subCompanyId!: string;
 }
