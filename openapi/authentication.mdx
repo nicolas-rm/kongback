@@ -359,6 +359,8 @@ Devuelve `Capabilities`.
 
 Autenticado. Si `mustChangePassword` es `true`, este endpoint queda bloqueado por el guard global hasta cambiar la contrasena.
 
+Si `email` cambia respecto al correo actual, el backend marca el nuevo correo como no verificado (`emailVerified: false`, `requiresEmailVerification: true`) y envia automaticamente un correo de verificacion al nuevo email.
+
 ### Body
 
 Todos los campos son opcionales.
@@ -385,7 +387,9 @@ Todos los campos son opcionales.
     "username": "admin",
     "email": "admin@example.com",
     "fullName": "Admin User",
-    "preferredLanguage": "es"
+    "preferredLanguage": "es",
+    "emailVerified": true,
+    "requiresEmailVerification": false
 }
 ```
 

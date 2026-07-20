@@ -316,7 +316,16 @@ export class AuthenticationRepository {
         });
     }
 
-    updateProfile(userId: string, data: { email?: string; fullName?: string; preferredLanguage?: string }) {
+    updateProfile(
+        userId: string,
+        data: {
+            email?: string;
+            fullName?: string;
+            preferredLanguage?: string;
+            emailVerifiedAt?: Date | null;
+            requiresEmailVerification?: boolean;
+        }
+    ) {
         return this.prisma.user.update({
             where: { id: userId },
             data,
@@ -326,6 +335,8 @@ export class AuthenticationRepository {
                 email: true,
                 fullName: true,
                 preferredLanguage: true,
+                emailVerifiedAt: true,
+                requiresEmailVerification: true,
             },
         });
     }

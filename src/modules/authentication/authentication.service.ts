@@ -80,8 +80,8 @@ export class AuthenticationService {
         return this.getProfileUseCase.execute(user);
     }
 
-    updateProfile(user: RequestUser, dto: UpdateMyProfileDto) {
-        return this.updateMyProfileUseCase.execute(user, dto);
+    updateProfile(user: RequestUser, dto: UpdateMyProfileDto, sessionContext?: SessionContext) {
+        return this.updateMyProfileUseCase.execute(user, dto, sessionContext);
     }
 
     listSessions(userId: string, refreshToken?: string) {

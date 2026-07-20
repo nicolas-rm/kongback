@@ -104,8 +104,8 @@ export class AuthenticationController {
     }
 
     @Patch('me')
-    updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMyProfileDto) {
-        return this.authenticationService.updateProfile(user, dto);
+    updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMyProfileDto, @SessionContextData() sessionContext: SessionContext) {
+        return this.authenticationService.updateProfile(user, dto, sessionContext);
     }
 
     @Get('sessions')
