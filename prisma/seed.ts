@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
+import { CardAssignmentMode, NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
 import { Pool } from 'pg';
 import { ALL_PERMISSION_CODES, PERMISSION_CATALOG, type PermissionCode } from './permission-catalog';
 
@@ -30,9 +30,18 @@ const prisma = new PrismaClient({
 const ADMIN_ROLE_CODE = 'admin';
 const ADMIN_ROLE_NAME = 'Administrador global';
 const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso completo a todos los permisos del sistema.';
-const DEMO_COUNT = 1;
+const DEFAULT_DEMO_TENANT_COUNT = 2;
+const DEFAULT_DEMO_SUB_COMPANIES_PER_COMPANY = 2;
+const DEMO_TENANT_COUNT = parseSeedPositiveInt('SEED_DEMO_TENANT_COUNT', DEFAULT_DEMO_TENANT_COUNT);
+const DEMO_SUB_COMPANIES_PER_COMPANY = parseSeedPositiveInt('SEED_DEMO_SUB_COMPANIES_PER_COMPANY', DEFAULT_DEMO_SUB_COMPANIES_PER_COMPANY);
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD?.trim() || 'Demo1234';
 const DOCUMENTS_STORAGE_DIR = process.env.DOCUMENTS_STORAGE_DIR?.trim() || path.join('uploads', 'documents');
+
+const DEMO_FUEL_DEFINITIONS = [
+    { code: 'DEMO-DIESEL', name: 'Demo Diesel' },
+    { code: 'DEMO-MAGNA', name: 'Demo Gasolina Magna' },
+    { code: 'DEMO-PREMIUM', name: 'Demo Gasolina Premium' },
+] as const;
 
 type RoleSeed = {
     id: string;
@@ -122,17 +131,23 @@ const DEMO_USER_DEFINITIONS = [
 type CompanySeed = {
     id: string;
     key: string;
+    index: number;
 };
 
 type SubCompanySeed = {
     id: string;
     key: string;
     companyId: string;
+    index: number;
+    companyIndex: number;
+    subCompanyIndex: number;
 };
 
 type DriverSeed = {
     id: string;
     name: string;
+    subCompanyId: string;
+    index: number;
 };
 
 type FuelSeed = {
@@ -144,10 +159,20 @@ type VehicleSeed = {
     id: string;
     subCompanyId: string;
     fuelId: string;
+    index: number;
 };
 
 type StationSeed = {
     id: string;
+    subCompanyId: string;
+    index: number;
+};
+
+type CardSeed = {
+    id: string;
+    externalId: string;
+    subCompanyId: string;
+    index: number;
 };
 
 function getRequiredEnv(name: string): string {
@@ -160,8 +185,16 @@ function getRequiredEnv(name: string): string {
     return value;
 }
 
-function seedIndexes(): number[] {
-    return Array.from({ length: DEMO_COUNT }, (_value, index) => index + 1);
+function parseSeedPositiveInt(name: string, fallback: number): number {
+    const rawValue = process.env[name]?.trim();
+    if (!rawValue) return fallback;
+
+    const value = Number.parseInt(rawValue, 10);
+    return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function seedIndexes(count = DEMO_TENANT_COUNT): number[] {
+    return Array.from({ length: count }, (_value, index) => index + 1);
 }
 
 function pad(index: number): string {
@@ -523,8 +556,6 @@ async function seedDemoUsers(): Promise<UserSeed[]> {
 }
 
 async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies: CompanySeed[], subCompanies: SubCompanySeed[]): Promise<void> {
-    const company = companies[0];
-    const subCompany = subCompanies[0];
     const rolesByCode = new Map(roles.map((role) => [role.code, role]));
 
     for (const user of users) {
@@ -533,33 +564,52 @@ async function seedUserAccesses(users: UserSeed[], roles: RoleSeed[], companies:
         const role = rolesByCode.get(user.roleCode);
         if (!role) throw new Error(`Rol demo no encontrado para ${user.username}: ${user.roleCode}`);
 
-        const companyId = user.accessScope === 'global' ? null : company.id;
-        const scopeKey = user.accessScope === 'subCompany' ? 'subCompanyId' : null;
-        const scopeId = user.accessScope === 'subCompany' ? subCompany.id : null;
-
-        const existing = await prisma.userAccess.findFirst({
-            where: {
+        if (user.accessScope === 'global') {
+            await ensureUserAccess({
                 userId: user.id,
                 roleId: role.id,
-                companyId,
-                scopeKey,
-                scopeId,
-            },
-            select: { id: true },
-        });
+                companyId: null,
+                scopeKey: null,
+                scopeId: null,
+            });
+            continue;
+        }
 
-        if (existing) continue;
+        for (const company of companies) {
+            if (user.accessScope === 'company') {
+                await ensureUserAccess({
+                    userId: user.id,
+                    roleId: role.id,
+                    companyId: company.id,
+                    scopeKey: null,
+                    scopeId: null,
+                });
+                continue;
+            }
 
-        await prisma.userAccess.create({
-            data: {
+            const subCompany = subCompanies.find((entry) => entry.companyId === company.id && entry.subCompanyIndex === 1);
+            if (!subCompany) throw new Error(`Subcompania demo no encontrada para ${company.key}`);
+
+            await ensureUserAccess({
                 userId: user.id,
                 roleId: role.id,
-                companyId,
-                scopeKey,
-                scopeId,
-            },
-        });
+                companyId: company.id,
+                scopeKey: 'subCompanyId',
+                scopeId: subCompany.id,
+            });
+        }
     }
+}
+
+async function ensureUserAccess(data: { userId: string; roleId: string; companyId: string | null; scopeKey: string | null; scopeId: string | null }): Promise<void> {
+    const existing = await prisma.userAccess.findFirst({
+        where: data,
+        select: { id: true },
+    });
+
+    if (existing) return;
+
+    await prisma.userAccess.create({ data });
 }
 
 async function seedSettings(adminUserId: string): Promise<void> {
@@ -654,7 +704,7 @@ async function seedCompanies(): Promise<CompanySeed[]> {
                   select: { id: true, key: true },
               });
 
-        companies.push(company);
+        companies.push({ ...company, index });
     }
 
     return companies;
@@ -663,34 +713,36 @@ async function seedCompanies(): Promise<CompanySeed[]> {
 async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySeed[]> {
     const subCompanies: SubCompanySeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const company = companies[index - 1];
-        const subCompany = await prisma.subCompany.upsert({
-            where: {
-                companyId_key: {
+    for (const company of companies) {
+        for (const subCompanyIndex of seedIndexes(DEMO_SUB_COMPANIES_PER_COMPANY)) {
+            const suffix = `${pad(company.index)}-${pad(subCompanyIndex)}`;
+            const globalIndex = (company.index - 1) * DEMO_SUB_COMPANIES_PER_COMPANY + subCompanyIndex;
+            const subCompany = await prisma.subCompany.upsert({
+                where: {
+                    companyId_key: {
+                        companyId: company.id,
+                        key: `DEMO-SUB-${suffix}`,
+                    },
+                },
+                create: {
                     companyId: company.id,
                     key: `DEMO-SUB-${suffix}`,
+                    cardcloudSubaccountId: `DEMO-SUBACCOUNT-${suffix}`,
+                    name: `Demo Sub Company ${suffix}`,
+                    status: Status.active,
+                    isDefault: subCompanyIndex === 1,
                 },
-            },
-            create: {
-                companyId: company.id,
-                key: `DEMO-SUB-${suffix}`,
-                cardcloudSubaccountId: null,
-                name: `Demo Sub Company ${suffix}`,
-                status: Status.active,
-                isDefault: index === 1,
-            },
-            update: {
-                cardcloudSubaccountId: null,
-                name: `Demo Sub Company ${suffix}`,
-                status: Status.active,
-                isDefault: index === 1,
-            },
-            select: { id: true, key: true },
-        });
+                update: {
+                    cardcloudSubaccountId: `DEMO-SUBACCOUNT-${suffix}`,
+                    name: `Demo Sub Company ${suffix}`,
+                    status: Status.active,
+                    isDefault: subCompanyIndex === 1,
+                },
+                select: { id: true, key: true, companyId: true },
+            });
 
-        subCompanies.push({ ...subCompany, companyId: company.id });
+            subCompanies.push({ ...subCompany, index: globalIndex, companyIndex: company.index, subCompanyIndex });
+        }
     }
 
     return subCompanies;
@@ -699,17 +751,16 @@ async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySee
 async function seedFuels(): Promise<FuelSeed[]> {
     const fuels: FuelSeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
+    for (const definition of DEMO_FUEL_DEFINITIONS) {
         const fuel = await prisma.fuel.upsert({
-            where: { code: `DEMO-FUEL-${suffix}` },
+            where: { code: definition.code },
             create: {
-                code: `DEMO-FUEL-${suffix}`,
-                name: `Demo Fuel ${suffix}`,
+                code: definition.code,
+                name: definition.name,
                 status: Status.active,
             },
             update: {
-                name: `Demo Fuel ${suffix}`,
+                name: definition.name,
                 status: Status.active,
             },
             select: { id: true, code: true },
@@ -724,10 +775,9 @@ async function seedFuels(): Promise<FuelSeed[]> {
 async function seedDrivers(subCompanies: SubCompanySeed[], users: UserSeed[]): Promise<DriverSeed[]> {
     const drivers: DriverSeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const subCompany = subCompanies[index - 1];
-        const user = users[index - 1];
+    for (const subCompany of subCompanies) {
+        const suffix = pad(subCompany.index);
+        const user = users[subCompany.index - 1];
         const driver = await prisma.driver.upsert({
             where: {
                 subCompanyId_externalReference: {
@@ -737,20 +787,20 @@ async function seedDrivers(subCompanies: SubCompanySeed[], users: UserSeed[]): P
             },
             create: {
                 subCompanyId: subCompany.id,
-                userId: user.id,
+                userId: user?.id ?? null,
                 name: `Demo Driver ${suffix}`,
                 externalReference: `DEMO-DRV-${suffix}`,
                 status: Status.active,
             },
             update: {
-                userId: user.id,
+                userId: user?.id ?? null,
                 name: `Demo Driver ${suffix}`,
                 status: Status.active,
             },
-            select: { id: true, name: true },
+            select: { id: true, name: true, subCompanyId: true },
         });
 
-        drivers.push(driver);
+        drivers.push({ ...driver, index: subCompany.index });
     }
 
     return drivers;
@@ -759,11 +809,10 @@ async function seedDrivers(subCompanies: SubCompanySeed[], users: UserSeed[]): P
 async function seedVehicles(subCompanies: SubCompanySeed[], fuels: FuelSeed[], drivers: DriverSeed[]): Promise<VehicleSeed[]> {
     const vehicles: VehicleSeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const subCompany = subCompanies[index - 1];
-        const fuel = fuels[index - 1];
-        const driver = drivers[index - 1];
+    for (const subCompany of subCompanies) {
+        const suffix = pad(subCompany.index);
+        const fuel = fuels[(subCompany.index - 1) % fuels.length];
+        const driver = drivers.find((entry) => entry.subCompanyId === subCompany.id);
         const vehicle = await prisma.vehicle.upsert({
             where: {
                 subCompanyId_plates: {
@@ -774,29 +823,29 @@ async function seedVehicles(subCompanies: SubCompanySeed[], fuels: FuelSeed[], d
             create: {
                 subCompanyId: subCompany.id,
                 fuelId: fuel.id,
-                driverId: driver.id,
+                driverId: driver?.id ?? null,
                 plates: `DEMO${suffix}`,
                 economicNumber: `DEMO-VEH-${suffix}`,
                 model: `Demo Model ${suffix}`,
-                year: 2020 + index,
+                year: 2020 + subCompany.index,
                 odometerControl: true,
-                odometerInitial: index * 1000,
+                odometerInitial: subCompany.index * 1000,
                 status: Status.active,
             },
             update: {
                 fuelId: fuel.id,
-                driverId: driver.id,
+                driverId: driver?.id ?? null,
                 economicNumber: `DEMO-VEH-${suffix}`,
                 model: `Demo Model ${suffix}`,
-                year: 2020 + index,
+                year: 2020 + subCompany.index,
                 odometerControl: true,
-                odometerInitial: index * 1000,
+                odometerInitial: subCompany.index * 1000,
                 status: Status.active,
             },
             select: { id: true, subCompanyId: true, fuelId: true },
         });
 
-        vehicles.push(vehicle);
+        vehicles.push({ ...vehicle, index: subCompany.index });
     }
 
     return vehicles;
@@ -812,12 +861,88 @@ async function removeDemoCards(): Promise<void> {
     });
 }
 
+async function seedCards(vehicles: VehicleSeed[]): Promise<CardSeed[]> {
+    const cards: CardSeed[] = [];
+
+    await removeDemoCards();
+
+    for (const vehicle of vehicles) {
+        const suffix = pad(vehicle.index);
+        const externalId = `DEMO-CARD-${suffix}`;
+        const card = await prisma.card.create({
+            data: {
+                subCompanyId: vehicle.subCompanyId,
+                vehicleId: vehicle.id,
+                designFuelId: vehicle.fuelId,
+                externalId,
+                assignmentMode: CardAssignmentMode.vehicle,
+                status: Status.active,
+                assignedAt: new Date(),
+            },
+            select: { id: true, externalId: true, subCompanyId: true },
+        });
+
+        cards.push({ ...card, externalId, index: vehicle.index });
+    }
+
+    return cards;
+}
+
+async function seedCardcloudStock(cards: CardSeed[], subCompanies: SubCompanySeed[]): Promise<void> {
+    for (const card of cards) {
+        const suffix = pad(card.index);
+        await prisma.cardcloud.upsert({
+            where: { externalId: card.externalId },
+            create: {
+                externalId: card.externalId,
+                subCompanyId: card.subCompanyId,
+                assignedCardId: card.id,
+                maskedPan: `XXXX-XXXX-XXXX-${String(1000 + card.index)}`,
+                clientId: `DEMO-CLIENT-${suffix}`,
+                balance: String(5000 + card.index * 250),
+                providerStatus: 'active',
+            },
+            update: {
+                subCompanyId: card.subCompanyId,
+                assignedCardId: card.id,
+                maskedPan: `XXXX-XXXX-XXXX-${String(1000 + card.index)}`,
+                clientId: `DEMO-CLIENT-${suffix}`,
+                balance: String(5000 + card.index * 250),
+                providerStatus: 'active',
+            },
+        });
+    }
+
+    for (const subCompany of subCompanies) {
+        const suffix = pad(subCompany.index);
+        await prisma.cardcloud.upsert({
+            where: { externalId: `DEMO-STOCK-${suffix}` },
+            create: {
+                externalId: `DEMO-STOCK-${suffix}`,
+                subCompanyId: subCompany.id,
+                assignedCardId: null,
+                maskedPan: `XXXX-XXXX-XXXX-${String(8000 + subCompany.index)}`,
+                clientId: `DEMO-STOCK-CLIENT-${suffix}`,
+                balance: String(1000 + subCompany.index * 100),
+                providerStatus: 'available',
+            },
+            update: {
+                subCompanyId: subCompany.id,
+                assignedCardId: null,
+                maskedPan: `XXXX-XXXX-XXXX-${String(8000 + subCompany.index)}`,
+                clientId: `DEMO-STOCK-CLIENT-${suffix}`,
+                balance: String(1000 + subCompany.index * 100),
+                providerStatus: 'available',
+            },
+        });
+    }
+}
+
 async function seedStations(subCompanies: SubCompanySeed[]): Promise<StationSeed[]> {
     const stations: StationSeed[] = [];
 
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const subCompany = subCompanies[index - 1];
+    for (const subCompany of subCompanies) {
+        const suffix = pad(subCompany.index);
         const station = await prisma.station.upsert({
             where: {
                 subCompanyId_stationNumber: {
@@ -829,56 +954,54 @@ async function seedStations(subCompanies: SubCompanySeed[]): Promise<StationSeed
                 subCompanyId: subCompany.id,
                 stationNumber: `DEMO-ST-${suffix}`,
                 name: `Demo Station ${suffix}`,
-                lat: 25.6 + index / 100,
-                lon: -100.3 - index / 100,
+                lat: 25.6 + subCompany.index / 100,
+                lon: -100.3 - subCompany.index / 100,
                 status: Status.active,
             },
             update: {
                 name: `Demo Station ${suffix}`,
-                lat: 25.6 + index / 100,
-                lon: -100.3 - index / 100,
+                lat: 25.6 + subCompany.index / 100,
+                lon: -100.3 - subCompany.index / 100,
                 status: Status.active,
             },
-            select: { id: true },
+            select: { id: true, subCompanyId: true },
         });
 
-        stations.push(station);
+        stations.push({ ...station, index: subCompany.index });
     }
 
     return stations;
 }
 
 async function seedStationFuels(stations: StationSeed[], fuels: FuelSeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const station = stations[index - 1];
-        const fuel = fuels[index - 1];
-
-        await prisma.stationFuel.upsert({
-            where: {
-                stationId_fuelId: {
+    for (const station of stations) {
+        for (const fuel of fuels) {
+            await prisma.stationFuel.upsert({
+                where: {
+                    stationId_fuelId: {
+                        stationId: station.id,
+                        fuelId: fuel.id,
+                    },
+                },
+                create: {
                     stationId: station.id,
                     fuelId: fuel.id,
+                    status: Status.active,
                 },
-            },
-            create: {
-                stationId: station.id,
-                fuelId: fuel.id,
-                status: Status.active,
-            },
-            update: {
-                status: Status.active,
-            },
-        });
+                update: {
+                    status: Status.active,
+                },
+            });
+        }
     }
 }
 
 async function seedDocuments(users: UserSeed[], companies: CompanySeed[]): Promise<void> {
-    for (const index of seedIndexes()) {
-        const suffix = pad(index);
-        const user = users[index - 1];
-        const company = companies[index - 1];
+    for (const company of companies) {
+        const suffix = pad(company.index);
+        const user = users[(company.index - 1) % users.length];
         const storageKey = path.posix.join('seed', 'documents', `demo-document-${suffix}.txt`);
-        const content = `Documento demo ${suffix}\nGenerado por prisma/seed.ts\n`;
+        const content = `Documento demo ${suffix}\nCompania: ${company.key}\nGenerado por prisma/seed.ts\n`;
         const storedFile = await ensureSeedDocumentFile(storageKey, content);
 
         await prisma.document.upsert({
@@ -943,7 +1066,7 @@ function getDocumentsStorageDirectory(): string {
 async function seedNotifications(users: UserSeed[]): Promise<void> {
     const types = [NotificationType.info, NotificationType.warning, NotificationType.success, NotificationType.error, NotificationType.info];
 
-    for (const index of seedIndexes()) {
+    for (const index of seedIndexes(users.length)) {
         const suffix = pad(index);
         const user = users[index - 1];
         const title = `Demo Notification ${suffix}`;
@@ -958,7 +1081,7 @@ async function seedNotifications(users: UserSeed[]): Promise<void> {
         const data = {
             message: `Mensaje demo ${suffix}`,
             detail: `Detalle demo ${suffix}`,
-            type: types[index - 1],
+            type: types[(index - 1) % types.length],
             link: `/demo/notifications/${suffix}`,
             isRead: index % 2 === 0,
             readAt: index % 2 === 0 ? new Date() : null,
@@ -993,8 +1116,9 @@ async function seedDemoData(adminUser: UserSeed, adminRole: RoleSeed): Promise<v
     await seedUserAccesses(users, demoRoles, companies, subCompanies);
     const fuels = await seedFuels();
     const drivers = await seedDrivers(subCompanies, users);
-    await removeDemoCards();
-    await seedVehicles(subCompanies, fuels, drivers);
+    const vehicles = await seedVehicles(subCompanies, fuels, drivers);
+    const cards = await seedCards(vehicles);
+    await seedCardcloudStock(cards, subCompanies);
     const stations = await seedStations(subCompanies);
 
     await seedStationFuels(stations, fuels);
@@ -1015,7 +1139,7 @@ async function main(): Promise<void> {
     console.log('Seed completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
     console.log(`Usuarios demo (${DEMO_PASSWORD}): ${DEMO_USER_DEFINITIONS.map((user) => user.username).join(', ')}`);
-    console.log(`Datos demo: ${DEMO_COUNT} registro por modulo base. Tarjetas y stock Cardcloud no se siembran.`);
+    console.log(`Datos demo medium: ${DEMO_TENANT_COUNT} companias, ${DEMO_SUB_COMPANIES_PER_COMPANY} subcompanias por compania, ${DEMO_FUEL_DEFINITIONS.length} combustibles, tarjetas y stock Cardcloud locales.`);
 }
 
 main()
