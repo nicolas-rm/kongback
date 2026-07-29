@@ -18,6 +18,9 @@
         "prisma:pull": "prisma pull",
         "prisma:reset": "prisma migrate reset",
         "prisma:seed": "tsx prisma/seed.ts",
+        "prisma:seed:empy": "tsx prisma/seed-empy.ts",
+        "prisma:seed:basic": "SEED_DEMO_TENANT_COUNT=1 SEED_DEMO_SUB_COMPANIES_PER_COMPANY=1 tsx prisma/seed.ts",
+        "prisma:seed:medium": "SEED_DEMO_TENANT_COUNT=2 SEED_DEMO_SUB_COMPANIES_PER_COMPANY=2 tsx prisma/seed.ts",
         "prisma:studio": "prisma studio",
         "postinstall": "prisma generate"
     },

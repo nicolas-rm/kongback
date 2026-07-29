@@ -1,2 +1,3 @@
 Documento demo 02
+Compania: DEMO-COMP-02
 Generado por prisma/seed.ts
