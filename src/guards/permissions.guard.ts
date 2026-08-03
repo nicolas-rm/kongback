@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { BadRequestException, CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { isUUID } from 'class-validator';
 import type { Request } from 'express';
@@ -7,7 +7,8 @@ import { PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { ROLES_KEY } from '@/decorators/roles.decorator';
 import { SYSTEM_ACCESS_REQUIRED_KEY, SYSTEM_OR_COMPANY_ACCESS_REQUIRED_KEY } from '@/decorators/system-access.decorator';
-import { I18N_KEYS, I18nBadRequestException, I18nForbiddenException } from '@/i18n';
+import { ERROR_CODES } from '@/errors/error-codes';
+import { I18N_KEYS, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
@@ -73,11 +74,11 @@ export class PermissionsGuard implements CanActivate {
         const companyId = request.get('x-company-id')?.trim();
         if (!companyId) {
             if (!required) return;
-            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'X-Company-Id requerido');
+            throw this.invalidCompanyHeader('X-Company-Id requerido', 'Selecciona una compania antes de consultar este modulo');
         }
 
         if (!isUUID(companyId, '4')) {
-            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'X-Company-Id invalido');
+            throw this.invalidCompanyHeader('X-Company-Id invalido', 'X-Company-Id debe ser un UUID valido');
         }
 
         if (!(await this.accessControl.companyIsActive(companyId))) {
@@ -89,5 +90,14 @@ export class PermissionsGuard implements CanActivate {
         }
 
         (request as CompanyRequest).companyId = companyId;
+    }
+
+    private invalidCompanyHeader(message: string, detail: string): BadRequestException {
+        return new BadRequestException({
+            statusCode: 400,
+            code: ERROR_CODES.VALIDATION_ERROR,
+            message,
+            errors: [{ field: 'X-Company-Id', message: detail }],
+        });
     }
 }

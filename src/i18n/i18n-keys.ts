@@ -45,6 +45,17 @@ export const I18N_KEYS = {
         },
     },
     mail: {
+        common: {
+            copyLink: 'errors.mail.common.copyLink',
+            securityTitle: 'errors.mail.common.securityTitle',
+            securityNote: 'errors.mail.common.securityNote',
+            footer: 'errors.mail.common.footer',
+            accessDataLabel: 'errors.mail.common.accessDataLabel',
+            emailLabel: 'errors.mail.common.emailLabel',
+            usernameLabel: 'errors.mail.common.usernameLabel',
+            temporaryPasswordLabel: 'errors.mail.common.temporaryPasswordLabel',
+            rateLimited: 'errors.mail.common.rateLimited',
+        },
         passwordReset: {
             subject: 'errors.mail.passwordReset.subject',
             title: 'errors.mail.passwordReset.title',

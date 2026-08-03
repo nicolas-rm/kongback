@@ -34,9 +34,18 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 ```json
 {
     "requiresTwoFactor": true,
-    "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84"
+    "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
+    "expiresInSeconds": 600,
+    "expiresAt": "2026-08-03T21:10:00.000Z"
 }
 ```
+
+| Campo              | Tipo      | Descripcion                                                               |
+| ------------------ | --------- | ------------------------------------------------------------------------- |
+| `requiresTwoFactor` | `boolean` | Indica que el login necesita verificacion 2FA antes de emitir tokens.     |
+| `challengeToken`    | `string`  | Token temporal que debe enviarse a `/api/authentication/2fa/verify-login`. |
+| `expiresInSeconds`  | `number`  | Segundos de vigencia restantes al emitir el desafio.                      |
+| `expiresAt`         | `string`  | Fecha ISO UTC en la que expira el desafio.                                |
 
 ### Profile
 
@@ -185,7 +194,7 @@ Publico. Rate limit: 5 requests por 60 segundos.
 
 Si el usuario no tiene 2FA activo, devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`.
 
-Si el usuario tiene 2FA activo, limpia cookies existentes y devuelve `TwoFactorChallengeResponse`.
+Si el usuario tiene 2FA activo, limpia cookies existentes y devuelve `TwoFactorChallengeResponse`. Usa `expiresInSeconds` o `expiresAt` para mostrar el contador del desafio en frontend.
 
 ## Verificar login 2FA
 
@@ -253,9 +262,13 @@ Publico. Rate limit: 3 requests por 60 segundos.
 {
     "id": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
     "registered": true,
-    "emailVerificationRequired": true
+    "emailVerificationRequired": true,
+    "expiresInSeconds": 3600,
+    "expiresAt": "2026-08-03T22:00:00.000Z"
 }
 ```
+
+`expiresInSeconds` y `expiresAt` corresponden al enlace de verificacion enviado por correo.
 
 ## Refresh
 
@@ -477,9 +490,13 @@ Devuelve la misma respuesta aunque el email no exista para evitar enumeracion de
 
 ```json
 {
-    "accepted": true
+    "accepted": true,
+    "expiresInSeconds": 3600,
+    "expiresAt": "2026-08-03T22:00:00.000Z"
 }
 ```
+
+`expiresInSeconds` y `expiresAt` indican la vigencia del enlace de recuperacion si se envio un correo.
 
 ## Restablecer contrasena
 
@@ -526,9 +543,13 @@ Devuelve la misma respuesta aunque el email no exista.
 
 ```json
 {
-    "accepted": true
+    "accepted": true,
+    "expiresInSeconds": 3600,
+    "expiresAt": "2026-08-03T22:00:00.000Z"
 }
 ```
+
+`expiresInSeconds` y `expiresAt` indican la vigencia del enlace de verificacion si se envio un correo.
 
 ## Confirmar verificacion de email
 
@@ -580,9 +601,13 @@ Genera un secreto TOTP pendiente y una URL `otpauth://` para QR.
 ```json
 {
     "secret": "JBSWY3DPEHPK3PXP",
+    "expiresInSeconds": 600,
+    "expiresAt": "2026-08-03T21:10:00.000Z",
     "otpAuthenticationUrl": "otpauth://totp/Kong:admin%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Kong"
 }
 ```
+
+`expiresInSeconds` y `expiresAt` indican la vigencia del secreto pendiente. Si expira, el front debe iniciar de nuevo `POST /api/authentication/2fa/setup`.
 
 ## Habilitar 2FA
 

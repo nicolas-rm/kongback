@@ -43,6 +43,17 @@
         "unprocessed": "La requete n'a pas pu etre traitee, veuillez reessayer plus tard"
     },
     "mail": {
+        "common": {
+            "copyLink": "Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :",
+            "securityTitle": "Avis de securite",
+            "securityNote": "Si vous n'avez pas demande cet e-mail, vous pouvez l'ignorer. Ne partagez jamais vos mots de passe, codes de verification ou liens d'acces.",
+            "footer": "Cet e-mail a ete envoye automatiquement par {appName}. Ne repondez pas a ce message.",
+            "accessDataLabel": "Donnees d'acces",
+            "emailLabel": "E-mail",
+            "usernameLabel": "Nom d'utilisateur",
+            "temporaryPasswordLabel": "Mot de passe temporaire",
+            "rateLimited": "Trop d'e-mails ont ete envoyes. Reessayez plus tard."
+        },
         "passwordReset": {
             "subject": "Reinitialiser le mot de passe",
             "title": "Reinitialiser le mot de passe",
@@ -52,7 +63,7 @@
         "welcomeCredentials": {
             "subject": "Bienvenue sur {appName}",
             "title": "Bienvenue sur {appName}",
-            "body": "Votre nom d'utilisateur est {username} et votre mot de passe temporaire est {password}."
+            "body": "Votre compte est pret. Utilisez ces identifiants temporaires pour vous connecter et changez votre mot de passe apres l'acces."
         },
         "emailVerification": {
             "subject": "Verifier l'adresse e-mail",

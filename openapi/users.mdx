@@ -443,6 +443,20 @@ Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassw
 }
 ```
 
+### Response `429`
+
+El backend no regenera la contrasena si el correo de credenciales excede el limite de envio.
+
+```json
+{
+    "statusCode": 429,
+    "code": "TOO_MANY_REQUESTS",
+    "message": "Demasiados correos enviados. Intenta nuevamente mas tarde.",
+    "path": "/api/users/:id/resend-credentials",
+    "timestamp": "2026-07-29T23:09:45.000Z"
+}
+```
+
 ## Notas para frontend
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar usuario`, confirmar eliminacion y refrescar el listado despues de cada mutacion.

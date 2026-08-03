@@ -43,6 +43,12 @@ export class I18nForbiddenException extends I18nHttpException {
     }
 }
 
+export class I18nTooManyRequestsException extends I18nHttpException {
+    constructor(i18nKey: I18nKey, fallbackMessage: string, options?: I18nExceptionOptions) {
+        super(HttpStatus.TOO_MANY_REQUESTS, i18nKey, fallbackMessage, options);
+    }
+}
+
 export class I18nNotFoundException extends I18nHttpException {
     constructor(i18nKey: I18nKey, fallbackMessage: string, options?: I18nExceptionOptions) {
         super(HttpStatus.NOT_FOUND, i18nKey, fallbackMessage, options);

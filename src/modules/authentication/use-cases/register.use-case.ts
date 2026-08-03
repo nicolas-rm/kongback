@@ -25,19 +25,26 @@ export class RegisterUseCase {
             requiresEmailVerification: true,
         });
 
-        await this.sendVerification(user.id, user.email, sessionContext);
-        return { id: user.id, registered: true, emailVerificationRequired: true };
+        const verificationExpiration = await this.sendVerification(user.id, user.email, sessionContext);
+        return { id: user.id, registered: true, emailVerificationRequired: true, ...verificationExpiration };
     }
 
     async resendVerification(email: string, sessionContext: SessionContext = {}) {
+        const verificationExpiration = this.buildVerificationExpiration();
         const user = await this.repository.findUserByEmail(email);
-        if (user?.email) await this.sendVerification(user.id, user.email, sessionContext);
-        return { accepted: true };
+        if (user?.email) await this.sendVerification(user.id, user.email, sessionContext, verificationExpiration.expiresAt);
+        return { accepted: true, ...verificationExpiration };
     }
 
-    private async sendVerification(userId: string, email: string, sessionContext: SessionContext): Promise<void> {
+    private async sendVerification(userId: string, email: string, sessionContext: SessionContext, expiresAt = this.buildVerificationExpiration().expiresAt): Promise<{ expiresInSeconds: number; expiresAt: Date }> {
         const token = randomBytes(32).toString('hex');
-        await this.repository.createEmailVerificationToken(userId, this.cryptoService.hashToken(token), new Date(Date.now() + this.config.session.emailVerificationTtlMinutes * 60 * 1000));
+        await this.repository.createEmailVerificationToken(userId, this.cryptoService.hashToken(token), expiresAt);
         await this.mailerService.sendEmailVerification(email, token, { recipientUserId: userId, ipAddress: sessionContext.ipAddress, language: sessionContext.language });
+        return { expiresInSeconds: this.config.session.emailVerificationTtlMinutes * 60, expiresAt };
+    }
+
+    private buildVerificationExpiration(): { expiresInSeconds: number; expiresAt: Date } {
+        const expiresInSeconds = this.config.session.emailVerificationTtlMinutes * 60;
+        return { expiresInSeconds, expiresAt: new Date(Date.now() + expiresInSeconds * 1000) };
     }
 }

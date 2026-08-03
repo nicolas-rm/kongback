@@ -3,7 +3,7 @@ import * as argon2 from 'argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Status } from '@prisma/client';
 import { Pool } from 'pg';
-import { ALL_PERMISSION_CODES, PERMISSION_CATALOG } from './permission-catalog';
+import { ALL_PERMISSION_CODES, PERMISSION_CATALOG, type PermissionCode } from './permission-catalog';
 
 const prismaConnectionString = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
 
@@ -38,6 +38,113 @@ type UserSeed = {
     username: string;
     fullName: string;
 };
+
+type RoleDefinition = {
+    code: string;
+    name: string;
+    description: string;
+    prefixes: readonly string[];
+    extraPermissionCodes?: readonly PermissionCode[];
+    excludePermissionCodes?: readonly PermissionCode[];
+    readOnly?: boolean;
+};
+
+const ROLE_DEFINITIONS = [
+    {
+        code: 'user-administrator',
+        name: 'Administrador de usuarios',
+        description: 'Administra usuarios, accesos y consulta roles/permisos disponibles.',
+        prefixes: ['users.'],
+        extraPermissionCodes: ['roles.read-list', 'roles.read-one', 'permissions.read-list', 'permissions.read-one'],
+    },
+    {
+        code: 'rbac-administrator',
+        name: 'Administrador de roles y permisos',
+        description: 'Administra el catalogo de roles, permisos y asignaciones de permisos por rol.',
+        prefixes: ['roles.', 'permissions.'],
+    },
+    {
+        code: 'company-manager',
+        name: 'Operador de compania',
+        description: 'Administra los modulos operativos principales dentro de una compania.',
+        prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'users.'],
+        extraPermissionCodes: [
+            'fuels.read-list',
+            'fuels.read-one',
+            'cardcloud.read-list',
+            'cardcloud.sub-company.assign',
+            'cardcloud.sub-company.unassign',
+            'notifications.read-list',
+            'notifications.unread-count.read',
+            'notifications.mark-read',
+            'notifications.mark-read-all',
+        ],
+        excludePermissionCodes: ['companies.create', 'companies.update', 'companies.delete'],
+    },
+    {
+        code: 'company-viewer',
+        name: 'Consulta de compania',
+        description: 'Consulta los modulos operativos principales dentro de una compania sin permisos de escritura.',
+        prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'notifications.', 'users.'],
+        readOnly: true,
+    },
+    {
+        code: 'driver-administrator',
+        name: 'Administrador de choferes',
+        description: 'Administra choferes y consulta subcompanias necesarias para asignarlos correctamente.',
+        prefixes: ['drivers.'],
+        extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
+    },
+    {
+        code: 'vehicle-administrator',
+        name: 'Administrador de vehiculos',
+        description: 'Administra vehiculos, asignacion de choferes y catalogos necesarios para la flota.',
+        prefixes: ['vehicles.'],
+        extraPermissionCodes: ['drivers.read-list', 'drivers.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
+    },
+    {
+        code: 'card-administrator',
+        name: 'Administrador de tarjetas',
+        description: 'Administra tarjetas, asignaciones a vehiculos y stock Cardcloud.',
+        prefixes: ['cards.'],
+        extraPermissionCodes: [
+            'vehicles.read-list',
+            'vehicles.read-one',
+            'fuels.read-list',
+            'fuels.read-one',
+            'sub-companies.read-list',
+            'sub-companies.read-one',
+            'cardcloud.read-list',
+            'cardcloud.sub-company.assign',
+            'cardcloud.sub-company.unassign',
+        ],
+    },
+    {
+        code: 'fuel-administrator',
+        name: 'Administrador de combustibles',
+        description: 'Administra el catalogo de combustibles.',
+        prefixes: ['fuels.'],
+    },
+    {
+        code: 'station-administrator',
+        name: 'Administrador de estaciones',
+        description: 'Administra estaciones y combustibles disponibles por estacion.',
+        prefixes: ['stations.', 'station-fuels.'],
+        extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
+    },
+    {
+        code: 'document-administrator',
+        name: 'Administrador de documentos',
+        description: 'Administra documentos de la compania seleccionada.',
+        prefixes: ['documents.'],
+    },
+    {
+        code: 'notification-administrator',
+        name: 'Administrador de notificaciones',
+        description: 'Administra notificaciones y consulta la bandeja del usuario.',
+        prefixes: ['notifications.'],
+    },
+] as const satisfies readonly RoleDefinition[];
 
 function getRequiredEnv(name: string): string {
     const value = process.env[name]?.trim();
@@ -83,8 +190,37 @@ async function upsertAdminRole(): Promise<RoleSeed> {
 }
 
 async function syncAdminRolePermissions(roleId: string): Promise<void> {
+    await syncRolePermissionsByCodes(roleId, [...ALL_PERMISSION_CODES]);
+}
+
+async function seedRoles(): Promise<RoleSeed[]> {
+    const roles: RoleSeed[] = [];
+
+    for (const definition of ROLE_DEFINITIONS) {
+        const role = await prisma.role.upsert({
+            where: { code: definition.code },
+            create: {
+                code: definition.code,
+                name: definition.name,
+                description: definition.description,
+            },
+            update: {
+                name: definition.name,
+                description: definition.description,
+            },
+            select: { id: true, code: true },
+        });
+
+        await syncRolePermissionsByCodes(role.id, resolveRolePermissionCodes(definition));
+        roles.push(role);
+    }
+
+    return roles;
+}
+
+async function syncRolePermissionsByCodes(roleId: string, codes: PermissionCode[]): Promise<void> {
     const permissions = await prisma.permission.findMany({
-        where: { code: { in: [...ALL_PERMISSION_CODES] } },
+        where: { code: { in: codes } },
         select: { id: true },
     });
     const permissionIds = permissions.map((permission) => permission.id);
@@ -97,6 +233,10 @@ async function syncAdminRolePermissions(roleId: string): Promise<void> {
             },
         });
 
+        if (permissionIds.length === 0) {
+            return;
+        }
+
         await tx.rolePermission.createMany({
             data: permissionIds.map((permissionId) => ({
                 roleId,
@@ -105,6 +245,30 @@ async function syncAdminRolePermissions(roleId: string): Promise<void> {
             skipDuplicates: true,
         });
     });
+}
+
+function resolveRolePermissionCodes(definition: RoleDefinition): PermissionCode[] {
+    const permissionCodes = new Set<PermissionCode>();
+
+    for (const code of ALL_PERMISSION_CODES) {
+        if (definition.prefixes.some((prefix) => code.startsWith(prefix)) && (!definition.readOnly || isReadPermissionCode(code))) {
+            permissionCodes.add(code);
+        }
+    }
+
+    for (const code of definition.extraPermissionCodes ?? []) {
+        permissionCodes.add(code);
+    }
+
+    for (const code of definition.excludePermissionCodes ?? []) {
+        permissionCodes.delete(code);
+    }
+
+    return [...permissionCodes];
+}
+
+function isReadPermissionCode(code: PermissionCode): boolean {
+    return code.includes('.read') || code.endsWith('.download');
 }
 
 async function seedAdminUser(roleId: string): Promise<UserSeed> {
@@ -184,12 +348,14 @@ async function main(): Promise<void> {
 
     const adminRole = await upsertAdminRole();
     await syncAdminRolePermissions(adminRole.id);
+    const roles = await seedRoles();
 
     const adminUser = await seedAdminUser(adminRole.id);
 
     console.log('Seed empty completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
-    console.log('Datos creados: permisos, rol admin, usuario admin y acceso global.');
+    console.log(`Roles base: ${roles.map((role) => role.code).join(', ')}`);
+    console.log('Datos creados: permisos, roles base, usuario admin y acceso global.');
 }
 
 main()

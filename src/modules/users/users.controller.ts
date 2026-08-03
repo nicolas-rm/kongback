@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
-import { CurrentCompanyScope, Permissions, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import { CurrentCompanyScope, CurrentUser, Permissions, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersService } from '@/modules/users/services/users.service';
@@ -88,8 +89,8 @@ export class UsersController {
     @Post(':id/resend-credentials')
     @Permissions('users.credentials.resend')
     @RequireSystemAccess()
-    resendCredentials(@Param('id', ParseUUIDPipe) id: string) {
-        return this.usersService.resendCredentials(id);
+    resendCredentials(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
+        return this.usersService.resendCredentials(id, user.id);
     }
 
     @Get(':id')

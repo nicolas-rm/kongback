@@ -426,12 +426,12 @@ export class AuthenticationRepository {
         });
     }
 
-    setPendingTwoFactorSecret(userId: string, encryptedSecret: string) {
+    setPendingTwoFactorSecret(userId: string, encryptedSecret: string, createdAt = new Date()) {
         return this.prisma.user.update({
             where: { id: userId },
             data: {
                 twoFactorPendingSecret: encryptedSecret,
-                twoFactorPendingCreatedAt: new Date(),
+                twoFactorPendingCreatedAt: createdAt,
             },
             select: { id: true },
         });

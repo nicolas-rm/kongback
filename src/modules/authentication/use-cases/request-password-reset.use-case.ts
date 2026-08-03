@@ -17,14 +17,15 @@ export class RequestPasswordResetUseCase {
     ) {}
 
     async execute(dto: RequestPasswordResetDto, sessionContext: SessionContext = {}) {
+        const expiresInSeconds = this.config.session.passwordResetTtlMinutes * 60;
+        const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
         const user = await this.repository.findUserByEmail(dto.email);
-        if (!user?.email) return { accepted: true };
+        if (!user?.email) return { accepted: true, expiresInSeconds, expiresAt };
 
         const token = randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + this.config.session.passwordResetTtlMinutes * 60 * 1000);
         await this.repository.createPasswordResetToken(user.id, this.cryptoService.hashToken(token), expiresAt);
         await this.mailerService.sendPasswordReset(user.email, token, expiresAt, { recipientUserId: user.id, ipAddress: sessionContext.ipAddress, language: sessionContext.language });
 
-        return { accepted: true };
+        return { accepted: true, expiresInSeconds, expiresAt };
     }
 }
