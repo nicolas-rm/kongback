@@ -25,10 +25,10 @@ const EMAIL_RATE_RULES: Partial<Record<EmailDispatchContext, RateRule[]>> = {
         { name: 'global_1h', dimension: 'global', limit: 300, windowMs: HOUR },
     ],
     welcome_credentials: [
-        { name: 'recipient_user_24h', dimension: 'recipient_user', limit: 1, windowMs: DAY },
-        { name: 'email_24h', dimension: 'recipient_email', limit: 2, windowMs: DAY },
-        { name: 'trigger_user_1h', dimension: 'trigger_user', limit: 50, windowMs: HOUR },
-        { name: 'global_1h', dimension: 'global', limit: 500, windowMs: HOUR },
+        { name: 'recipient_user_24h', dimension: 'recipient_user', limit: 50, windowMs: DAY },
+        { name: 'email_24h', dimension: 'recipient_email', limit: 100, windowMs: DAY },
+        { name: 'trigger_user_1h', dimension: 'trigger_user', limit: 500, windowMs: HOUR },
+        { name: 'global_1h', dimension: 'global', limit: 2_000, windowMs: HOUR },
     ],
     verify_email: [
         { name: 'email_10m', dimension: 'recipient_email', limit: 1, windowMs: 10 * MINUTE },

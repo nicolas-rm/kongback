@@ -29,10 +29,15 @@ export class TwoFactorUseCase {
         if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
 
         const secret = generateTotpSecret();
-        await this.repository.setPendingTwoFactorSecret(user.id, this.cryptoService.encrypt(secret));
+        const createdAt = new Date();
+        const expiresInSeconds = this.config.twoFactor.setupTtlMinutes * 60;
+        const expiresAt = new Date(createdAt.getTime() + expiresInSeconds * 1000);
+        await this.repository.setPendingTwoFactorSecret(user.id, this.cryptoService.encrypt(secret), createdAt);
 
         return {
             secret,
+            expiresInSeconds,
+            expiresAt,
             otpAuthenticationUrl: buildTotpOtpAuthenticationUrl({
                 secret,
                 accountName: user.email,

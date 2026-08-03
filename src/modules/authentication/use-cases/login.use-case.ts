@@ -40,15 +40,17 @@ export class LoginUseCase {
 
         if (user.twoFactorEnabled) {
             const challengeToken = randomBytes(32).toString('hex');
+            const expiresInSeconds = this.config.twoFactor.loginChallengeTtlMinutes * 60;
+            const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
             await this.repository.createTwoFactorLoginChallenge({
                 userId: user.id,
                 challengeHash: this.cryptoService.hashToken(challengeToken),
-                expiresAt: new Date(Date.now() + this.config.twoFactor.loginChallengeTtlMinutes * 60 * 1000),
+                expiresAt,
                 userAgent: sessionContext.userAgent,
                 ipAddress: sessionContext.ipAddress,
             });
 
-            return { requiresTwoFactor: true, challengeToken };
+            return { requiresTwoFactor: true, challengeToken, expiresInSeconds, expiresAt };
         }
 
         return this.authenticationTokensService.issueTokens(

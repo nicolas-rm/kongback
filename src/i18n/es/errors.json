@@ -43,6 +43,17 @@
         "unprocessed": "Solicitud no procesada, intente nuevamente mas tarde"
     },
     "mail": {
+        "common": {
+            "copyLink": "Si el boton no funciona, copia y pega este enlace en tu navegador:",
+            "securityTitle": "Aviso de seguridad",
+            "securityNote": "Si no solicitaste este correo, puedes ignorarlo. Nunca compartas contrasenas, codigos de verificacion ni enlaces de acceso con nadie.",
+            "footer": "Este correo fue enviado automaticamente por {appName}. No respondas a este mensaje.",
+            "accessDataLabel": "Datos de acceso",
+            "emailLabel": "Correo",
+            "usernameLabel": "Usuario",
+            "temporaryPasswordLabel": "Contrasena temporal",
+            "rateLimited": "Demasiados correos enviados. Intenta nuevamente mas tarde."
+        },
         "passwordReset": {
             "subject": "Restablecer contrasena",
             "title": "Restablecer contrasena",
@@ -52,7 +63,7 @@
         "welcomeCredentials": {
             "subject": "Bienvenido a {appName}",
             "title": "Bienvenido a {appName}",
-            "body": "Tu usuario es {username} y tu contrasena temporal es {password}."
+            "body": "Tu cuenta esta lista. Usa estas credenciales temporales para iniciar sesion y cambia tu contrasena al entrar."
         },
         "emailVerification": {
             "subject": "Verificar correo electronico",

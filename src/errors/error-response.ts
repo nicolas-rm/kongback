@@ -32,5 +32,6 @@ export function resolveDefaultErrorCode(statusCode: number): ErrorCode {
     if (statusCode === HttpStatus.FORBIDDEN) return ERROR_CODES.FORBIDDEN;
     if (statusCode === HttpStatus.NOT_FOUND) return ERROR_CODES.NOT_FOUND;
     if (statusCode === HttpStatus.CONFLICT) return ERROR_CODES.CONFLICT;
+    if (statusCode === HttpStatus.TOO_MANY_REQUESTS) return ERROR_CODES.TOO_MANY_REQUESTS;
     return ERROR_CODES.INTERNAL_SERVER_ERROR;
 }

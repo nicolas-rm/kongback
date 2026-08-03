@@ -43,6 +43,17 @@
         "unprocessed": "请求无法处理，请稍后重试"
     },
     "mail": {
+        "common": {
+            "copyLink": "如果按钮无法使用，请将此链接复制并粘贴到浏览器中：",
+            "securityTitle": "安全提醒",
+            "securityNote": "如果你没有请求此邮件，可以忽略它。不要与任何人分享密码、验证码或访问链接。",
+            "footer": "此邮件由 {appName} 自动发送，请勿回复。",
+            "accessDataLabel": "访问凭据",
+            "emailLabel": "邮箱",
+            "usernameLabel": "用户名",
+            "temporaryPasswordLabel": "临时密码",
+            "rateLimited": "发送的邮件过多，请稍后再试。"
+        },
         "passwordReset": {
             "subject": "重置密码",
             "title": "重置密码",
@@ -52,7 +63,7 @@
         "welcomeCredentials": {
             "subject": "欢迎使用 {appName}",
             "title": "欢迎使用 {appName}",
-            "body": "您的用户名是 {username}，临时密码是 {password}。"
+            "body": "你的账户已准备就绪。请使用以下临时凭据登录，并在进入后修改密码。"
         },
         "emailVerification": {
             "subject": "验证邮箱地址",

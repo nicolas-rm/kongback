@@ -43,6 +43,17 @@
         "unprocessed": "Die Anfrage konnte nicht verarbeitet werden, bitte versuchen Sie es spaeter erneut"
     },
     "mail": {
+        "common": {
+            "copyLink": "Wenn die Schaltflaeche nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:",
+            "securityTitle": "Sicherheitshinweis",
+            "securityNote": "Wenn Sie diese E-Mail nicht angefordert haben, koennen Sie sie ignorieren. Teilen Sie niemals Passwoerter, Bestaetigungscodes oder Zugriffslinks.",
+            "footer": "Diese E-Mail wurde automatisch von {appName} gesendet. Antworten Sie nicht auf diese Nachricht.",
+            "accessDataLabel": "Zugangsdaten",
+            "emailLabel": "E-Mail",
+            "usernameLabel": "Benutzername",
+            "temporaryPasswordLabel": "Temporaeres Passwort",
+            "rateLimited": "Es wurden zu viele E-Mails gesendet. Versuchen Sie es spaeter erneut."
+        },
         "passwordReset": {
             "subject": "Passwort zuruecksetzen",
             "title": "Passwort zuruecksetzen",
@@ -52,7 +63,7 @@
         "welcomeCredentials": {
             "subject": "Willkommen bei {appName}",
             "title": "Willkommen bei {appName}",
-            "body": "Ihr Benutzername ist {username} und Ihr temporaeres Passwort ist {password}."
+            "body": "Ihr Konto ist bereit. Verwenden Sie diese temporaeren Zugangsdaten zur Anmeldung und aendern Sie danach Ihr Passwort."
         },
         "emailVerification": {
             "subject": "E-Mail-Adresse bestaetigen",

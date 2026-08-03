@@ -171,15 +171,18 @@ export class UsersService {
         return { twoFactorUnlinked: true };
     }
 
-    async resendCredentials(userId: string) {
+    async resendCredentials(userId: string, triggeredByUserId?: string | null) {
         const user = await this.repository.findCredentialRecipient(userId);
         if (!user) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+
+        const mailContext = { recipientUserId: user.id, triggeredByUserId, language: user.preferredLanguage };
+        const dispatchId = await this.mailerService.reserveWelcomeCredentialsOrThrow(user.email, mailContext);
 
         const password = generateSecurePassword();
         const result = await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(password), true);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
 
-        await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id, language: user.preferredLanguage });
+        await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, mailContext, dispatchId);
 
         return { credentialsSent: true };
     }
