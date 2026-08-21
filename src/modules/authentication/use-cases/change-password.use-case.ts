@@ -13,13 +13,13 @@ export class ChangePasswordUseCase {
 
     async execute(userId: string, dto: ChangePasswordDto) {
         const user = await this.repository.findUserForPasswordChange(userId);
-        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
+        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'No pudimos validar tu usuario. Inicia sesion nuevamente.');
 
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.currentPassword);
-        if (!validPassword) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidCurrentPassword, 'Contrasena actual invalida');
+        if (!validPassword) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidCurrentPassword, 'La contrasena actual no es correcta.');
 
         const result = await this.repository.updatePassword(user.id, await this.cryptoService.hashPassword(dto.newPassword));
-        if (result.count === 0) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
+        if (result.count === 0) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'No pudimos validar tu usuario. Inicia sesion nuevamente.');
 
         await this.repository.revokeUserSessions(user.id);
 

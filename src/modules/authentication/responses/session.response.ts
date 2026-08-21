@@ -4,6 +4,7 @@ type SessionResponseData = {
     userAgent: string | null;
     ipAddress: string | null;
     lastActivityAt: Date;
+    idleExpiresAt: Date;
     expiresAt: Date;
     isCurrent: boolean;
 };
@@ -15,12 +16,13 @@ export class SessionResponse {
         public userAgent: string | null,
         public ipAddress: string | null,
         public lastActivityAt: Date,
+        public idleExpiresAt: Date,
         public expiresAt: Date,
         public isCurrent: boolean
     ) {}
 
     static from(data: SessionResponseData): SessionResponse {
-        return new SessionResponse(data.id, data.deviceName, data.userAgent, data.ipAddress, data.lastActivityAt, data.expiresAt, data.isCurrent);
+        return new SessionResponse(data.id, data.deviceName, data.userAgent, data.ipAddress, data.lastActivityAt, data.idleExpiresAt, data.expiresAt, data.isCurrent);
     }
 }
 

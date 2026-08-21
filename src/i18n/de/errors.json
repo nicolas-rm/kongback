@@ -1,46 +1,52 @@
 {
     "authentication": {
-        "invalidCredentials": "Ungueltige Zugangsdaten",
-        "accountLocked": "Konto gesperrt. Versuchen Sie es spaeter erneut",
-        "emailVerificationRequired": "Sie muessen Ihre E-Mail bestaetigen, bevor Sie sich anmelden",
-        "invalidTwoFactorChallenge": "Ungueltige 2FA-Challenge",
-        "invalidTwoFactorCode": "Ungueltiger 2FA-Code",
-        "invalidRefreshToken": "Ungueltiger Refresh Token",
-        "reusedRefreshToken": "Refresh Token wurde wiederverwendet",
-        "expiredRefreshToken": "Refresh Token ist abgelaufen",
-        "unauthorizedUser": "Nicht autorisierter Benutzer",
-        "invalidCurrentPassword": "Aktuelles Passwort ist ungueltig",
-        "invalidVerificationToken": "Ungueltiger oder abgelaufener Bestaetigungstoken",
-        "invalidResetToken": "Ungueltiger oder abgelaufener Token",
-        "twoFactorPendingNotFound": "Keine ausstehende 2FA-Konfiguration vorhanden",
-        "twoFactorSetupExpired": "Die 2FA-Einrichtung ist abgelaufen. Starten Sie den Vorgang erneut",
-        "twoFactorNotEnabled": "2FA ist nicht aktiviert"
+        "invalidCredentials": "Benutzername oder Passwort ist falsch.",
+        "accountLocked": "Ihr Konto ist voruebergehend gesperrt. Versuchen Sie es spaeter erneut.",
+        "emailVerificationRequired": "Bestaetigen Sie Ihre E-Mail, um sich anzumelden.",
+        "invalidTwoFactorChallenge": "Die Sicherheitspruefung ist nicht mehr gueltig. Melden Sie sich erneut an.",
+        "invalidTwoFactorCode": "Der Bestaetigungscode ist falsch.",
+        "invalidRefreshToken": "Ihre Sitzung ist nicht gueltig. Melden Sie sich erneut an.",
+        "reusedRefreshToken": "Wir haben Ihre Sitzung aus Sicherheitsgruenden beendet. Melden Sie sich erneut an.",
+        "expiredRefreshToken": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an.",
+        "sessionExpired": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an.",
+        "sessionIdleExpired": "Ihre Sitzung ist wegen Inaktivitaet abgelaufen. Melden Sie sich erneut an.",
+        "unauthorizedUser": "Ihr Benutzer konnte nicht validiert werden. Melden Sie sich erneut an.",
+        "invalidCurrentPassword": "Das aktuelle Passwort ist falsch.",
+        "invalidVerificationToken": "Der Bestaetigungslink ist nicht gueltig oder abgelaufen.",
+        "invalidResetToken": "Der Link zum Zuruecksetzen des Passworts ist nicht gueltig oder abgelaufen.",
+        "twoFactorPendingNotFound": "Starten Sie zuerst die 2FA-Einrichtung.",
+        "twoFactorSetupExpired": "Die 2FA-Einrichtung ist abgelaufen. Starten Sie den Vorgang erneut.",
+        "twoFactorNotEnabled": "Zwei-Faktor-Verifizierung ist nicht aktiviert."
     },
     "authorization": {
-        "unauthorized": "Nicht autorisiert",
-        "insufficientPermissions": "Unzureichende Berechtigungen",
-        "companyDenied": "Zugriff auf dieses Unternehmen verweigert",
-        "mustChangePassword": "Sie muessen Ihr Passwort aendern, bevor Sie fortfahren."
+        "unauthorized": "Ihre Sitzung ist nicht gueltig. Melden Sie sich erneut an.",
+        "insufficientPermissions": "Sie haben nicht genuegend Berechtigungen fuer diesen Inhalt.",
+        "companyDenied": "Sie haben keinen Zugriff auf dieses Unternehmen.",
+        "mustChangePassword": "Aendern Sie Ihr Passwort, um fortzufahren."
     },
     "documents": {
-        "notFound": "Dokument nicht gefunden",
-        "fileRequired": "Datei ist erforderlich",
-        "fileTooLarge": "Datei ist zu gross",
-        "mimeTypeNotAllowed": "Dateityp ist nicht erlaubt",
-        "storageFileNotFound": "Datei im Speicher nicht gefunden",
-        "invalidFilePath": "Ungueltiger Dateipfad"
+        "notFound": "Wir konnten das angeforderte Dokument nicht finden.",
+        "fileRequired": "Waehlen Sie eine Datei aus, um fortzufahren.",
+        "fileTooLarge": "Die Datei ist zu gross.",
+        "mimeTypeNotAllowed": "Dieser Dateityp ist nicht erlaubt.",
+        "storageFileNotFound": "Wir konnten die angeforderte Datei nicht finden.",
+        "invalidFilePath": "Wir konnten den Dateipfad nicht verarbeiten."
     },
     "notifications": {
-        "notFound": "Benachrichtigung nicht gefunden"
+        "notFound": "Wir konnten die angeforderte Benachrichtigung nicht finden."
     },
     "users": {
-        "notFound": "Benutzer nicht gefunden"
+        "notFound": "Wir konnten den angeforderten Benutzer nicht finden."
+    },
+    "business": {
+        "companyReferenceExists": "Die Unternehmensreferenz existiert bereits.",
+        "subCompanyKeyExists": "Der Subcompany-Schluessel existiert fuer dieses Unternehmen bereits."
     },
     "validation": {
-        "invalidData": "Die Anfrage enthaelt ungueltige Daten"
+        "invalidData": "Pruefen Sie die gesendeten Informationen."
     },
     "internal": {
-        "unprocessed": "Die Anfrage konnte nicht verarbeitet werden, bitte versuchen Sie es spaeter erneut"
+        "unprocessed": "Wir konnten die Anfrage nicht verarbeiten. Versuchen Sie es spaeter erneut."
     },
     "mail": {
         "common": {
@@ -73,15 +79,15 @@
         }
     },
     "prisma": {
-        "uniqueConstraint": "Der Wert von ({fields}) existiert bereits",
-        "invalidRelation": "Ungueltige Beziehung",
-        "valueTooLong": "Wert ist zu lang",
-        "recordNotFound": "Datensatz nicht gefunden",
-        "invalidData": "Ungueltige Daten",
-        "internalFailure": "Interner Serverfehler",
+        "uniqueConstraint": "Ein Datensatz mit demselben Wert fuer {fields} existiert bereits.",
+        "invalidRelation": "Einige verknuepfte Informationen sind nicht gueltig.",
+        "valueTooLong": "Eines der Felder ueberschreitet die erlaubte Laenge.",
+        "recordNotFound": "Wir konnten den angeforderten Datensatz nicht finden.",
+        "invalidData": "Pruefen Sie die gesendeten Informationen.",
+        "internalFailure": "Wir konnten die Anfrage nicht verarbeiten. Versuchen Sie es spaeter erneut.",
         "unknownField": "unbekannt"
     },
     "socket": {
-        "unauthorized": "Nicht autorisiert"
+        "unauthorized": "Ihre Sitzung ist nicht gueltig. Melden Sie sich erneut an."
     }
 }

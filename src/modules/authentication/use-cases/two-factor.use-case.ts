@@ -16,7 +16,7 @@ export class TwoFactorUseCase {
 
     async status(userId: string) {
         const user = await this.repository.findTwoFactorUser(userId);
-        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
+        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'No pudimos validar tu usuario. Inicia sesion nuevamente.');
 
         return {
             enabled: user.twoFactorEnabled,
@@ -26,7 +26,7 @@ export class TwoFactorUseCase {
 
     async beginSetup(userId: string) {
         const user = await this.repository.findTwoFactorUser(userId);
-        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'Usuario no autorizado');
+        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.unauthorizedUser, 'No pudimos validar tu usuario. Inicia sesion nuevamente.');
 
         const secret = generateTotpSecret();
         const createdAt = new Date();
@@ -50,14 +50,14 @@ export class TwoFactorUseCase {
 
     async enable(userId: string, dto: TwoFactorCodeDto) {
         const user = await this.repository.findTwoFactorUser(userId);
-        if (!user?.twoFactorPendingSecret) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorPendingNotFound, 'No hay configuracion 2FA pendiente');
+        if (!user?.twoFactorPendingSecret) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorPendingNotFound, 'Primero inicia la configuracion de 2FA.');
         if (this.isPendingSetupExpired(user.twoFactorPendingCreatedAt)) {
             await this.repository.clearPendingTwoFactorSecret(user.id);
-            throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorSetupExpired, 'La configuracion 2FA expiro. Inicia el proceso nuevamente');
+            throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorSetupExpired, 'La configuracion de 2FA expiro. Inicia el proceso nuevamente.');
         }
 
         const secret = this.cryptoService.decrypt(user.twoFactorPendingSecret);
-        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'Codigo 2FA invalido');
+        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
 
         const recoveryCodes = generateRecoveryCodes(this.config.twoFactor.recoveryCodesCount);
         await this.repository.enableTwoFactor(user.id, this.cryptoService.encrypt(secret));
@@ -74,7 +74,7 @@ export class TwoFactorUseCase {
         if (!user?.twoFactorEnabled || !user.twoFactorSecret) return { enabled: false };
 
         const secret = this.cryptoService.decrypt(user.twoFactorSecret);
-        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'Codigo 2FA invalido');
+        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
 
         await this.repository.disableTwoFactor(user.id);
         return { enabled: false };
@@ -82,10 +82,10 @@ export class TwoFactorUseCase {
 
     async regenerateRecoveryCodes(userId: string, dto: TwoFactorCodeDto) {
         const user = await this.repository.findTwoFactorUser(userId);
-        if (!user?.twoFactorEnabled || !user.twoFactorSecret) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorNotEnabled, '2FA no esta habilitado');
+        if (!user?.twoFactorEnabled || !user.twoFactorSecret) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.twoFactorNotEnabled, 'La verificacion en dos pasos no esta activada.');
 
         const secret = this.cryptoService.decrypt(user.twoFactorSecret);
-        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'Codigo 2FA invalido');
+        if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
 
         const recoveryCodes = generateRecoveryCodes(this.config.twoFactor.recoveryCodesCount);
         await this.repository.replaceRecoveryCodes(

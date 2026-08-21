@@ -107,3 +107,13 @@ export class TransferCardcloudFundsBulkDto {
     @Type(() => TransferCardcloudFundsDto)
     transfers!: TransferCardcloudFundsDto[];
 }
+
+export class DownloadCardcloudTransferBulkExcelDto {
+    @ValidatorUUID({ optional: true })
+    subCompanyId?: string;
+}
+
+export class TransferCardcloudFundsBulkExcelDto {
+    @ValidatorUUID()
+    subCompanyId!: string;
+}

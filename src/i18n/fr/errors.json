@@ -1,46 +1,52 @@
 {
     "authentication": {
-        "invalidCredentials": "Identifiants invalides",
-        "accountLocked": "Compte verrouille. Reessayez plus tard",
-        "emailVerificationRequired": "Vous devez verifier votre e-mail avant de vous connecter",
-        "invalidTwoFactorChallenge": "Defi 2FA invalide",
-        "invalidTwoFactorCode": "Code 2FA invalide",
-        "invalidRefreshToken": "Refresh token invalide",
-        "reusedRefreshToken": "Refresh token reutilise",
-        "expiredRefreshToken": "Refresh token expire",
-        "unauthorizedUser": "Utilisateur non autorise",
-        "invalidCurrentPassword": "Mot de passe actuel invalide",
-        "invalidVerificationToken": "Token de verification invalide ou expire",
-        "invalidResetToken": "Token invalide ou expire",
-        "twoFactorPendingNotFound": "Aucune configuration 2FA en attente",
-        "twoFactorSetupExpired": "La configuration 2FA a expire. Redemarrez le processus",
-        "twoFactorNotEnabled": "La 2FA n'est pas activee"
+        "invalidCredentials": "L'identifiant ou le mot de passe est incorrect.",
+        "accountLocked": "Votre compte est temporairement verrouille. Reessayez plus tard.",
+        "emailVerificationRequired": "Verifiez votre e-mail pour vous connecter.",
+        "invalidTwoFactorChallenge": "La verification de securite n'est plus valide. Connectez-vous a nouveau.",
+        "invalidTwoFactorCode": "Le code de verification est incorrect.",
+        "invalidRefreshToken": "Votre session n'est pas valide. Connectez-vous a nouveau.",
+        "reusedRefreshToken": "Nous avons ferme votre session par securite. Connectez-vous a nouveau.",
+        "expiredRefreshToken": "Votre session a expire. Connectez-vous a nouveau.",
+        "sessionExpired": "Votre session a expire. Connectez-vous a nouveau.",
+        "sessionIdleExpired": "Votre session a expire pour inactivite. Connectez-vous a nouveau.",
+        "unauthorizedUser": "Nous n'avons pas pu valider votre utilisateur. Connectez-vous a nouveau.",
+        "invalidCurrentPassword": "Le mot de passe actuel est incorrect.",
+        "invalidVerificationToken": "Le lien de verification n'est pas valide ou a expire.",
+        "invalidResetToken": "Le lien de reinitialisation du mot de passe n'est pas valide ou a expire.",
+        "twoFactorPendingNotFound": "Commencez d'abord la configuration 2FA.",
+        "twoFactorSetupExpired": "La configuration 2FA a expire. Redemarrez le processus.",
+        "twoFactorNotEnabled": "La verification en deux etapes n'est pas activee."
     },
     "authorization": {
-        "unauthorized": "Non autorise",
-        "insufficientPermissions": "Permissions insuffisantes",
-        "companyDenied": "Acces refuse a cette compagnie",
-        "mustChangePassword": "Vous devez changer votre mot de passe avant de continuer."
+        "unauthorized": "Votre session n'est pas valide. Connectez-vous a nouveau.",
+        "insufficientPermissions": "Vous n'avez pas les autorisations suffisantes pour ce contenu.",
+        "companyDenied": "Vous n'avez pas acces a cette compagnie.",
+        "mustChangePassword": "Changez votre mot de passe pour continuer."
     },
     "documents": {
-        "notFound": "Document introuvable",
-        "fileRequired": "Le fichier est requis",
-        "fileTooLarge": "Le fichier est trop volumineux",
-        "mimeTypeNotAllowed": "Type de fichier non autorise",
-        "storageFileNotFound": "Fichier introuvable dans le stockage",
-        "invalidFilePath": "Chemin de fichier invalide"
+        "notFound": "Nous n'avons pas trouve le document demande.",
+        "fileRequired": "Selectionnez un fichier pour continuer.",
+        "fileTooLarge": "Le fichier est trop volumineux.",
+        "mimeTypeNotAllowed": "Ce type de fichier n'est pas autorise.",
+        "storageFileNotFound": "Nous n'avons pas trouve le fichier demande.",
+        "invalidFilePath": "Nous n'avons pas pu traiter le chemin du fichier."
     },
     "notifications": {
-        "notFound": "Notification introuvable"
+        "notFound": "Nous n'avons pas trouve la notification demandee."
     },
     "users": {
-        "notFound": "Utilisateur introuvable"
+        "notFound": "Nous n'avons pas trouve l'utilisateur demande."
+    },
+    "business": {
+        "companyReferenceExists": "La reference de l'entreprise existe deja.",
+        "subCompanyKeyExists": "La cle de sous-entreprise existe deja pour cette entreprise."
     },
     "validation": {
-        "invalidData": "La requete contient des donnees invalides"
+        "invalidData": "Verifiez les informations envoyees."
     },
     "internal": {
-        "unprocessed": "La requete n'a pas pu etre traitee, veuillez reessayer plus tard"
+        "unprocessed": "Nous n'avons pas pu traiter la demande. Reessayez plus tard."
     },
     "mail": {
         "common": {
@@ -73,15 +79,15 @@
         }
     },
     "prisma": {
-        "uniqueConstraint": "La valeur de ({fields}) existe deja",
-        "invalidRelation": "Relation invalide",
-        "valueTooLong": "Valeur trop longue",
-        "recordNotFound": "Enregistrement introuvable",
-        "invalidData": "Donnees invalides",
-        "internalFailure": "Erreur interne du serveur",
+        "uniqueConstraint": "Un enregistrement existe deja avec la meme valeur pour : {fields}.",
+        "invalidRelation": "Certaines informations liees ne sont pas valides.",
+        "valueTooLong": "L'un des champs depasse la taille autorisee.",
+        "recordNotFound": "Nous n'avons pas trouve l'enregistrement demande.",
+        "invalidData": "Verifiez les informations envoyees.",
+        "internalFailure": "Nous n'avons pas pu traiter la demande. Reessayez plus tard.",
         "unknownField": "inconnu"
     },
     "socket": {
-        "unauthorized": "Non autorise"
+        "unauthorized": "Votre session n'est pas valide. Connectez-vous a nouveau."
     }
 }

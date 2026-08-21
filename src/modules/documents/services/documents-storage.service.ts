@@ -43,7 +43,7 @@ export class DocumentsStorageService {
         try {
             await fs.access(this.resolveAbsolutePath(storageKey));
         } catch {
-            throw new I18nNotFoundException(I18N_KEYS.errors.documents.storageFileNotFound, 'Archivo no encontrado en almacenamiento');
+            throw new I18nNotFoundException(I18N_KEYS.errors.documents.storageFileNotFound, 'No pudimos encontrar el archivo solicitado.');
         }
     }
 
@@ -53,12 +53,12 @@ export class DocumentsStorageService {
 
     private resolveAbsolutePath(storageKey: string): string {
         const normalized = path.posix.normalize(storageKey.replace(/\\/g, '/'));
-        if (normalized.startsWith('..') || path.posix.isAbsolute(normalized)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
+        if (normalized.startsWith('..') || path.posix.isAbsolute(normalized)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'No pudimos procesar la ruta del archivo.');
 
         const baseDirectory = this.getBaseDirectory();
         const absolutePath = path.resolve(baseDirectory, normalized);
         if (absolutePath !== baseDirectory && !absolutePath.startsWith(`${baseDirectory}${path.sep}`))
-            throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'Ruta de archivo invalida');
+            throw new I18nBadRequestException(I18N_KEYS.errors.documents.invalidFilePath, 'No pudimos procesar la ruta del archivo.');
 
         return absolutePath;
     }

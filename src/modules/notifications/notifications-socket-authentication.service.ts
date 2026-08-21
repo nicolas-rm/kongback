@@ -26,16 +26,16 @@ export class NotificationsSocketAuthenticationService {
     async authenticate(client: Socket): Promise<SocketAuthenticationUser> {
         this.assertAllowedOrigin(client);
         const accessToken = this.getAccessToken(client);
-        if (!accessToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+        if (!accessToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
 
         const payload = await this.verifyAccessToken(accessToken);
         if (payload.sessionId) {
             const session = await this.authenticationRepository.findActiveSession(payload.sessionId);
-            if (!session || session.userId !== payload.sub) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+            if (!session || session.userId !== payload.sub) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
         }
 
         const user = await this.authenticationRepository.findActiveUserForRequest(payload.sub);
-        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+        if (!user) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
 
         return { id: user.id, username: user.username };
     }
@@ -45,14 +45,14 @@ export class NotificationsSocketAuthenticationService {
         if (!origin) return;
 
         const allowedOrigins = new Set([this.config.webUrl, ...this.config.security.allowedOrigins].map((value) => this.normalizeOrigin(value)).filter((value): value is string => Boolean(value)));
-        if (!allowedOrigins.has(origin)) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+        if (!allowedOrigins.has(origin)) throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
     }
 
     private async verifyAccessToken(accessToken: string): Promise<JwtPayload> {
         try {
             return await this.jwtService.verifyAsync<JwtPayload>(accessToken, { secret: this.config.jwt.accessSecret });
         } catch {
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
         }
     }
 

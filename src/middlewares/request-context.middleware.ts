@@ -30,9 +30,11 @@ function formatIndentedFields(fields: string[]): string {
 function formatRequestPayloadFields(request: Request): string[] {
     const includeEmptyFields = request.originalUrl.startsWith('/api/authentication');
 
-    return [formatLogField('query', request.query, includeEmptyFields), formatLogField('body', request.body, includeEmptyFields), formatLogField('cookies', request.cookies, includeEmptyFields)].filter(
-        Boolean
-    );
+    return [
+        formatLogField('query', request.query, includeEmptyFields),
+        formatLogField('body', request.body, includeEmptyFields),
+        formatLogField('cookies', request.cookies, includeEmptyFields),
+    ].filter(Boolean);
 }
 
 function formatLogField(name: string, value: unknown, includeEmpty = false): string {
@@ -91,9 +93,7 @@ function sanitizeLogValue(value: unknown, seen = new WeakSet<object>()): unknown
 
         seen.add(value);
 
-        return Object.fromEntries(
-            Object.entries(value).map(([key, item]) => [key, SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : sanitizeLogValue(item, seen)])
-        );
+        return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : sanitizeLogValue(item, seen)]));
     }
 
     return String(value);

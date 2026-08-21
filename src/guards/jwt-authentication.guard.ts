@@ -20,10 +20,15 @@ export class JwtAuthenticationGuard extends AuthGuard('jwt') {
 
     handleRequest<TUser = unknown>(err: unknown, user: TUser, info: unknown, context: ExecutionContext): TUser {
         if (user) return user;
+        if (err instanceof I18nUnauthorizedException) throw err;
 
         const request = context.switchToHttp().getRequest<Request>();
-        const message = err instanceof Error ? err.message : info instanceof Error ? info.message : 'No autorizado';
-        throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'No autorizado', { extra: { reason: this.resolveUnauthorizedReason(message, this.getAccessToken(request)) } });
+        const message = err instanceof Error ? err.message : info instanceof Error ? info.message : 'Tu sesion no es valida. Inicia sesion nuevamente.';
+        const reason = this.resolveUnauthorizedReason(message, this.getAccessToken(request));
+        if (reason === 'access_token_expired') {
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.sessionExpired, 'Tu sesion expiro. Inicia sesion nuevamente.', { extra: { reason } });
+        }
+        throw new I18nUnauthorizedException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason } });
     }
 
     private getAccessToken(request: Request): string | null {

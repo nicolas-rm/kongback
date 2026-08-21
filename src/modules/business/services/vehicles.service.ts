@@ -3,15 +3,17 @@ import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
-import { CreateVehicleDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
+import { CreateVehicleDto, FindStatusRecordsDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
+import { DriversRepository } from '@/modules/business/repositories/drivers.repository';
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
 
 @Injectable()
 export class VehiclesService {
     constructor(
         private readonly repository: VehiclesRepository,
-        private readonly relations: BusinessRelationsRepository
+        private readonly relations: BusinessRelationsRepository,
+        private readonly drivers: DriversRepository
     ) {}
 
     async create(dto: CreateVehicleDto, scope?: CompanyScope) {
@@ -52,6 +54,21 @@ export class VehiclesService {
         const vehicle = await this.repository.findById(id, scope);
         if (!vehicle) throw notFound();
         return vehicle;
+    }
+
+    async findDrivers(id: string, dto: FindStatusRecordsDto, scope?: CompanyScope) {
+        const vehicle = await this.repository.findById(id, scope);
+        if (!vehicle) throw notFound();
+        if (!vehicle.driverId) return paginate([], 0, dto);
+
+        const where: Prisma.DriverWhereInput = {
+            id: vehicle.driverId,
+            subCompany: subCompanyScopeWhere(scope),
+            status: dto.status,
+            ...(dto.search ? { OR: textSearch<Prisma.DriverWhereInput>(dto.search, ['name', 'externalReference']) } : {}),
+        };
+        const [data, total] = await Promise.all([this.drivers.findMany(where, dto.skip, dto.actualLimit), this.drivers.count(where)]);
+        return paginate(data, total, dto);
     }
 
     async update(id: string, dto: UpdateVehicleDto, scope?: CompanyScope) {

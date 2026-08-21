@@ -1,12 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { CardAssignmentMode, Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
-import { AssignCardsToSubCompanyDto, AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, SyncSubCompanyCardsDto, UpdateCardDto } from '@/modules/business/dto';
+import {
+    AssignCardsToSubCompanyDto,
+    AssignCardVehicleDto,
+    CreateCardDto,
+    FindCardsDto,
+    FindStatusRecordsDto,
+    SyncSubCompanyCardsDto,
+    UpdateCardAssignmentDto,
+    UpdateCardDto,
+    ValidateOwnedCardDto,
+} from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { CardsRepository } from '@/modules/business/repositories/cards.repository';
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
+import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 
 type CardcloudSubaccountCard = {
@@ -71,6 +82,49 @@ export class CardsService {
         const card = await this.repository.findById(id, scope);
         if (!card) throw notFound();
         return card;
+    }
+
+    async validateOwnedCard(dto: ValidateOwnedCardDto, scope?: CompanyScope) {
+        const candidates = await this.repository.findAssignedStockByClientId(dto.clientId, scope);
+        if (candidates.length === 0) throw notFound();
+        if (candidates.length > 1) throw new ConflictException('No pudimos identificar una sola tarjeta con esos datos.');
+
+        const stock = candidates[0];
+        if (!stock.assignedCard) throw notFound();
+
+        const sensitive = await this.cardcloud.getCardSensitiveData(stock.externalId);
+        const panDigits = this.extractPanDigits(sensitive);
+        const validated = await this.cardcloud.validateCard({
+            card: panDigits.slice(-8),
+            pin: dto.nip,
+            moye: dto.vigencia.replace(/\D/g, ''),
+        });
+
+        const validatedCardId = this.extractValidatedCardId(validated);
+        if (!validatedCardId) throw new BadRequestException('No pudimos validar la tarjeta con el proveedor. Intenta nuevamente.');
+        if (validatedCardId !== stock.externalId) throw new BadRequestException('Los datos no corresponden a la tarjeta seleccionada.');
+
+        return {
+            valid: true,
+            card: {
+                id: stock.assignedCard.id,
+                externalId: stock.externalId,
+                clientId: stock.clientId,
+                maskedPan: stock.maskedPan,
+                status: stock.assignedCard.status,
+                subCompanyId: stock.assignedCard.subCompanyId,
+                vehicleId: stock.assignedCard.vehicleId,
+                assignmentMode: stock.assignedCard.assignmentMode,
+            },
+        };
+    }
+
+    async getMovements(id: string, dto: CardcloudDateRangeQueryDto, scope?: CompanyScope) {
+        const card = await this.repository.findById(id, scope);
+        if (!card) throw notFound();
+        if (!card.externalId) throw invalidRelation();
+
+        return this.cardcloud.getCardMovements(card.externalId, dto);
     }
 
     async findByDesignFuel(designFuelId: string, dto: FindStatusRecordsDto, scope?: CompanyScope) {
@@ -169,6 +223,15 @@ export class CardsService {
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
     }
 
+    async updateAssignment(id: string, dto: UpdateCardAssignmentDto, scope?: CompanyScope) {
+        if (dto.assignmentMode === CardAssignmentMode.unassigned || dto.vehicleId === null) {
+            return this.unassign(id, scope);
+        }
+
+        if (!dto.vehicleId) throw invalidRelation();
+        return this.assignVehicle(id, { vehicleId: dto.vehicleId, assignedAt: dto.assignedAt }, scope);
+    }
+
     async unassign(id: string, scope?: CompanyScope) {
         const current = await this.repository.findById(id, scope);
         if (!current) throw notFound();
@@ -232,5 +295,19 @@ export class CardsService {
 
     private isRecord(value: unknown): value is Record<string, unknown> {
         return typeof value === 'object' && value !== null && !Array.isArray(value);
+    }
+
+    private extractPanDigits(response: unknown): string {
+        const source = this.isRecord(response) && this.isRecord(response.sensitive_data_raw) ? response.sensitive_data_raw : response;
+        const pan = this.isRecord(source) ? source.pan : null;
+        const digits = typeof pan === 'string' ? pan.replace(/\D/g, '') : '';
+        if (digits.length < 8) throw new BadRequestException('No pudimos obtener los datos necesarios para validar la tarjeta.');
+        return digits;
+    }
+
+    private extractValidatedCardId(response: unknown): string | null {
+        if (!this.isRecord(response)) return null;
+        const id = response.card_id ?? response.card_external_id;
+        return typeof id === 'string' && id.trim() ? id.trim() : null;
     }
 }

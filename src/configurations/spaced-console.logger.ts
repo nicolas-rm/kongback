@@ -79,14 +79,7 @@ export class SpacedConsoleLogger extends ConsoleLogger {
         return `${sourceMessage}${this.paint(`[${context}]`, 'yellow')} `;
     }
 
-    protected formatMessage(
-        logLevel: LogLevel,
-        message: unknown,
-        _pidMessage: string,
-        _formattedLogLevel: string,
-        _contextMessage: string,
-        timestampDiff: string,
-    ): string {
+    protected formatMessage(logLevel: LogLevel, message: unknown, _pidMessage: string, _formattedLogLevel: string, _contextMessage: string, timestampDiff: string): string {
         const output = this.stringifyOutput(message, logLevel);
         const separator = this.resolveSeparator(message);
         SpacedConsoleLogger.hasPrintedMessage = true;

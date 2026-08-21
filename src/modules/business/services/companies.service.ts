@@ -45,10 +45,7 @@ export class CompaniesService {
                 toAddressData(dto.address)
             );
         } catch (error) {
-            this.logger.error(
-                `No se pudo crear Company local despues de crear subcuenta Cardcloud ${cardcloudSubaccountId}`,
-                error instanceof Error ? error.stack : undefined
-            );
+            this.logger.error(`No se pudo crear Company local despues de crear subcuenta Cardcloud ${cardcloudSubaccountId}`, error instanceof Error ? error.stack : undefined);
             throw error;
         }
     }
@@ -95,9 +92,8 @@ export class CompaniesService {
         const conflicts = await this.repository.countCreateConflicts(dto.key, dto.externalId);
         if (conflicts === 0) return;
 
-        throw new I18nHttpException(HttpStatus.CONFLICT, I18N_KEYS.prisma.uniqueConstraint, 'El valor de (key, externalId) ya existe', {
+        throw new I18nHttpException(HttpStatus.CONFLICT, I18N_KEYS.errors.business.companyReferenceExists, 'La referencia de la empresa ya existe.', {
             code: ERROR_CODES.UNIQUE_CONSTRAINT,
-            args: { fields: 'key, externalId' },
         });
     }
 }

@@ -13,10 +13,10 @@ export class ResetPasswordUseCase {
 
     async execute(dto: ResetPasswordDto) {
         const storedToken = await this.repository.findPasswordResetToken(this.cryptoService.hashToken(dto.token));
-        if (!storedToken) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidResetToken, 'Token invalido o expirado');
+        if (!storedToken) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidResetToken, 'El enlace para restablecer la contrasena no es valido o expiro.');
 
         const result = await this.repository.updatePassword(storedToken.userId, await this.cryptoService.hashPassword(dto.password));
-        if (result.count === 0) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidResetToken, 'Token invalido o expirado');
+        if (result.count === 0) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidResetToken, 'El enlace para restablecer la contrasena no es valido o expiro.');
 
         await this.repository.markPasswordResetTokenUsed(storedToken.id);
         await this.repository.revokeUserSessions(storedToken.userId);

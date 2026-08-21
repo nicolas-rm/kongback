@@ -67,7 +67,14 @@ export class AuthenticationRepository {
                 expiresAt: { gt: new Date() },
                 idleExpiresAt: { gt: new Date() },
             },
-            select: { id: true, userId: true, lastActivityAt: true },
+            select: { id: true, userId: true, lastActivityAt: true, idleExpiresAt: true },
+        });
+    }
+
+    findSessionForAuthentication(sessionId: string) {
+        return this.prisma.session.findUnique({
+            where: { id: sessionId },
+            select: { id: true, userId: true, revokedAt: true, expiresAt: true, idleExpiresAt: true, lastActivityAt: true },
         });
     }
 
@@ -253,8 +260,10 @@ export class AuthenticationRepository {
     }
 
     listActiveSessions(userId: string) {
+        const now = new Date();
+
         return this.prisma.session.findMany({
-            where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+            where: { userId, revokedAt: null, expiresAt: { gt: now }, idleExpiresAt: { gt: now } },
             orderBy: { lastActivityAt: 'desc' },
             select: {
                 id: true,
@@ -262,6 +271,7 @@ export class AuthenticationRepository {
                 ipAddress: true,
                 deviceName: true,
                 lastActivityAt: true,
+                idleExpiresAt: true,
                 expiresAt: true,
             },
         });

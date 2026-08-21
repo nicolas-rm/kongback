@@ -18,7 +18,7 @@ export class NotificationsService {
 
     async createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
         const notification = await this.repository.createForUser(userId, data);
-        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         return notification;
     }
@@ -43,7 +43,7 @@ export class NotificationsService {
             type: data.type,
             link: data.link,
         });
-        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         return notification;
     }
@@ -54,7 +54,7 @@ export class NotificationsService {
 
     async create(dto: CreateNotificationDto, scope?: CompanyScope) {
         const notification = await this.repository.createForUser(dto.userId, dto, scope);
-        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'Usuario no encontrado');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         return {
             notification,
@@ -79,14 +79,14 @@ export class NotificationsService {
 
     async findOneForUser(userId: string, notificationId: string) {
         const notification = await this.repository.findOne({ id: notificationId, userId });
-        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'Notificacion no encontrada');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'No encontramos la notificacion solicitada.');
         return notification;
     }
 
     async markRead(userId: string, notificationId: string) {
         await this.findOneForUser(userId, notificationId);
         const notification = await this.repository.markRead(notificationId, userId);
-        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'Notificacion no encontrada');
+        if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'No encontramos la notificacion solicitada.');
 
         return {
             notification,

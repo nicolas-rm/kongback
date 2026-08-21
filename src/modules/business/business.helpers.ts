@@ -39,9 +39,9 @@ export async function assertActive(checks: Array<{ ids: Array<string | null | un
 }
 
 export function notFound() {
-    return new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+    return new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 }
 
 export function invalidRelation() {
-    return new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+    return new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
 }
