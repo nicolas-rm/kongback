@@ -16,7 +16,7 @@ export class MustChangePasswordGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest<Request & { user?: RequestUser }>();
         if (request.user?.mustChangePassword) {
-            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.mustChangePassword, 'Debes cambiar tu contrasena antes de continuar.', { code: ERROR_CODES.MUST_CHANGE_PASSWORD });
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.mustChangePassword, 'Cambia tu contrasena para continuar.', { code: ERROR_CODES.MUST_CHANGE_PASSWORD });
         }
 
         return true;

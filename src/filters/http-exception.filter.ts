@@ -10,6 +10,13 @@ import { buildErrorResponse, type ErrorDetail } from '@/errors/error-response';
 import { I18N_KEYS, type I18nKey, translateI18n } from '@/i18n';
 import type { ErrorCode } from '@/errors/error-codes';
 
+type HttpErrorDetails = {
+    message: string;
+    code?: ErrorCode;
+    errors?: ErrorDetail[];
+    reason?: string;
+};
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -21,12 +28,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         if (exception instanceof RequestValidationException || exception instanceof I18nValidationException) {
             const errors = exception instanceof RequestValidationException ? exception.errors : this.formatI18nValidationErrors(exception, host);
+            const details: HttpErrorDetails = {
+                message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'Revisa la informacion enviada.'),
+                code: ERROR_CODES.VALIDATION_ERROR,
+                errors,
+            };
+            this.logHttpError(HttpStatus.BAD_REQUEST, details, request, exception);
             response.status(HttpStatus.BAD_REQUEST).json(
                 buildErrorResponse({
                     statusCode: HttpStatus.BAD_REQUEST,
-                    code: ERROR_CODES.VALIDATION_ERROR,
-                    message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'La solicitud contiene datos invalidos'),
-                    errors,
+                    code: details.code,
+                    message: details.message,
+                    errors: details.errors,
                     path: request.url,
                 })
             );
@@ -37,30 +50,58 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const status = isHttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
         const details = isHttpException
             ? this.resolveHttpDetails(exception, status, host)
-            : { message: translateI18n(host, I18N_KEYS.errors.internal.unprocessed, 'Solicitud no procesada, intente nuevamente mas tarde') };
+            : { message: translateI18n(host, I18N_KEYS.errors.internal.unprocessed, 'No pudimos procesar la solicitud. Intenta nuevamente mas tarde.') };
 
-        if (status >= 500) {
-            this.logger.error(`${status} ${details.message} path=${request.url} method=${request.method}`, exception instanceof Error ? exception.stack : undefined);
-        }
+        this.logHttpError(status, details, request, exception);
 
         response.status(status).json(buildErrorResponse({ statusCode: status, message: details.message, code: details.code, errors: details.errors, path: request.url }));
     }
 
-    private resolveHttpDetails(exception: HttpException, status: number, host: ArgumentsHost): { message: string; code?: ErrorCode; errors?: ErrorDetail[] } {
+    private resolveHttpDetails(exception: HttpException, status: number, host: ArgumentsHost): HttpErrorDetails {
         const body = exception.getResponse();
 
         if (typeof body === 'string') return { message: body || this.defaultMessage(status) };
         if (body && typeof body === 'object') {
-            const payload = body as { message?: string | string[]; code?: ErrorCode; errors?: ErrorDetail[]; i18nKey?: I18nKey; i18nArgs?: Record<string, unknown> };
+            const payload = body as {
+                message?: string | string[];
+                code?: ErrorCode;
+                errors?: ErrorDetail[];
+                i18nKey?: I18nKey;
+                i18nArgs?: Record<string, unknown>;
+                reason?: unknown;
+            };
             const message = Array.isArray(payload.message) ? payload.message.join('; ') : payload.message;
             return {
                 message: payload.i18nKey ? translateI18n(host, payload.i18nKey, message || this.defaultMessage(status), payload.i18nArgs) : message || this.defaultMessage(status),
                 code: payload.code,
                 errors: payload.errors,
+                reason: typeof payload.reason === 'string' ? payload.reason : undefined,
             };
         }
 
         return { message: this.defaultMessage(status) };
+    }
+
+    private logHttpError(status: number, details: HttpErrorDetails, request: Request, exception: unknown): void {
+        const message = [
+            `${status} ${details.message}`,
+            `path=${request.url}`,
+            `method=${request.method}`,
+            details.code ? `code=${details.code}` : null,
+            details.reason ? `reason=${details.reason}` : null,
+            details.errors?.length ? `errors=${details.errors.length}` : null,
+        ]
+            .filter(Boolean)
+            .join(' ');
+
+        if (status >= 500) {
+            this.logger.error(message, exception instanceof Error ? exception.stack : undefined);
+            return;
+        }
+
+        if (status >= 400) {
+            this.logger.warn(message);
+        }
     }
 
     private defaultMessage(status: number): string {

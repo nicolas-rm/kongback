@@ -18,7 +18,7 @@ import { DocumentsService } from '@/modules/documents/services/documents.service
                 limits: { fileSize: config.documents.maxFileSizeMb * 1024 * 1024 },
                 fileFilter: (_request, file, callback) => {
                     const allowed = config.documents.allowedMimeTypes.includes(file.mimetype.toLowerCase());
-                    callback(allowed ? null : new BadRequestException('Tipo de archivo no permitido'), allowed);
+                    callback(allowed ? null : new BadRequestException('Este tipo de archivo no esta permitido.'), allowed);
                 },
             }),
         }),

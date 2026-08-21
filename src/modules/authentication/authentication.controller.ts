@@ -103,6 +103,17 @@ export class AuthenticationController {
         return this.authenticationService.getCapabilities(user, companyId);
     }
 
+    @Post('heartbeat')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    @SkipMustChangePassword()
+    heartbeat(@CurrentUser() user: RequestUser) {
+        return {
+            ok: true,
+            userId: user.id,
+            sessionId: user.sessionId ?? null,
+        };
+    }
+
     @Patch('me')
     updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateMyProfileDto, @SessionContextData() sessionContext: SessionContext) {
         return this.authenticationService.updateProfile(user, dto, sessionContext);

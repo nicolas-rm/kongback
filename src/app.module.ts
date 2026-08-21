@@ -51,7 +51,10 @@ const I18N_PATH = resolveI18nPath();
                 resolvers: [new AcceptLanguageResolver({ matchType: 'strict-loose' })],
             }),
         }),
-        ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+        ThrottlerModule.forRoot({
+            throttlers: [{ ttl: 60_000, limit: 100 }],
+            errorMessage: 'Demasiados intentos. Intenta nuevamente mas tarde.',
+        }),
         PrismaModule,
         CryptoModule,
         AppMailerModule,

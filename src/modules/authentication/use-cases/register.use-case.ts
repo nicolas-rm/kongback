@@ -36,7 +36,12 @@ export class RegisterUseCase {
         return { accepted: true, ...verificationExpiration };
     }
 
-    private async sendVerification(userId: string, email: string, sessionContext: SessionContext, expiresAt = this.buildVerificationExpiration().expiresAt): Promise<{ expiresInSeconds: number; expiresAt: Date }> {
+    private async sendVerification(
+        userId: string,
+        email: string,
+        sessionContext: SessionContext,
+        expiresAt = this.buildVerificationExpiration().expiresAt
+    ): Promise<{ expiresInSeconds: number; expiresAt: Date }> {
         const token = randomBytes(32).toString('hex');
         await this.repository.createEmailVerificationToken(userId, this.cryptoService.hashToken(token), expiresAt);
         await this.mailerService.sendEmailVerification(email, token, { recipientUserId: userId, ipAddress: sessionContext.ipAddress, language: sessionContext.language });

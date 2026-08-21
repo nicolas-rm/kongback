@@ -40,7 +40,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
             await this.emitUnreadCount(user.id);
             client.emit('notifications.connected', { userId: user.id, connectedAt: new Date().toISOString() });
         } catch {
-            client.emit('notifications.error', { message: this.translateSocket(client, I18N_KEYS.socket.unauthorized, 'No autorizado') });
+            client.emit('notifications.error', { message: this.translateSocket(client, I18N_KEYS.socket.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.') });
             client.disconnect(true);
         }
     }

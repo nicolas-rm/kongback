@@ -32,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest<CompanyRequest & { user?: RequestUser }>();
         const user = request.user;
-        if (!user?.id) throw new I18nForbiddenException(I18N_KEYS.errors.authorization.unauthorized, 'Usuario no autorizado');
+        if (!user?.id) throw new I18nForbiddenException(I18N_KEYS.errors.authorization.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.');
 
         await this.resolveCompanyId(request, user, requiresCompany);
         const companyId = request.companyId;
@@ -41,14 +41,14 @@ export class PermissionsGuard implements CanActivate {
         if (requiredRoles.length > 0) {
             const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, accessCompanyId);
             if (!hasRole) {
-                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
+                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'No tienes permisos suficientes para este contenido.');
             }
         }
 
         if (requiredPermissions.length > 0) {
             const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, accessCompanyId);
             if (!hasPermissions) {
-                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'Permisos insuficientes');
+                throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'No tienes permisos suficientes para este contenido.');
             }
         }
 
@@ -64,7 +64,7 @@ export class PermissionsGuard implements CanActivate {
 
         const scope = await this.accessControl.resolveCompanyScope(user.id, companyId, requiredPermissions, requiredRoles);
         if (!scope) {
-            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'Acceso denegado a esta compania');
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
         return scope;
@@ -74,19 +74,19 @@ export class PermissionsGuard implements CanActivate {
         const companyId = request.get('x-company-id')?.trim();
         if (!companyId) {
             if (!required) return;
-            throw this.invalidCompanyHeader('X-Company-Id requerido', 'Selecciona una compania antes de consultar este modulo');
+            throw this.invalidCompanyHeader('Selecciona una compania para continuar.', 'Selecciona una compania antes de consultar este modulo.');
         }
 
         if (!isUUID(companyId, '4')) {
-            throw this.invalidCompanyHeader('X-Company-Id invalido', 'X-Company-Id debe ser un UUID valido');
+            throw this.invalidCompanyHeader('Selecciona una compania valida para continuar.', 'La compania seleccionada no es valida.');
         }
 
         if (!(await this.accessControl.companyIsActive(companyId))) {
-            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'Acceso denegado a esta compania');
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
         if (!user.isGlobalAdmin && !(await this.accessControl.userCanAccessCompany(user.id, companyId))) {
-            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'Acceso denegado a esta compania');
+            throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
         (request as CompanyRequest).companyId = companyId;

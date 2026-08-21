@@ -58,7 +58,7 @@ export class AppMailerService {
     async reserveWelcomeCredentialsOrThrow(to: string, context: MailContext = {}): Promise<string> {
         const reservation = await this.reserveWelcomeCredentials(to, context);
         if (!reservation.allowed) {
-            throw new I18nTooManyRequestsException(I18N_KEYS.mail.common.rateLimited, 'Demasiados correos enviados. Intenta nuevamente mas tarde.', {
+            throw new I18nTooManyRequestsException(I18N_KEYS.mail.common.rateLimited, 'Se enviaron demasiados correos. Intenta nuevamente mas tarde.', {
                 extra: {
                     retryAfterSeconds: reservation.retryAfterSeconds,
                     reason: reservation.reason,
@@ -241,7 +241,11 @@ export class AppMailerService {
         return {
             copyLinkText: this.translate(lang, I18N_KEYS.mail.common.copyLink, 'Si el boton no funciona, copia y pega este enlace en tu navegador:'),
             securityTitle: this.translate(lang, I18N_KEYS.mail.common.securityTitle, 'Aviso de seguridad'),
-            securityNote: this.translate(lang, I18N_KEYS.mail.common.securityNote, 'Si no solicitaste este correo, puedes ignorarlo. Nunca compartas contrasenas, codigos de verificacion ni enlaces de acceso con nadie.'),
+            securityNote: this.translate(
+                lang,
+                I18N_KEYS.mail.common.securityNote,
+                'Si no solicitaste este correo, puedes ignorarlo. Nunca compartas contrasenas, codigos de verificacion ni enlaces de acceso con nadie.'
+            ),
             footerText: this.translate(lang, I18N_KEYS.mail.common.footer, 'Este correo fue enviado automaticamente por {appName}. No respondas a este mensaje.', { appName: this.config.name }),
         };
     }

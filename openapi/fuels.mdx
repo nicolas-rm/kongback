@@ -103,6 +103,21 @@ Este catalogo es global. No envies `X-Company-Id` para crear, actualizar o desac
 
 La pantalla de combustibles es opcional segun permisos/producto. Si el usuario no administra catalogos globales, usa `GET /api/fuels` solo como fuente de selects para vehiculos, tarjetas y combustibles disponibles en estaciones.
 
+El seed base carga estos combustibles iniciales:
+
+| Code               | Nombre                |
+| ------------------ | --------------------- |
+| `GASOLINE_REGULAR` | Gasolina Regular      |
+| `GASOLINE_PREMIUM` | Gasolina Premium      |
+| `DIESEL`           | Diesel                |
+| `DIESEL_UBA`       | Diesel UBA            |
+| `LPG`              | Gas LP                |
+| `CNG`              | Gas Natural Vehicular |
+| `ELECTRIC`         | Electrico             |
+| `BIODIESEL`        | Biodiesel             |
+| `ETHANOL_E85`      | Etanol E85            |
+| `HYDROGEN`         | Hidrogeno             |
+
 Campos recomendados para formularios:
 
 - Codigo: `code`.

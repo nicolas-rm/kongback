@@ -14,9 +14,13 @@
         "stations",
         "station-fuels",
         "cardcloud",
+        "cardcloud-stock",
+        "cardholders",
+        "cardholder",
         "documents",
         "notifications",
         "health",
+        "endpoint-permissions",
         "frontend-guidelines"
     ]
 }

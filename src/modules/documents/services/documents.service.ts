@@ -76,20 +76,20 @@ export class DocumentsService {
 
     async findOne(id: string, scope?: CompanyScope) {
         const document = await this.repository.findById(id, scope);
-        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
         return DocumentResponse.from(document);
     }
 
     async update(id: string, dto: UpdateDocumentDto, userId?: string | null, scope?: CompanyScope) {
         const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null }, scope);
-        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         return DocumentResponse.from(document);
     }
 
     async download(id: string, scope?: CompanyScope) {
         const document = await this.repository.findDownloadById(id, scope);
-        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         await this.storage.assertFileExists(document.storageKey);
         return { document, stream: this.storage.createStream(document.storageKey) };
@@ -97,21 +97,21 @@ export class DocumentsService {
 
     async remove(id: string, userId?: string | null, scope?: CompanyScope) {
         const document = await this.repository.findDownloadById(id, scope);
-        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+        if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         const result = await this.repository.softDelete(id, userId, scope);
-        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'Documento no encontrado');
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         await this.storage.removeFile(document.storageKey);
         return { id, deleted: true };
     }
 
     private assertAllowedFile(file: UploadedFile): void {
-        if (!file) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileRequired, 'Archivo requerido');
-        if (file.size > this.config.documents.maxFileSizeMb * 1024 * 1024) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileTooLarge, 'Archivo demasiado grande');
+        if (!file) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileRequired, 'Selecciona un archivo para continuar.');
+        if (file.size > this.config.documents.maxFileSizeMb * 1024 * 1024) throw new I18nBadRequestException(I18N_KEYS.errors.documents.fileTooLarge, 'El archivo es demasiado grande.');
         const mimeType = file.mimetype.toLowerCase();
-        if (!this.config.documents.allowedMimeTypes.includes(mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
-        if (!this.matchesDeclaredMimeType(file.buffer, mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Tipo de archivo no permitido');
+        if (!this.config.documents.allowedMimeTypes.includes(mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Este tipo de archivo no esta permitido.');
+        if (!this.matchesDeclaredMimeType(file.buffer, mimeType)) throw new I18nBadRequestException(I18N_KEYS.errors.documents.mimeTypeNotAllowed, 'Este tipo de archivo no esta permitido.');
     }
 
     private matchesDeclaredMimeType(buffer: Buffer, mimeType: string): boolean {
@@ -131,23 +131,24 @@ export class DocumentsService {
 
     private async resolveDocumentScope(scopeKey?: string | null, scopeId?: string | null, scope?: CompanyScope): Promise<{ scopeKey: string; scopeId: string }> {
         if (!scope?.companyId) {
-            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
         }
 
         if (scope.subCompanyIds) {
-            if (scopeKey && scopeKey !== SUB_COMPANY_SCOPE_KEY) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            if (scopeKey && scopeKey !== SUB_COMPANY_SCOPE_KEY) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
             const subCompanyId = scopeId ?? (scope.subCompanyIds.length === 1 ? scope.subCompanyIds[0] : null);
-            if (!subCompanyId || !scope.subCompanyIds.includes(subCompanyId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            if (!subCompanyId || !scope.subCompanyIds.includes(subCompanyId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
             return { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: subCompanyId };
         }
 
         if (scopeKey === SUB_COMPANY_SCOPE_KEY) {
-            if (!scopeId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+            if (!scopeId) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
             await assertActive([{ ids: [scopeId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) }]);
             return { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId };
         }
 
-        if ((scopeKey && scopeKey !== 'companyId') || (scopeId && scopeId !== scope.companyId)) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        if ((scopeKey && scopeKey !== 'companyId') || (scopeId && scopeId !== scope.companyId))
+            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
 
         return { scopeKey: 'companyId', scopeId: scope.companyId };
     }

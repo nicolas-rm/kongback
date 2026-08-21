@@ -108,6 +108,25 @@ export class UsersRepository {
         return this.prisma.role.count({ where: { id: { in: ids } } });
     }
 
+    findRolePermissionProfiles(ids: string[]) {
+        return this.prisma.role.findMany({
+            where: { id: { in: ids } },
+            select: {
+                id: true,
+                code: true,
+                permissions: {
+                    select: {
+                        permission: {
+                            select: {
+                                code: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
     countActiveCompanies(ids: string[]): Promise<number> {
         return this.prisma.company.count({
             where: {
@@ -150,6 +169,19 @@ export class UsersRepository {
             where: this.accessScopeWhere(userId, scope),
             orderBy: { assignedAt: 'desc' },
             select: this.accessSelect(),
+        });
+    }
+
+    listAccessRoleIds(userId: string, scope?: CompanyScope, outsideScope = false) {
+        if (outsideScope && !scope?.companyId) return Promise.resolve([]);
+
+        return this.prisma.userAccess.findMany({
+            where: outsideScope
+                ? {
+                      AND: [buildActiveUserAccessWhere({ userId }), { NOT: this.accessScopeWhere(userId, scope) }],
+                  }
+                : buildActiveUserAccessWhere({ userId }),
+            select: { roleId: true },
         });
     }
 

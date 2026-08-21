@@ -63,7 +63,15 @@ export class UpdateProfileResponse {
         public requiresEmailVerification: boolean
     ) {}
 
-    static from(data: { id: string; username: string; email: string; fullName: string; preferredLanguage: string; emailVerifiedAt: Date | null; requiresEmailVerification: boolean }): UpdateProfileResponse {
+    static from(data: {
+        id: string;
+        username: string;
+        email: string;
+        fullName: string;
+        preferredLanguage: string;
+        emailVerifiedAt: Date | null;
+        requiresEmailVerification: boolean;
+    }): UpdateProfileResponse {
         return new UpdateProfileResponse(data.id, data.username, data.email, data.fullName, data.preferredLanguage, Boolean(data.emailVerifiedAt), data.requiresEmailVerification);
     }
 }

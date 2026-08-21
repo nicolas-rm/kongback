@@ -1,0 +1,274 @@
+# Cruce de endpoints contra GasBackend
+
+Fuente comparada: `/Users/nicolas-rm/Desktop/ProxGas-Complete/GasBackend`
+
+Backend actual: `/Users/nicolas-rm/Desktop/kong-back`
+
+## Leyenda
+
+| Estado      | Significado                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| Cubierto    | El metodo y path existen igual en `kong-back`.                              |
+| Equivalente | El flujo existe, pero cambio de path o nombre.                              |
+| Parcial     | Existe una ruta relacionada, pero no cubre todo el comportamiento anterior. |
+| Falta       | No encontre endpoint equivalente en `kong-back`.                            |
+| Nuevo       | Existe en `kong-back`, pero no estaba en `GasBackend`.                      |
+| No aplica   | No se implementa por decision de alcance actual.                            |
+
+## Resumen
+
+| Categoria                                    | Conteo |
+| -------------------------------------------- | -----: |
+| Endpoints en `GasBackend`                    |    147 |
+| Endpoints en `kong-back`                     |    139 |
+| Faltantes completos detectados aplicables    |      4 |
+| Endpoints parciales detectados               |      3 |
+| Excluidos por decision de alcance            |     23 |
+| Endpoints nuevos o reemplazos en `kong-back` |     19 |
+
+## Endpoints de GasBackend contra kong-back
+
+### App y auditoria
+
+| Estado    | GasBackend                             | kong-back  | Para que sirve / contexto                                                               |
+| --------- | -------------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| Cubierto  | `GET /api`                             | `GET /api` | Verificacion basica de disponibilidad de la app.                                        |
+| No aplica | `GET /api/audit/evidence/system-error` | -          | Endpoint tecnico/evidencia de auditoria; queda fuera por alcance de modulos de sistema. |
+
+### Autenticacion publica
+
+| Estado      | GasBackend                      | kong-back                                         | Para que sirve / contexto                                                |
+| ----------- | ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| Equivalente | `POST /api/login`               | `POST /api/authentication/login`                  | Login con usuario y contrasena.                                          |
+| Equivalente | `POST /api/2fa/verify-login`    | `POST /api/authentication/2fa/verify-login`       | Completa login con 2FA.                                                  |
+| Equivalente | `POST /api/register`            | `POST /api/authentication/register`               | Registro publico de usuario.                                             |
+| No aplica   | `POST /api/register/cardholder` | -                                                 | Registro de tarjetahabiente; queda fuera junto con el modulo cardholder. |
+| Equivalente | `POST /api/forgot-password`     | `POST /api/authentication/password/reset/request` | Solicita correo/enlace de recuperacion de contrasena.                    |
+| Equivalente | `POST /api/reset-password`      | `POST /api/authentication/password/reset`         | Restablece contrasena con token de recuperacion.                         |
+| Equivalente | `POST /api/refresh`             | `POST /api/authentication/refresh`                | Rota refresh token y emite credenciales nuevas.                          |
+
+### Cuenta autenticada
+
+| Estado      | GasBackend                             | kong-back                                        | Para que sirve / contexto                                                     |
+| ----------- | -------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Equivalente | `GET /api/auth/me`                     | `GET /api/authentication/me`                     | Obtiene perfil del usuario autenticado.                                       |
+| Equivalente | `PATCH /api/auth/me`                   | `PATCH /api/authentication/me`                   | Actualiza perfil propio.                                                      |
+| Equivalente | `POST /api/auth/logout`                | `POST /api/authentication/logout`                | Cierra sesion actual.                                                         |
+| Equivalente | `POST /api/auth/logout-all`            | `POST /api/authentication/logout-all`            | Cierra todas las sesiones del usuario.                                        |
+| Equivalente | `GET /api/auth/sessions`               | `GET /api/authentication/sessions`               | Lista sesiones activas propias.                                               |
+| Equivalente | `DELETE /api/auth/sessions/:sessionId` | `DELETE /api/authentication/sessions/:sessionId` | Revoca una sesion propia.                                                     |
+| Equivalente | `PATCH /api/auth/password`             | `PATCH /api/authentication/password`             | Cambia contrasena propia.                                                     |
+| No aplica   | `POST /api/auth/heartbeat`             | -                                                | Heartbeat autenticado tecnico; queda fuera por alcance de modulos de sistema. |
+
+### Cuenta autenticada 2FA
+
+| Estado      | GasBackend                                     | kong-back                                                | Para que sirve / contexto             |
+| ----------- | ---------------------------------------------- | -------------------------------------------------------- | ------------------------------------- |
+| Equivalente | `GET /api/auth/2fa/status`                     | `GET /api/authentication/2fa/status`                     | Consulta estado 2FA del usuario.      |
+| Equivalente | `POST /api/auth/2fa/setup`                     | `POST /api/authentication/2fa/setup`                     | Inicia configuracion 2FA.             |
+| Equivalente | `POST /api/auth/2fa/enable`                    | `POST /api/authentication/2fa/enable`                    | Activa 2FA.                           |
+| Equivalente | `POST /api/auth/2fa/disable`                   | `POST /api/authentication/2fa/disable`                   | Desactiva 2FA.                        |
+| Equivalente | `POST /api/auth/2fa/recovery-codes/regenerate` | `POST /api/authentication/2fa/recovery-codes/regenerate` | Regenera codigos de recuperacion 2FA. |
+| Equivalente | `DELETE /api/auth/2fa/reset`                   | `DELETE /api/authentication/2fa/reset`                   | Resetea configuracion 2FA.            |
+
+### Usuarios
+
+| Estado   | GasBackend                               | kong-back                                | Para que sirve / contexto                   |
+| -------- | ---------------------------------------- | ---------------------------------------- | ------------------------------------------- |
+| Cubierto | `POST /api/users`                        | `POST /api/users`                        | Crea usuario.                               |
+| Cubierto | `GET /api/users`                         | `GET /api/users`                         | Lista usuarios.                             |
+| Cubierto | `GET /api/users/:id`                     | `GET /api/users/:id`                     | Consulta usuario.                           |
+| Cubierto | `PATCH /api/users/:id`                   | `PATCH /api/users/:id`                   | Actualiza usuario.                          |
+| Cubierto | `DELETE /api/users/:id`                  | `DELETE /api/users/:id`                  | Elimina usuario.                            |
+| Cubierto | `PUT /api/users/:id/access`              | `PUT /api/users/:id/access`              | Reemplaza accesos del usuario.              |
+| Cubierto | `GET /api/users/:id/access`              | `GET /api/users/:id/access`              | Lista accesos del usuario.                  |
+| Cubierto | `GET /api/users/:id/permissions`         | `GET /api/users/:id/permissions`         | Lista permisos efectivos del usuario.       |
+| Cubierto | `PATCH /api/users/:id/password`          | `PATCH /api/users/:id/password`          | Cambia contrasena de otro usuario.          |
+| Cubierto | `PATCH /api/users/:id/2fa/unlink`        | `PATCH /api/users/:id/2fa/unlink`        | Desvincula 2FA de un usuario.               |
+| Cubierto | `POST /api/users/:id/resend-credentials` | `POST /api/users/:id/resend-credentials` | Regenera y reenvia credenciales temporales. |
+
+### Roles y permisos
+
+| Estado   | GasBackend                       | kong-back                        | Para que sirve / contexto       |
+| -------- | -------------------------------- | -------------------------------- | ------------------------------- |
+| Cubierto | `POST /api/roles`                | `POST /api/roles`                | Crea rol.                       |
+| Cubierto | `GET /api/roles`                 | `GET /api/roles`                 | Lista roles.                    |
+| Cubierto | `GET /api/roles/:id`             | `GET /api/roles/:id`             | Consulta rol.                   |
+| Cubierto | `PATCH /api/roles/:id`           | `PATCH /api/roles/:id`           | Actualiza rol.                  |
+| Cubierto | `DELETE /api/roles/:id`          | `DELETE /api/roles/:id`          | Elimina rol.                    |
+| Cubierto | `PUT /api/roles/:id/permissions` | `PUT /api/roles/:id/permissions` | Reemplaza permisos de rol.      |
+| Cubierto | `GET /api/roles/:id/permissions` | `GET /api/roles/:id/permissions` | Lista permisos asignados a rol. |
+| Cubierto | `POST /api/permissions`          | `POST /api/permissions`          | Crea permiso.                   |
+| Cubierto | `GET /api/permissions`           | `GET /api/permissions`           | Lista permisos.                 |
+| Cubierto | `GET /api/permissions/:id`       | `GET /api/permissions/:id`       | Consulta permiso.               |
+| Cubierto | `PATCH /api/permissions/:id`     | `PATCH /api/permissions/:id`     | Actualiza permiso.              |
+| Cubierto | `DELETE /api/permissions/:id`    | `DELETE /api/permissions/:id`    | Elimina permiso.                |
+
+### Empresas y subempresas
+
+| Estado   | GasBackend                                     | kong-back                                      | Para que sirve / contexto                       |
+| -------- | ---------------------------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| Cubierto | `POST /api/companies`                          | `POST /api/companies`                          | Crea empresa/tenant.                            |
+| Cubierto | `GET /api/companies`                           | `GET /api/companies`                           | Lista empresas.                                 |
+| Cubierto | `GET /api/companies/:id`                       | `GET /api/companies/:id`                       | Consulta empresa.                               |
+| Cubierto | `PATCH /api/companies/:id`                     | `PATCH /api/companies/:id`                     | Actualiza empresa.                              |
+| Cubierto | `DELETE /api/companies/:id`                    | `DELETE /api/companies/:id`                    | Inactiva empresa.                               |
+| Cubierto | `POST /api/sub-companies`                      | `POST /api/sub-companies`                      | Crea subempresa.                                |
+| Cubierto | `GET /api/sub-companies`                       | `GET /api/sub-companies`                       | Lista subempresas.                              |
+| Cubierto | `GET /api/sub-companies/:id`                   | `GET /api/sub-companies/:id`                   | Consulta subempresa.                            |
+| Cubierto | `PATCH /api/sub-companies/:id`                 | `PATCH /api/sub-companies/:id`                 | Actualiza subempresa.                           |
+| Cubierto | `DELETE /api/sub-companies/:id`                | `DELETE /api/sub-companies/:id`                | Inactiva subempresa.                            |
+| Cubierto | `GET /api/sub-companies/:id/drivers/download`  | `GET /api/sub-companies/:id/drivers/download`  | Exporta conductores de una subempresa en Excel. |
+| Cubierto | `GET /api/sub-companies/:id/vehicles/download` | `GET /api/sub-companies/:id/vehicles/download` | Exporta vehiculos de una subempresa en Excel.   |
+| Cubierto | `GET /api/sub-companies/:id/cards/download`    | `GET /api/sub-companies/:id/cards/download`    | Exporta tarjetas de una subempresa en Excel.    |
+
+### Conductores y vehiculos
+
+| Estado   | GasBackend                      | kong-back                       | Para que sirve / contexto                                                                                                                        |
+| -------- | ------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cubierto | `POST /api/drivers`             | `POST /api/drivers`             | Crea conductor.                                                                                                                                  |
+| Cubierto | `GET /api/drivers`              | `GET /api/drivers`              | Lista conductores.                                                                                                                               |
+| Cubierto | `GET /api/drivers/:id`          | `GET /api/drivers/:id`          | Consulta conductor.                                                                                                                              |
+| Cubierto | `PATCH /api/drivers/:id`        | `PATCH /api/drivers/:id`        | Actualiza conductor.                                                                                                                             |
+| Cubierto | `DELETE /api/drivers/:id`       | `DELETE /api/drivers/:id`       | Inactiva conductor.                                                                                                                              |
+| Parcial  | `GET /api/drivers/:id/vehicles` | `GET /api/drivers/:id/vehicles` | Lista vehiculos actualmente asignados a un conductor. En `kong-back` no hay historial `driverVehicle`, solo relacion vigente `vehicle.driverId`. |
+| Cubierto | `POST /api/vehicles`            | `POST /api/vehicles`            | Crea vehiculo.                                                                                                                                   |
+| Cubierto | `GET /api/vehicles`             | `GET /api/vehicles`             | Lista vehiculos.                                                                                                                                 |
+| Cubierto | `GET /api/vehicles/:id`         | `GET /api/vehicles/:id`         | Consulta vehiculo.                                                                                                                               |
+| Cubierto | `PATCH /api/vehicles/:id`       | `PATCH /api/vehicles/:id`       | Actualiza vehiculo.                                                                                                                              |
+| Cubierto | `DELETE /api/vehicles/:id`      | `DELETE /api/vehicles/:id`      | Inactiva vehiculo.                                                                                                                               |
+| Parcial  | `GET /api/vehicles/:id/drivers` | `GET /api/vehicles/:id/drivers` | Lista conductor actualmente asignado a un vehiculo. En `kong-back` no hay historial `driverVehicle`, solo relacion vigente `vehicle.driverId`.   |
+
+### Combustibles, estaciones y documentos
+
+| Estado   | GasBackend                        | kong-back                         | Para que sirve / contexto        |
+| -------- | --------------------------------- | --------------------------------- | -------------------------------- |
+| Cubierto | `POST /api/fuels`                 | `POST /api/fuels`                 | Crea combustible.                |
+| Cubierto | `GET /api/fuels`                  | `GET /api/fuels`                  | Lista combustibles.              |
+| Cubierto | `GET /api/fuels/:id`              | `GET /api/fuels/:id`              | Consulta combustible.            |
+| Cubierto | `PATCH /api/fuels/:id`            | `PATCH /api/fuels/:id`            | Actualiza combustible.           |
+| Cubierto | `DELETE /api/fuels/:id`           | `DELETE /api/fuels/:id`           | Inactiva combustible.            |
+| Cubierto | `POST /api/stations`              | `POST /api/stations`              | Crea estacion.                   |
+| Cubierto | `GET /api/stations`               | `GET /api/stations`               | Lista estaciones.                |
+| Cubierto | `GET /api/stations/:id`           | `GET /api/stations/:id`           | Consulta estacion.               |
+| Cubierto | `PATCH /api/stations/:id`         | `PATCH /api/stations/:id`         | Actualiza estacion.              |
+| Cubierto | `DELETE /api/stations/:id`        | `DELETE /api/stations/:id`        | Inactiva estacion.               |
+| Cubierto | `POST /api/documents`             | `POST /api/documents`             | Sube/crea documento.             |
+| Cubierto | `GET /api/documents`              | `GET /api/documents`              | Lista documentos.                |
+| Cubierto | `GET /api/documents/:id`          | `GET /api/documents/:id`          | Consulta metadata de documento.  |
+| Cubierto | `GET /api/documents/:id/download` | `GET /api/documents/:id/download` | Descarga documento.              |
+| Cubierto | `PATCH /api/documents/:id`        | `PATCH /api/documents/:id`        | Actualiza metadata de documento. |
+| Cubierto | `DELETE /api/documents/:id`       | `DELETE /api/documents/:id`       | Elimina/desactiva documento.     |
+
+### Notificaciones
+
+| Estado      | GasBackend                            | kong-back                                | Para que sirve / contexto                           |
+| ----------- | ------------------------------------- | ---------------------------------------- | --------------------------------------------------- |
+| Cubierto    | `POST /api/notifications`             | `POST /api/notifications`                | Crea notificacion para usuario.                     |
+| Equivalente | `GET /api/notifications`              | `GET /api/me/notifications`              | Lista notificaciones propias.                       |
+| Equivalente | `GET /api/notifications/unread-count` | `GET /api/me/notifications/unread-count` | Cuenta notificaciones no leidas propias.            |
+| Equivalente | `PATCH /api/notifications/:id/read`   | `PATCH /api/me/notifications/:id/read`   | Marca una notificacion propia como leida.           |
+| Equivalente | `PATCH /api/notifications/read-all`   | `PATCH /api/me/notifications/read-all`   | Marca todas las notificaciones propias como leidas. |
+
+### Cardcloud
+
+| Estado      | GasBackend                                        | kong-back                                        | Para que sirve / contexto                                                                                     |
+| ----------- | ------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Equivalente | `GET /api/cardcloud/stock`                        | `GET /api/cardcloud-stock`                       | Lista stock/espejo local de tarjetas Cardcloud.                                                               |
+| Cubierto    | `GET /api/cardcloud/cards/movement/:uuid`         | `GET /api/cardcloud/cards/movement/:uuid`        | Consulta detalle de movimiento externo.                                                                       |
+| Cubierto    | `GET /api/cardcloud/cards/:uuid`                  | `GET /api/cardcloud/cards/:uuid`                 | Consulta tarjeta externa.                                                                                     |
+| Cubierto    | `GET /api/cardcloud/cards/:uuid/movements`        | `GET /api/cardcloud/cards/:uuid/movements`       | Lista movimientos externos de tarjeta.                                                                        |
+| Cubierto    | `GET /api/cardcloud/cards/:uuid/sensitive`        | `GET /api/cardcloud/cards/:uuid/sensitive`       | Consulta datos sensibles de tarjeta externa.                                                                  |
+| Cubierto    | `GET /api/cardcloud/cards/:uuid/cvv`              | `GET /api/cardcloud/cards/:uuid/cvv`             | Consulta CVV temporal.                                                                                        |
+| Cubierto    | `PATCH /api/cardcloud/cards/:uuid/nip`            | `PATCH /api/cardcloud/cards/:uuid/nip`           | Actualiza NIP en Cardcloud.                                                                                   |
+| Cubierto    | `POST /api/cardcloud/cards/validate`              | `POST /api/cardcloud/cards/validate`             | Valida tarjeta contra Cardcloud.                                                                              |
+| Cubierto    | `POST /api/cardcloud/cards/:uuid/block`           | `POST /api/cardcloud/cards/:uuid/block`          | Bloquea tarjeta en Cardcloud.                                                                                 |
+| Cubierto    | `POST /api/cardcloud/cards/:uuid/unblock`         | `POST /api/cardcloud/cards/:uuid/unblock`        | Desbloquea tarjeta en Cardcloud.                                                                              |
+| Cubierto    | `GET /api/cardcloud/subaccounts`                  | `GET /api/cardcloud/subaccounts`                 | Lista subcuentas Cardcloud.                                                                                   |
+| Cubierto    | `GET /api/cardcloud/subaccounts/:uuid`            | `GET /api/cardcloud/subaccounts/:uuid`           | Consulta subcuenta Cardcloud.                                                                                 |
+| Cubierto    | `GET /api/cardcloud/subaccounts/:uuid/cards`      | `GET /api/cardcloud/subaccounts/:uuid/cards`     | Lista tarjetas de subcuenta Cardcloud.                                                                        |
+| Cubierto    | `POST /api/cardcloud/subaccounts`                 | `POST /api/cardcloud/subaccounts`                | Crea subcuenta Cardcloud.                                                                                     |
+| Cubierto    | `GET /api/cardcloud/subaccounts/:uuid/movements`  | `GET /api/cardcloud/subaccounts/:uuid/movements` | Lista movimientos de subcuenta.                                                                               |
+| Cubierto    | `POST /api/cardcloud/account/cards/assign`        | `POST /api/cardcloud/account/cards/assign`       | Asigna tarjetas desde cuenta Cardcloud.                                                                       |
+| Cubierto    | `POST /api/cardcloud/account/cards/assign-bulk`   | `POST /api/cardcloud/account/cards/assign-bulk`  | Asigna tarjetas en lote desde Cardcloud.                                                                      |
+| Cubierto    | `POST /api/cardcloud/account/transfer`            | `POST /api/cardcloud/account/transfer`           | Ejecuta transferencia Cardcloud.                                                                              |
+| Cubierto    | `POST /api/cardcloud/account/transfer-bulk`       | `POST /api/cardcloud/account/transfer-bulk`      | Ejecuta transferencias masivas Cardcloud.                                                                     |
+| No aplica   | `GET /api/cardcloud/account/transfer-bulk-excel`  | -                                                | Descarga template Excel para transferencias masivas; queda fuera por ser operacion externa/sistema Cardcloud. |
+| No aplica   | `POST /api/cardcloud/account/transfer-bulk-excel` | -                                                | Procesa Excel para transferencias masivas; queda fuera por ser operacion externa/sistema Cardcloud.           |
+| Cubierto    | `GET /api/cardcloud/account`                      | `GET /api/cardcloud/account`                     | Consulta cuenta Cardcloud.                                                                                    |
+| Cubierto    | `GET /api/cardcloud/account/movements`            | `GET /api/cardcloud/account/movements`           | Lista movimientos de cuenta Cardcloud.                                                                        |
+
+### Tarjetas operativas
+
+| Estado      | GasBackend                                                   | kong-back                            | Para que sirve / contexto                                                                                              |
+| ----------- | ------------------------------------------------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Equivalente | `POST /api/cards/assign`                                     | `POST /api/cards/assign-sub-company` | Asigna tarjetas Cardcloud a subempresa/subcompania local.                                                              |
+| Equivalente | `POST /api/cards/sync/sub-company`                           | `POST /api/cards/sync-sub-company`   | Sincroniza tarjetas de una subempresa/subcompania.                                                                     |
+| Cubierto    | `POST /api/cards/validate`                                   | `POST /api/cards/validate`           | Valida una tarjeta local contra Cardcloud dentro del alcance de compania/subcompania.                                  |
+| Parcial     | `PATCH /api/cards/:id/assignment`                            | `PATCH /api/cards/:id/assignment`    | GasBackend permitia actualizar driver, vehiculo y modo de asignacion; `kong-back` solo cubre `vehicle` y `unassigned`. |
+| Cubierto    | `POST /api/cards`                                            | `POST /api/cards`                    | Crea tarjeta local.                                                                                                    |
+| Cubierto    | `GET /api/cards`                                             | `GET /api/cards`                     | Lista tarjetas.                                                                                                        |
+| Cubierto    | `GET /api/cards/:id`                                         | `GET /api/cards/:id`                 | Consulta tarjeta.                                                                                                      |
+| Cubierto    | `GET /api/cards/:id/movements`                               | `GET /api/cards/:id/movements`       | Lista movimientos externos de una tarjeta local usando su `externalId` en Cardcloud.                                   |
+| Falta       | `GET /api/cards/:id/movement-evidences`                      | -                                    | Lista evidencias asociadas a movimientos de tarjeta.                                                                   |
+| Falta       | `GET /api/cards/:id/movement-evidences/:evidenceId`          | -                                    | Consulta una evidencia de movimiento.                                                                                  |
+| Falta       | `GET /api/cards/:id/movement-evidences/:evidenceId/download` | -                                    | Descarga archivo de evidencia de movimiento.                                                                           |
+| Cubierto    | `PATCH /api/cards/:id`                                       | `PATCH /api/cards/:id`               | Actualiza tarjeta.                                                                                                     |
+| Falta       | `DELETE /api/cards/:id/movement-evidences/:evidenceId`       | -                                    | Elimina evidencia de movimiento.                                                                                       |
+| Cubierto    | `DELETE /api/cards/:id`                                      | `DELETE /api/cards/:id`              | Inactiva tarjeta.                                                                                                      |
+
+### Cardholder
+
+| Estado    | GasBackend                                                                  | kong-back | Para que sirve / contexto                                                              |
+| --------- | --------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
+| No aplica | `GET /api/cardholder/me`                                                    | -         | Perfil del tarjetahabiente autenticado; modulo cardholder fuera de alcance.            |
+| No aplica | `GET /api/cardholder/cards`                                                 | -         | Lista tarjetas del tarjetahabiente; modulo cardholder fuera de alcance.                |
+| No aplica | `GET /api/cardholder/cards/:cardId`                                         | -         | Consulta tarjeta propia del tarjetahabiente; modulo cardholder fuera de alcance.       |
+| No aplica | `GET /api/cardholder/sub-company`                                           | -         | Consulta subempresa asociada al tarjetahabiente; modulo cardholder fuera de alcance.   |
+| No aplica | `GET /api/cardholder/vehicles`                                              | -         | Lista vehiculos asociados al tarjetahabiente; modulo cardholder fuera de alcance.      |
+| No aplica | `POST /api/cardholder/cards/:cardId/off`                                    | -         | Apaga/bloquea tarjeta propia; modulo cardholder fuera de alcance.                      |
+| No aplica | `POST /api/cardholder/cards/:cardId/on`                                     | -         | Enciende/desbloquea tarjeta propia; modulo cardholder fuera de alcance.                |
+| No aplica | `GET /api/cardholder/cards/:cardId/movements`                               | -         | Lista movimientos de tarjeta propia; modulo cardholder fuera de alcance.               |
+| No aplica | `POST /api/cardholder/cards/:cardId/movement-evidences/:movementId`         | -         | Crea evidencia para movimiento de tarjeta propia; modulo cardholder fuera de alcance.  |
+| No aplica | `GET /api/cardholder/cards/:cardId/movement-evidences`                      | -         | Lista evidencias de movimientos propias; modulo cardholder fuera de alcance.           |
+| No aplica | `GET /api/cardholder/cards/:cardId/movement-evidences/:evidenceId`          | -         | Consulta evidencia propia; modulo cardholder fuera de alcance.                         |
+| No aplica | `GET /api/cardholder/cards/:cardId/movement-evidences/:evidenceId/download` | -         | Descarga evidencia propia; modulo cardholder fuera de alcance.                         |
+| No aplica | `PATCH /api/cardholder/cards/:cardId/movement-evidences/:evidenceId`        | -         | Actualiza evidencia propia; modulo cardholder fuera de alcance.                        |
+| No aplica | `DELETE /api/cardholder/cards/:cardId/movement-evidences/:evidenceId`       | -         | Elimina evidencia propia; modulo cardholder fuera de alcance.                          |
+| No aplica | `GET /api/cardholder/vehicles/:vehicleId/odometer-history`                  | -         | Consulta historial de odometro de vehiculo propio; modulo cardholder fuera de alcance. |
+| No aplica | `GET /api/cardholder/cards/:cardId/sensitive`                               | -         | Consulta datos sensibles de tarjeta propia; modulo cardholder fuera de alcance.        |
+| No aplica | `PATCH /api/cardholder/cards/:cardId/nip`                                   | -         | Actualiza NIP de tarjeta propia; modulo cardholder fuera de alcance.                   |
+| No aplica | `POST /api/cardholder/cards/validate`                                       | -         | Valida/agrega tarjeta fisica al tarjetahabiente; modulo cardholder fuera de alcance.   |
+
+## Endpoints nuevos en kong-back
+
+| Estado | kong-back                                             | Para que sirve / contexto                              |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------ |
+| Nuevo  | `GET /api/health`                                     | Health check del backend/base de datos.                |
+| Nuevo  | `GET /api/authentication/companies`                   | Lista companias disponibles para seleccionar contexto. |
+| Nuevo  | `GET /api/authentication/capabilities`                | Devuelve permisos efectivos para frontend.             |
+| Nuevo  | `POST /api/authentication/email/verification/request` | Solicita/reenvia verificacion de email.                |
+| Nuevo  | `POST /api/authentication/email/verification/confirm` | Confirma email con token.                              |
+| Nuevo  | `POST /api/cardcloud-stock/sync`                      | Sincroniza espejo local global de Cardcloud.           |
+| Nuevo  | `PATCH /api/cardcloud-stock/:id/assign-sub-company`   | Asigna stock Cardcloud local a subcompania.            |
+| Nuevo  | `PATCH /api/cardcloud-stock/:id/unassign-sub-company` | Quita asignacion local de stock Cardcloud.             |
+| Nuevo  | `GET /api/cards/by-design-fuel/:designFuelId`         | Lista tarjetas por combustible de diseno.              |
+| Nuevo  | `PATCH /api/cards/:id/assign-vehicle`                 | Asigna tarjeta a vehiculo.                             |
+| Nuevo  | `PATCH /api/cards/:id/unassign`                       | Quita asignacion de tarjeta.                           |
+| Nuevo  | `POST /api/station-fuels`                             | Crea/reactiva relacion estacion-combustible.           |
+| Nuevo  | `GET /api/station-fuels`                              | Lista combustibles disponibles por estacion.           |
+| Nuevo  | `GET /api/station-fuels/:id`                          | Consulta relacion estacion-combustible.                |
+| Nuevo  | `PATCH /api/station-fuels/:id`                        | Actualiza relacion estacion-combustible.               |
+| Nuevo  | `DELETE /api/station-fuels/:id`                       | Desactiva relacion estacion-combustible.               |
+| Nuevo  | `POST /api/users/:id/access`                          | Agrega un acceso/rol al usuario sin reemplazar todos.  |
+| Nuevo  | `DELETE /api/users/:id/access/:accessId`              | Elimina un acceso puntual del usuario.                 |
+| Nuevo  | `PATCH /api/vehicles/:id/driver`                      | Asigna o quita conductor actual del vehiculo.          |
+
+## Faltantes priorizados
+
+| Prioridad | Grupo                                    |   Endpoints | Motivo                                                                                                                                 |
+| --------- | ---------------------------------------- | ----------: | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Alta      | Evidencias de movimientos de tarjetas    |           4 | Requiere modelo/local storage de evidencias; el schema actual no tiene `CardMovementEvidence`.                                         |
+| Media     | Asignacion completa de tarjeta           |   1 parcial | El endpoint actual solo asigna/desasigna vehiculo; GasBackend tambien manejaba driver y modo de asignacion.                            |
+| No aplica | Cardcloud Excel masivo                   |           2 | Facilita transferencias bulk por archivo, pero queda fuera de esta tanda por ser operacion externa/sistema Cardcloud.                  |
+| Media     | Relaciones conductor/vehiculo historicas | 2 parciales | Ya existen consultas de relacion vigente; falta historial real porque el schema actual no tiene tabla de historial conductor-vehiculo. |

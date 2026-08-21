@@ -1,46 +1,52 @@
 {
     "authentication": {
-        "invalidCredentials": "Credenciales invalidas",
-        "accountLocked": "Cuenta bloqueada. Intenta de nuevo mas tarde",
-        "emailVerificationRequired": "Debes verificar tu correo antes de iniciar sesion",
-        "invalidTwoFactorChallenge": "Desafio 2FA invalido",
-        "invalidTwoFactorCode": "Codigo 2FA invalido",
-        "invalidRefreshToken": "Refresh token invalido",
-        "reusedRefreshToken": "Refresh token reutilizado",
-        "expiredRefreshToken": "Refresh token expirado",
-        "unauthorizedUser": "Usuario no autorizado",
-        "invalidCurrentPassword": "Contrasena actual invalida",
-        "invalidVerificationToken": "Token de verificacion invalido o expirado",
-        "invalidResetToken": "Token invalido o expirado",
-        "twoFactorPendingNotFound": "No hay configuracion 2FA pendiente",
-        "twoFactorSetupExpired": "La configuracion 2FA expiro. Inicia el proceso nuevamente",
-        "twoFactorNotEnabled": "2FA no esta habilitado"
+        "invalidCredentials": "El usuario o la contrasena no son correctos.",
+        "accountLocked": "Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.",
+        "emailVerificationRequired": "Verifica tu correo para iniciar sesion.",
+        "invalidTwoFactorChallenge": "La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.",
+        "invalidTwoFactorCode": "El codigo de verificacion no es correcto.",
+        "invalidRefreshToken": "Tu sesion no es valida. Inicia sesion nuevamente.",
+        "reusedRefreshToken": "Por seguridad cerramos tu sesion. Inicia sesion nuevamente.",
+        "expiredRefreshToken": "Tu sesion expiro. Inicia sesion nuevamente.",
+        "sessionExpired": "Tu sesion expiro. Inicia sesion nuevamente.",
+        "sessionIdleExpired": "Tu sesion expiro por inactividad. Inicia sesion nuevamente.",
+        "unauthorizedUser": "No pudimos validar tu usuario. Inicia sesion nuevamente.",
+        "invalidCurrentPassword": "La contrasena actual no es correcta.",
+        "invalidVerificationToken": "El enlace de verificacion no es valido o expiro.",
+        "invalidResetToken": "El enlace para restablecer la contrasena no es valido o expiro.",
+        "twoFactorPendingNotFound": "Primero inicia la configuracion de 2FA.",
+        "twoFactorSetupExpired": "La configuracion de 2FA expiro. Inicia el proceso nuevamente.",
+        "twoFactorNotEnabled": "La verificacion en dos pasos no esta activada."
     },
     "authorization": {
-        "unauthorized": "No autorizado",
-        "insufficientPermissions": "Permisos insuficientes",
-        "companyDenied": "Acceso denegado a esta compania",
-        "mustChangePassword": "Debes cambiar tu contrasena antes de continuar."
+        "unauthorized": "Tu sesion no es valida. Inicia sesion nuevamente.",
+        "insufficientPermissions": "No tienes permisos suficientes para este contenido.",
+        "companyDenied": "No tienes acceso a esta compania.",
+        "mustChangePassword": "Cambia tu contrasena para continuar."
     },
     "documents": {
-        "notFound": "Documento no encontrado",
-        "fileRequired": "Archivo requerido",
-        "fileTooLarge": "Archivo demasiado grande",
-        "mimeTypeNotAllowed": "Tipo de archivo no permitido",
-        "storageFileNotFound": "Archivo no encontrado en almacenamiento",
-        "invalidFilePath": "Ruta de archivo invalida"
+        "notFound": "No encontramos el documento solicitado.",
+        "fileRequired": "Selecciona un archivo para continuar.",
+        "fileTooLarge": "El archivo es demasiado grande.",
+        "mimeTypeNotAllowed": "Este tipo de archivo no esta permitido.",
+        "storageFileNotFound": "No pudimos encontrar el archivo solicitado.",
+        "invalidFilePath": "No pudimos procesar la ruta del archivo."
     },
     "notifications": {
-        "notFound": "Notificacion no encontrada"
+        "notFound": "No encontramos la notificacion solicitada."
     },
     "users": {
-        "notFound": "Usuario no encontrado"
+        "notFound": "No encontramos el usuario solicitado."
+    },
+    "business": {
+        "companyReferenceExists": "La referencia de la empresa ya existe.",
+        "subCompanyKeyExists": "La clave de subcompania ya existe para esta compania."
     },
     "validation": {
-        "invalidData": "La solicitud contiene datos invalidos"
+        "invalidData": "Revisa la informacion enviada."
     },
     "internal": {
-        "unprocessed": "Solicitud no procesada, intente nuevamente mas tarde"
+        "unprocessed": "No pudimos procesar la solicitud. Intenta nuevamente mas tarde."
     },
     "mail": {
         "common": {
@@ -52,7 +58,7 @@
             "emailLabel": "Correo",
             "usernameLabel": "Usuario",
             "temporaryPasswordLabel": "Contrasena temporal",
-            "rateLimited": "Demasiados correos enviados. Intenta nuevamente mas tarde."
+            "rateLimited": "Se enviaron demasiados correos. Intenta nuevamente mas tarde."
         },
         "passwordReset": {
             "subject": "Restablecer contrasena",
@@ -73,15 +79,15 @@
         }
     },
     "prisma": {
-        "uniqueConstraint": "El valor de ({fields}) ya existe",
-        "invalidRelation": "Relacion invalida",
-        "valueTooLong": "Valor demasiado largo",
-        "recordNotFound": "Registro no encontrado",
-        "invalidData": "Datos no validos",
-        "internalFailure": "Falla interna del servidor",
+        "uniqueConstraint": "{fields} {existsVerb}.",
+        "invalidRelation": "Algunos datos relacionados no son validos.",
+        "valueTooLong": "Uno de los campos supera el tamano permitido.",
+        "recordNotFound": "No encontramos el registro solicitado.",
+        "invalidData": "Revisa la informacion enviada.",
+        "internalFailure": "No pudimos procesar la solicitud. Intenta nuevamente mas tarde.",
         "unknownField": "desconocido"
     },
     "socket": {
-        "unauthorized": "No autorizado"
+        "unauthorized": "Tu sesion no es valida. Inicia sesion nuevamente."
     }
 }

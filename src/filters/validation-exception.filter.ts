@@ -20,7 +20,7 @@ export class ValidationExceptionFilter implements ExceptionFilter {
             buildErrorResponse({
                 statusCode: HttpStatus.BAD_REQUEST,
                 code: ERROR_CODES.VALIDATION_ERROR,
-                message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'La solicitud contiene datos invalidos'),
+                message: translateI18n(host, I18N_KEYS.errors.validation.invalidData, 'Revisa la informacion enviada.'),
                 errors,
                 path: request.url,
             })

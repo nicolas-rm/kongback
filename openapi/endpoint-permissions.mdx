@@ -1,0 +1,358 @@
+---
+title: Endpoint Permissions Matrix
+description: Matriz completa de endpoints, permisos, alcance y razon de autorizacion por controller.
+---
+
+## Objetivo
+
+Esta matriz documenta que permiso requiere cada endpoint HTTP del backend, que alcance aplica y por que ese permiso es necesario. La fuente de verdad son los decorators de los controllers:
+
+- `@Public()`: endpoint publico; no requiere JWT.
+- `@Permissions(...)`: permiso RBAC requerido por el `PermissionsGuard`.
+- `@RequireSystemAccess()`: requiere acceso global de sistema (`companyId: null`).
+- `@RequireCompany()`: requiere `X-Company-Id`; el guard valida compania activa y acceso del usuario.
+- `@RequireSystemOrCompanyAccess()`: sin `X-Company-Id` opera con acceso global; con `X-Company-Id` opera dentro de la compania seleccionada.
+
+Los endpoints sin `@Permissions(...)` pero no publicos siguen requiriendo JWT por el guard global de autenticacion. Se usan para flujos propios de sesion, perfil o seguridad donde el usuario solo opera sobre su cuenta.
+
+Cuando un endpoint tiene `@Permissions(...)` pero no declara `@RequireSystemAccess()`, `@RequireCompany()` ni `@RequireSystemOrCompanyAccess()`, el `PermissionsGuard` valida el permiso RBAC con el contexto disponible. Si el request trae `X-Company-Id`, tambien valida la compania y resuelve `companyScope`; si no trae header, el permiso puede cumplirse con accesos activos globales o de compania segun el filtro de accesos.
+
+## Resumen de cobertura
+
+| Tipo de endpoint         | Criterio usado                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Publicos                 | Solo `@Public()`: raiz, health y flujos publicos de autenticacion.                                                     |
+| Autenticados sin RBAC    | Flujos de cuenta propia: perfil, sesiones, logout, 2FA y cambio de contrasena propia.                                  |
+| Autenticados con permiso | Endpoints con `@Permissions(...)` sin scope obligatorio; pueden usar `X-Company-Id` si el cliente selecciona compania. |
+| Sistema                  | Administracion global, catalogos globales, RBAC y proxy tecnico Cardcloud.                                             |
+| Compania                 | Modulos operativos que siempre dependen de `X-Company-Id`.                                                             |
+| Sistema/compania         | Endpoints administrativos mixtos que pueden operar global o dentro de una compania.                                    |
+
+## Permisos de modulo para frontend
+
+Estos permisos no protegen endpoints por si solos. Sirven para que el frontend decida si un usuario puede ver y entrar a un modulo. Las acciones internas deben seguir usando permisos granulares como `users.create`, `users.access.assign`, `cards.update` o `documents.download`.
+
+| Permiso                  | Modulo                   | Alcance recomendado | Uso esperado                                                 |
+| ------------------------ | ------------------------ | ------------------- | ------------------------------------------------------------ |
+| `companies.module`       | Empresas                 | Sistema/compania    | Mostrar entrada al modulo de empresas.                       |
+| `sub-companies.module`   | Subempresas              | Compania            | Mostrar entrada al modulo de subempresas.                    |
+| `drivers.module`         | Conductores              | Compania            | Mostrar entrada al modulo de conductores.                    |
+| `fuels.module`           | Combustibles             | Sistema/compania    | Mostrar entrada al modulo de combustibles.                   |
+| `vehicles.module`        | Vehiculos                | Compania            | Mostrar entrada al modulo de vehiculos.                      |
+| `cards.module`           | Tarjetas                 | Compania            | Mostrar entrada al modulo de tarjetas.                       |
+| `stations.module`        | Estaciones               | Compania            | Mostrar entrada al modulo de estaciones.                     |
+| `station-fuels.module`   | Combustibles de estacion | Compania            | Mostrar entrada a la gestion de combustibles de estacion.    |
+| `cardcloud-stock.module` | Stock Cardcloud          | Sistema/compania    | Mostrar entrada al modulo de stock local Cardcloud.          |
+| `cardcloud.module`       | Cardcloud                | Sistema             | Mostrar entrada al modulo de operaciones externas Cardcloud. |
+| `cardholders.module`     | Tarjetahabientes         | Compania            | Mostrar entrada al modulo administrativo de tarjetahabientes. |
+| `cardholder.module`      | Tarjetahabiente          | Usuario conductor   | Mostrar entrada al modulo propio de tarjetahabiente.         |
+| `users.module`           | Usuarios                 | Sistema/compania    | Mostrar entrada al modulo de usuarios.                       |
+| `roles.module`           | Roles                    | Sistema             | Mostrar entrada al modulo de roles.                          |
+| `permissions.module`     | Permisos                 | Sistema             | Mostrar entrada al modulo de permisos.                       |
+| `documents.module`       | Documentos               | Compania            | Mostrar entrada al modulo de documentos.                     |
+| `notifications.module`   | Notificaciones           | Sistema/compania    | Mostrar entrada al modulo de notificaciones.                 |
+
+## AppController
+
+Base path efectivo: `/api`
+
+| Metodo | Ruta   | Permiso | Alcance | Para que sirve           | Por que se necesita                                                             |
+| ------ | ------ | ------- | ------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `GET`  | `/api` | Ninguno | Publico | Devuelve `Hello World!`. | Endpoint basico/publico de disponibilidad de la app; no expone datos sensibles. |
+
+## AuthenticationController
+
+Base path: `/api/authentication`
+
+| Metodo   | Ruta                                                | Permiso | Alcance                                | Para que sirve                                                              | Por que se necesita                                                                      |
+| -------- | --------------------------------------------------- | ------- | -------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `POST`   | `/api/authentication/login`                         | Ninguno | Publico                                | Inicia sesion con usuario y contrasena.                                     | Debe ser publico porque aun no existe sesion; usa rate limit y validacion interna.       |
+| `POST`   | `/api/authentication/2fa/verify-login`              | Ninguno | Publico                                | Completa login cuando hay 2FA activo.                                       | Debe ser publico porque forma parte del login antes de emitir tokens.                    |
+| `POST`   | `/api/authentication/register`                      | Ninguno | Publico                                | Registra usuario y envia verificacion de email.                             | Es flujo de alta publica; se protege con validacion, unicidad y rate limit.              |
+| `POST`   | `/api/authentication/refresh`                       | Ninguno | Publico                                | Rota refresh token y emite tokens nuevos.                                   | Usa refresh token como credencial; debe poder llamarse cuando el access token ya expiro. |
+| `POST`   | `/api/authentication/logout`                        | Ninguno | Autenticado propio                     | Cierra la sesion actual o revoca sesiones del usuario.                      | Solo afecta sesiones del usuario autenticado; no requiere permiso administrativo.        |
+| `POST`   | `/api/authentication/logout-all`                    | Ninguno | Autenticado propio                     | Revoca todas las sesiones del usuario actual.                               | Es una accion de seguridad propia del usuario.                                           |
+| `GET`    | `/api/authentication/me`                            | Ninguno | Autenticado propio                     | Obtiene perfil del usuario actual.                                          | La identidad propia es necesaria para la UI de sesion; no administra otros usuarios.     |
+| `GET`    | `/api/authentication/companies`                     | Ninguno | Autenticado propio                     | Lista companias disponibles para seleccionar contexto.                      | El backend filtra por accesos del usuario; no expone companias ajenas.                   |
+| `GET`    | `/api/authentication/capabilities`                  | Ninguno | Autenticado propio / contexto opcional | Devuelve permisos efectivos del usuario actual, opcionalmente por compania. | Es el contrato que usa el frontend para renderizar menus y acciones permitidas.          |
+| `POST`   | `/api/authentication/heartbeat`                     | Ninguno | Autenticado propio                     | Confirma que la sesion autenticada sigue activa.                            | Sirve como ping autenticado y participa en la actualizacion de actividad de sesion.      |
+| `PATCH`  | `/api/authentication/me`                            | Ninguno | Autenticado propio                     | Actualiza perfil propio.                                                    | Solo cambia datos del usuario autenticado; no requiere permiso admin.                    |
+| `GET`    | `/api/authentication/sessions`                      | Ninguno | Autenticado propio                     | Lista sesiones activas propias.                                             | Es gestion de seguridad personal.                                                        |
+| `DELETE` | `/api/authentication/sessions/:sessionId`           | Ninguno | Autenticado propio                     | Revoca una sesion propia.                                                   | Solo puede revocar sesiones del usuario autenticado.                                     |
+| `PATCH`  | `/api/authentication/password`                      | Ninguno | Autenticado propio                     | Cambia contrasena propia validando la actual.                               | Requiere identidad y contrasena actual; no es administracion de terceros.                |
+| `POST`   | `/api/authentication/password/reset/request`        | Ninguno | Publico                                | Solicita correo de recuperacion.                                            | Debe iniciar sin sesion; responde de forma uniforme para evitar enumeracion.             |
+| `POST`   | `/api/authentication/password/reset`                | Ninguno | Publico                                | Restablece contrasena con token.                                            | El token de recuperacion autoriza la operacion.                                          |
+| `POST`   | `/api/authentication/email/verification/request`    | Ninguno | Publico                                | Reenvia correo de verificacion.                                             | Debe funcionar antes de que el usuario pueda iniciar sesion.                             |
+| `POST`   | `/api/authentication/email/verification/confirm`    | Ninguno | Publico                                | Confirma email con token.                                                   | El token de verificacion autoriza la operacion.                                          |
+| `GET`    | `/api/authentication/2fa/status`                    | Ninguno | Autenticado propio                     | Consulta estado 2FA propio.                                                 | Es configuracion de seguridad personal.                                                  |
+| `POST`   | `/api/authentication/2fa/setup`                     | Ninguno | Autenticado propio                     | Inicia configuracion 2FA.                                                   | Solo genera secreto pendiente para el usuario actual.                                    |
+| `POST`   | `/api/authentication/2fa/enable`                    | Ninguno | Autenticado propio                     | Habilita 2FA validando codigo TOTP.                                         | Solo afecta seguridad del usuario autenticado.                                           |
+| `POST`   | `/api/authentication/2fa/disable`                   | Ninguno | Autenticado propio                     | Deshabilita 2FA validando codigo TOTP.                                      | Solo afecta seguridad del usuario autenticado.                                           |
+| `POST`   | `/api/authentication/2fa/recovery-codes/regenerate` | Ninguno | Autenticado propio                     | Regenera codigos de recuperacion 2FA.                                       | Solo afecta secretos del usuario actual.                                                 |
+| `DELETE` | `/api/authentication/2fa/reset`                     | Ninguno | Autenticado propio                     | Resetea 2FA del usuario actual.                                             | Accion de seguridad propia, permitida aun con `mustChangePassword`.                      |
+
+## UsersController
+
+Base path: `/api/users`
+
+| Metodo   | Ruta                                | Permiso                    | Alcance          | Para que sirve                                   | Por que se necesita                                                            |
+| -------- | ----------------------------------- | -------------------------- | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `POST`   | `/api/users`                        | `users.create`             | Sistema/compania | Crea usuarios, opcionalmente con acceso inicial. | Crear cuentas afecta identidad y accesos; requiere permiso explicito.          |
+| `GET`    | `/api/users`                        | `users.read-list`          | Sistema/compania | Lista usuarios con filtros y paginacion.         | Expone datos de usuarios; debe limitarse a administradores autorizados.        |
+| `GET`    | `/api/users/:id`                    | `users.read-one`           | Sistema/compania | Consulta un usuario por ID.                      | Ver detalle de usuario requiere autorizacion y scope correcto.                 |
+| `PATCH`  | `/api/users/:id`                    | `users.update`             | Sistema          | Actualiza datos base de un usuario.              | Cambia identidad/estado global del usuario; requiere acceso de sistema.        |
+| `DELETE` | `/api/users/:id`                    | `users.delete`             | Sistema          | Elimina usuario.                                 | Es accion destructiva sobre identidad global.                                  |
+| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Sistema/compania | Lista accesos activos del usuario.               | Los accesos determinan permisos; su consulta debe estar controlada.            |
+| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Sistema/compania | Lista permisos efectivos del usuario.            | Expone capacidad operativa del usuario; requiere permiso especifico.           |
+| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Sistema/compania | Agrega un acceso/rol al usuario.                 | Asignar accesos concede permisos; requiere permiso fuerte.                     |
+| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Sistema/compania | Reemplaza accesos del usuario.                   | Reemplazar accesos puede elevar o revocar privilegios.                         |
+| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Sistema/compania | Elimina un acceso puntual.                       | Modifica autorizacion del usuario; usa el mismo permiso de asignacion.         |
+| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Sistema          | Cambia contrasena de otro usuario.               | Operacion sensible de identidad; requiere acceso global.                       |
+| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Sistema          | Desvincula 2FA de un usuario.                    | Reduce una proteccion de seguridad; requiere permiso dedicado.                 |
+| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Sistema          | Regenera y envia credenciales temporales.        | Cambia contrasena y dispara correo; debe limitarse a administradores globales. |
+
+## RolesController
+
+Base path: `/api/roles`
+
+| Metodo   | Ruta                         | Permiso                    | Alcance | Para que sirve                | Por que se necesita                                                   |
+| -------- | ---------------------------- | -------------------------- | ------- | ----------------------------- | --------------------------------------------------------------------- |
+| `POST`   | `/api/roles`                 | `roles.create`             | Sistema | Crea un rol.                  | Los roles agrupan permisos; solo administracion global debe crearlos. |
+| `GET`    | `/api/roles`                 | `roles.read-list`          | Sistema | Lista roles.                  | Expone estructura RBAC global.                                        |
+| `GET`    | `/api/roles/:id`             | `roles.read-one`           | Sistema | Consulta detalle de rol.      | Permite inspeccionar RBAC global.                                     |
+| `PATCH`  | `/api/roles/:id`             | `roles.update`             | Sistema | Actualiza rol.                | Cambia etiquetas/codigos usados para accesos.                         |
+| `DELETE` | `/api/roles/:id`             | `roles.delete`             | Sistema | Elimina rol.                  | Puede romper o remover autorizaciones.                                |
+| `PUT`    | `/api/roles/:id/permissions` | `roles.permissions.assign` | Sistema | Reemplaza permisos de un rol. | Modifica capacidades de todos los usuarios con ese rol.               |
+| `GET`    | `/api/roles/:id/permissions` | `roles.permissions.read`   | Sistema | Lista permisos de un rol.     | Expone composicion de privilegios globales.                           |
+
+## PermissionsController
+
+Base path: `/api/permissions`
+
+| Metodo   | Ruta                   | Permiso                 | Alcance | Para que sirve                 | Por que se necesita                                                        |
+| -------- | ---------------------- | ----------------------- | ------- | ------------------------------ | -------------------------------------------------------------------------- |
+| `POST`   | `/api/permissions`     | `permissions.create`    | Sistema | Crea permiso en catalogo RBAC. | El catalogo controla guards del backend; es administracion tecnica global. |
+| `GET`    | `/api/permissions`     | `permissions.read-list` | Sistema | Lista permisos.                | Expone catalogo tecnico de capacidades.                                    |
+| `GET`    | `/api/permissions/:id` | `permissions.read-one`  | Sistema | Consulta permiso por ID.       | Permite diagnosticar o editar catalogo RBAC.                               |
+| `PATCH`  | `/api/permissions/:id` | `permissions.update`    | Sistema | Actualiza permiso.             | Cambiar codigos/nombres afecta autorizacion.                               |
+| `DELETE` | `/api/permissions/:id` | `permissions.delete`    | Sistema | Elimina permiso.               | Puede retirar capacidades de roles.                                        |
+
+## CompaniesController
+
+Base path: `/api/companies`
+
+| Metodo   | Ruta                 | Permiso               | Alcance                 | Para que sirve                                          | Por que se necesita                                                    |
+| -------- | -------------------- | --------------------- | ----------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `POST`   | `/api/companies`     | `companies.create`    | Sistema                 | Crea compania y subcompania default ligada a Cardcloud. | Crear tenants/clientes es administracion global.                       |
+| `GET`    | `/api/companies`     | `companies.read-list` | Autenticado con permiso | Lista companias accesibles para el usuario.             | Expone catalogo de tenants; el servicio filtra por acceso del usuario. |
+| `GET`    | `/api/companies/:id` | `companies.read-one`  | Autenticado con permiso | Consulta una compania.                                  | Debe validar que el usuario pueda ver esa compania.                    |
+| `PATCH`  | `/api/companies/:id` | `companies.update`    | Sistema                 | Actualiza compania.                                     | Modifica datos del tenant global.                                      |
+| `DELETE` | `/api/companies/:id` | `companies.delete`    | Sistema                 | Desactiva compania.                                     | Desactivar un tenant impacta modulos operativos.                       |
+
+## SubCompaniesController
+
+Base path: `/api/sub-companies`
+
+| Metodo   | Ruta                                       | Permiso                   | Alcance  | Para que sirve                                    | Por que se necesita                                                                              |
+| -------- | ------------------------------------------ | ------------------------- | -------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST`   | `/api/sub-companies`                       | `sub-companies.create`    | Compania | Crea subcompania y subcuenta Cardcloud.           | Crea unidad operativa dentro de la compania seleccionada.                                        |
+| `GET`    | `/api/sub-companies`                       | `sub-companies.read-list` | Compania | Lista subcompanias visibles.                      | Expone estructura operativa de la compania.                                                      |
+| `GET`    | `/api/sub-companies/:id/drivers/download`  | `drivers.download`        | Compania | Descarga conductores de una subcompania en Excel. | Exporta datos operativos de conductores; requiere permiso de descarga del modulo de conductores. |
+| `GET`    | `/api/sub-companies/:id/vehicles/download` | `vehicles.download`       | Compania | Descarga vehiculos de una subcompania en Excel.   | Exporta datos operativos de flotilla; requiere permiso de descarga del modulo de vehiculos.      |
+| `GET`    | `/api/sub-companies/:id/cards/download`    | `cards.download`          | Compania | Descarga tarjetas de una subcompania en Excel.    | Exporta inventario operativo de tarjetas; requiere permiso de descarga del modulo de tarjetas.   |
+| `GET`    | `/api/sub-companies/:id`                   | `sub-companies.read-one`  | Compania | Consulta una subcompania.                         | Debe respetar compania y scope por subcompania.                                                  |
+| `PATCH`  | `/api/sub-companies/:id`                   | `sub-companies.update`    | Compania | Actualiza subcompania.                            | Cambia datos operativos de una unidad visible.                                                   |
+| `DELETE` | `/api/sub-companies/:id`                   | `sub-companies.delete`    | Compania | Desactiva subcompania.                            | Accion destructiva dentro del tenant.                                                            |
+
+## DriversController
+
+Base path: `/api/drivers`
+
+| Metodo   | Ruta                        | Permiso                      | Alcance  | Para que sirve                                        | Por que se necesita                                          |
+| -------- | --------------------------- | ---------------------------- | -------- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| `POST`   | `/api/drivers`              | `drivers.create`             | Compania | Crea conductor.                                       | Agrega entidad operativa dentro de la compania/subcompania.  |
+| `GET`    | `/api/drivers`              | `drivers.read-list`          | Compania | Lista conductores.                                    | Expone datos operativos de personal/conductores.             |
+| `GET`    | `/api/drivers/:id/vehicles` | `drivers.vehicles.read-list` | Compania | Lista vehiculos actualmente asignados a un conductor. | Expone relaciones operativas del conductor dentro del scope. |
+| `GET`    | `/api/drivers/:id`          | `drivers.read-one`           | Compania | Consulta conductor.                                   | Debe validar scope de compania/subcompania.                  |
+| `PATCH`  | `/api/drivers/:id`          | `drivers.update`             | Compania | Actualiza conductor.                                  | Cambia datos operativos y posible usuario vinculado.         |
+| `DELETE` | `/api/drivers/:id`          | `drivers.delete`             | Compania | Desactiva conductor.                                  | Accion destructiva en catalogo operativo.                    |
+
+## VehiclesController
+
+Base path: `/api/vehicles`
+
+| Metodo   | Ruta                        | Permiso                      | Alcance  | Para que sirve                                      | Por que se necesita                                                    |
+| -------- | --------------------------- | ---------------------------- | -------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `POST`   | `/api/vehicles`             | `vehicles.create`            | Compania | Crea vehiculo.                                      | Agrega activo operativo dentro de la compania.                         |
+| `GET`    | `/api/vehicles`             | `vehicles.read-list`         | Compania | Lista vehiculos.                                    | Expone flotilla visible por scope.                                     |
+| `GET`    | `/api/vehicles/:id/drivers` | `vehicles.drivers.read-list` | Compania | Lista conductor actualmente asignado a un vehiculo. | Expone relaciones operativas de flotilla dentro del scope.             |
+| `GET`    | `/api/vehicles/:id`         | `vehicles.read-one`          | Compania | Consulta vehiculo.                                  | Debe validar que el vehiculo pertenezca al scope.                      |
+| `PATCH`  | `/api/vehicles/:id/driver`  | `vehicles.driver.assign`     | Compania | Asigna o quita conductor.                           | Modifica una relacion operativa especifica y sensible para uso diario. |
+| `PATCH`  | `/api/vehicles/:id`         | `vehicles.update`            | Compania | Actualiza vehiculo.                                 | Cambia datos de flotilla y relaciones.                                 |
+| `DELETE` | `/api/vehicles/:id`         | `vehicles.delete`            | Compania | Desactiva vehiculo.                                 | Accion destructiva del catalogo de flotilla.                           |
+
+## CardsController
+
+Base path: `/api/cards`
+
+| Metodo   | Ruta                                      | Permiso                     | Alcance  | Para que sirve                                                | Por que se necesita                                               |
+| -------- | ----------------------------------------- | --------------------------- | -------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `POST`   | `/api/cards`                              | `cards.create`              | Compania | Crea tarjeta local.                                           | Agrega instrumento operativo asociado a subcompania/vehiculo.     |
+| `GET`    | `/api/cards`                              | `cards.read-list`           | Compania | Lista tarjetas.                                               | Expone inventario de tarjetas dentro del scope.                   |
+| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`    | Compania | Lista tarjetas por combustible de diseno.                     | Consulta especializada para asignaciones/seleccion filtrada.      |
+| `POST`   | `/api/cards/assign-sub-company`           | `cards.create`              | Compania | Asigna tarjetas Cardcloud a subcompania y sincroniza locales. | Crea/mueve tarjetas locales; usa permiso de creacion de tarjetas. |
+| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                | Compania | Sincroniza tarjetas de una subcompania desde Cardcloud.       | Actualiza inventario local desde proveedor externo.               |
+| `POST`   | `/api/cards/validate`                     | `cards.validate`            | Compania | Valida una tarjeta local contra Cardcloud.                    | Usa datos sensibles del proveedor para confirmar propiedad/uso.   |
+| `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list` | Compania | Lista movimientos externos de una tarjeta local.              | Expone actividad de tarjeta despues de validar scope local.       |
+| `GET`    | `/api/cards/:id`                          | `cards.read-one`            | Compania | Consulta tarjeta.                                             | Debe validar pertenencia al scope.                                |
+| `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`   | Compania | Actualiza asignacion operativa de tarjeta.                    | Modifica relacion tarjeta-vehiculo o libera la tarjeta.           |
+| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`      | Compania | Asigna tarjeta a vehiculo.                                    | Modifica relacion operativa entre tarjeta y vehiculo.             |
+| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`            | Compania | Quita asignacion de tarjeta.                                  | Libera una tarjeta para reasignacion; requiere accion explicita.  |
+| `PATCH`  | `/api/cards/:id`                          | `cards.update`              | Compania | Actualiza tarjeta.                                            | Cambia datos de tarjeta, combustible de diseno o estado.          |
+| `DELETE` | `/api/cards/:id`                          | `cards.delete`              | Compania | Desactiva tarjeta.                                            | Accion destructiva sobre instrumento operativo.                   |
+
+## FuelsController
+
+Base path: `/api/fuels`
+
+| Metodo   | Ruta             | Permiso           | Alcance                 | Para que sirve           | Por que se necesita                                         |
+| -------- | ---------------- | ----------------- | ----------------------- | ------------------------ | ----------------------------------------------------------- |
+| `POST`   | `/api/fuels`     | `fuels.create`    | Sistema                 | Crea combustible global. | Catalogo global usado por vehiculos, tarjetas y estaciones. |
+| `GET`    | `/api/fuels`     | `fuels.read-list` | Autenticado con permiso | Lista combustibles.      | Se usa como catalogo de referencia para modulos operativos. |
+| `GET`    | `/api/fuels/:id` | `fuels.read-one`  | Autenticado con permiso | Consulta combustible.    | Permite validar/mostrar catalogo global.                    |
+| `PATCH`  | `/api/fuels/:id` | `fuels.update`    | Sistema                 | Actualiza combustible.   | Cambia catalogo global compartido.                          |
+| `DELETE` | `/api/fuels/:id` | `fuels.delete`    | Sistema                 | Desactiva combustible.   | Impacta disponibilidad en relaciones operativas.            |
+
+## StationsController
+
+Base path: `/api/stations`
+
+| Metodo   | Ruta                | Permiso              | Alcance  | Para que sirve      | Por que se necesita                                  |
+| -------- | ------------------- | -------------------- | -------- | ------------------- | ---------------------------------------------------- |
+| `POST`   | `/api/stations`     | `stations.create`    | Compania | Crea estacion.      | Agrega punto operativo dentro del scope.             |
+| `GET`    | `/api/stations`     | `stations.read-list` | Compania | Lista estaciones.   | Expone estaciones visibles por compania/subcompania. |
+| `GET`    | `/api/stations/:id` | `stations.read-one`  | Compania | Consulta estacion.  | Debe validar pertenencia al scope.                   |
+| `PATCH`  | `/api/stations/:id` | `stations.update`    | Compania | Actualiza estacion. | Cambia datos operativos y ubicacion.                 |
+| `DELETE` | `/api/stations/:id` | `stations.delete`    | Compania | Desactiva estacion. | Accion destructiva del catalogo operativo.           |
+
+## StationFuelsController
+
+Base path: `/api/station-fuels`
+
+| Metodo   | Ruta                     | Permiso                   | Alcance  | Para que sirve                                 | Por que se necesita                                |
+| -------- | ------------------------ | ------------------------- | -------- | ---------------------------------------------- | -------------------------------------------------- |
+| `POST`   | `/api/station-fuels`     | `station-fuels.create`    | Compania | Crea o reactiva relacion estacion-combustible. | Define combustibles disponibles en una estacion.   |
+| `GET`    | `/api/station-fuels`     | `station-fuels.read-list` | Compania | Lista relaciones estacion-combustible.         | Alimenta seccion de combustibles de una estacion.  |
+| `GET`    | `/api/station-fuels/:id` | `station-fuels.read-one`  | Compania | Consulta una relacion.                         | Debe validar que la estacion sea visible.          |
+| `PATCH`  | `/api/station-fuels/:id` | `station-fuels.update`    | Compania | Actualiza estado de la relacion.               | Controla disponibilidad operativa del combustible. |
+| `DELETE` | `/api/station-fuels/:id` | `station-fuels.delete`    | Compania | Desactiva relacion.                            | Quita combustible de la operacion de una estacion. |
+
+## CardcloudStockController
+
+Base path: `/api/cardcloud-stock`
+
+| Metodo  | Ruta                                            | Permiso                                | Alcance          | Para que sirve                                  | Por que se necesita                                                                           |
+| ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock Cardcloud.          | Expone inventario financiero/operativo sincronizado sin llamar al proveedor en cada consulta. |
+| `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local global desde Cardcloud. | Accion tecnica global sobre inventario del proveedor.                                         |
+| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock local a subcompania.               | Ubica tarjeta de proveedor en una operacion local.                                            |
+| `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita subcompania del stock local.              | Libera stock local sin llamar al proveedor externo.                                           |
+
+## CardcloudController
+
+Base path: `/api/cardcloud`
+
+| Metodo  | Ruta                                         | Permiso                                     | Alcance | Para que sirve                                  | Por que se necesita                                                     |
+| ------- | -------------------------------------------- | ------------------------------------------- | ------- | ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `GET`   | `/api/cardcloud/account`                     | `cardcloud.account.read-one`                | Sistema | Consulta cuenta Cardcloud.                      | Expone informacion global del proveedor.                                |
+| `GET`   | `/api/cardcloud/account/movements`           | `cardcloud.account.movements.read-list`     | Sistema | Lista movimientos de cuenta Cardcloud.          | Expone movimientos financieros/globales del proveedor.                  |
+| `POST`  | `/api/cardcloud/account/transfer`            | `cardcloud.account.transfer`                | Sistema | Ejecuta transferencia Cardcloud.                | Mueve fondos; requiere permiso critico global.                          |
+| `POST`  | `/api/cardcloud/account/transfer-bulk`       | `cardcloud.account.transfer.bulk`           | Sistema | Ejecuta transferencias en lote.                 | Puede mover fondos masivamente.                                         |
+| `GET`   | `/api/cardcloud/account/transfer-bulk-excel` | `cardcloud.account.transfer.bulk`           | Sistema | Descarga plantilla Excel de fondeo masivo.      | Facilita cargas masivas; usa el mismo permiso critico de transferencia. |
+| `POST`  | `/api/cardcloud/account/transfer-bulk-excel` | `cardcloud.account.transfer.bulk`           | Sistema | Procesa fondeo masivo desde Excel.              | Ejecuta movimientos masivos de fondos desde archivo validado.           |
+| `POST`  | `/api/cardcloud/account/cards/assign`        | `cardcloud.cards.assign`                    | Sistema | Asigna tarjetas por tipo/cantidad en Cardcloud. | Accion directa contra proveedor externo.                                |
+| `POST`  | `/api/cardcloud/account/cards/assign-bulk`   | `cardcloud.cards.assign.bulk`               | Sistema | Asigna tarjetas especificas en Cardcloud.       | Accion masiva directa contra proveedor externo.                         |
+| `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema | Consulta detalle externo de tarjeta.            | Expone datos del proveedor para una tarjeta.                            |
+| `GET`   | `/api/cardcloud/cards/:uuid/movements`       | `cardcloud.cards.movements.read-list`       | Sistema | Lista movimientos externos de tarjeta.          | Expone actividad financiera/operativa de tarjeta.                       |
+| `GET`   | `/api/cardcloud/cards/movement/:uuid`        | `cardcloud.cards.movements.read-one`        | Sistema | Consulta detalle de movimiento externo.         | Expone detalle de transaccion/movimiento.                               |
+| `GET`   | `/api/cardcloud/cards/:uuid/sensitive`       | `cardcloud.cards.sensitive.read-one`        | Sistema | Consulta datos sensibles de tarjeta.            | Es informacion altamente sensible; requiere permiso dedicado.           |
+| `GET`   | `/api/cardcloud/cards/:uuid/cvv`             | `cardcloud.cards.cvv.read`                  | Sistema | Consulta CVV temporal.                          | Expone dato sensible de pago; requiere permiso dedicado.                |
+| `PATCH` | `/api/cardcloud/cards/:uuid/nip`             | `cardcloud.cards.nip.update`                | Sistema | Actualiza NIP de tarjeta.                       | Modifica credencial de tarjeta.                                         |
+| `POST`  | `/api/cardcloud/cards/validate`              | `cardcloud.cards.validate`                  | Sistema | Valida tarjeta contra Cardcloud.                | Usa datos de tarjeta/PIN; debe estar restringido.                       |
+| `POST`  | `/api/cardcloud/cards/:uuid/block`           | `cardcloud.cards.block`                     | Sistema | Bloquea tarjeta en Cardcloud.                   | Cambia disponibilidad de tarjeta en proveedor.                          |
+| `POST`  | `/api/cardcloud/cards/:uuid/unblock`         | `cardcloud.cards.unblock`                   | Sistema | Desbloquea tarjeta en Cardcloud.                | Cambia disponibilidad de tarjeta en proveedor.                          |
+| `GET`   | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.read-list`           | Sistema/compania | Lista subcuentas Cardcloud.              | Sin compania expone proxy global; con compania filtra solo subcuentas vinculadas localmente. |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid`           | `cardcloud.subaccounts.read-one`            | Sistema/compania | Consulta subcuenta Cardcloud.            | Con compania valida que la subcuenta externa este vinculada a una subcompania local visible. |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/cards`     | `cardcloud.subaccounts.cards.read-list`     | Sistema/compania | Lista tarjetas de subcuenta Cardcloud.   | Con compania valida pertenencia local antes de consultar tarjetas externas.                  |
+| `POST`  | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.create`              | Sistema | Crea subcuenta Cardcloud.                       | Modifica estructura del proveedor; normalmente lo usan flujos internos. |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/movements` | `cardcloud.subaccounts.movements.read-list` | Sistema/compania | Lista movimientos de subcuenta.          | Con compania valida pertenencia local antes de consultar movimientos externos.               |
+
+## CardholdersController
+
+Base path: `/api/cardholders`
+
+| Metodo | Ruta               | Permiso                 | Alcance  | Para que sirve                                      | Por que se necesita                                                         |
+| ------ | ------------------ | ----------------------- | -------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| `GET`  | `/api/cardholders` | `cardholders.read-list` | Compania | Lista usuarios con perfil tarjetahabiente.          | Permite administrar altas incompletas y validar conductor/vehiculo/tarjeta. |
+
+## CardholderController
+
+Base path: `/api/cardholder`
+
+Estos endpoints no usan `X-Company-Id`. El permiso RBAC permite entrar o ejecutar la accion, pero el alcance real se resuelve por `User.id -> Driver.userId -> Vehicle.driverId -> Card.vehicleId`. Para alta administrativa, el acceso recomendado del rol tarjetahabiente es `scopeKey: "subCompanyId"` con `scopeId` de la subcompania del conductor.
+
+| Metodo  | Ruta                                      | Permiso                                | Alcance                       | Para que sirve                                    | Por que se necesita                                                            |
+| ------- | ----------------------------------------- | -------------------------------------- | ----------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET`   | `/api/cardholder/me`                      | `cardholder.profile.read`              | Tarjetahabiente autenticado   | Consulta perfil propio y conductor vinculado.     | Expone datos propios del usuario conductor sin requerir contexto de compania.  |
+| `GET`   | `/api/cardholder/sub-company`             | `cardholder.sub-companies.read-one`    | Tarjetahabiente autenticado   | Consulta subcompania asociada al conductor.       | Permite mostrar contexto operativo propio sin exponer otras subcompanias.      |
+| `GET`   | `/api/cardholder/vehicles`                | `cardholder.vehicles.read-list`        | Tarjetahabiente autenticado   | Lista vehiculos asignados al conductor.           | El backend limita por `Driver.userId` y `Vehicle.driverId`.                    |
+| `GET`   | `/api/cardholder/cards`                   | `cardholder.cards.read-list`           | Tarjetahabiente autenticado   | Lista tarjetas asignadas a vehiculos del conductor. | Expone solo tarjetas propias disponibles para operacion del conductor.         |
+| `POST`  | `/api/cardholder/cards/validate`          | `cardholder.cards.validate`            | Tarjetahabiente autenticado   | Valida una tarjeta propia contra Cardcloud.       | Usa NIP/vigencia; requiere permiso dedicado y propiedad local validada.        |
+| `GET`   | `/api/cardholder/cards/:cardId`           | `cardholder.cards.read-one`            | Tarjetahabiente autenticado   | Consulta una tarjeta propia.                      | Debe validar que la tarjeta pertenezca al conductor autenticado.               |
+| `POST`  | `/api/cardholder/cards/:cardId/off`       | `cardholder.cards.power.off`           | Tarjetahabiente autenticado   | Bloquea una tarjeta propia en Cardcloud.          | Cambia disponibilidad de una tarjeta; solo procede sobre tarjetas propias.     |
+| `POST`  | `/api/cardholder/cards/:cardId/on`        | `cardholder.cards.power.on`            | Tarjetahabiente autenticado   | Desbloquea una tarjeta propia en Cardcloud.       | Cambia disponibilidad de una tarjeta; solo procede sobre tarjetas propias.     |
+| `GET`   | `/api/cardholder/cards/:cardId/movements` | `cardholder.cards.movements.read-list` | Tarjetahabiente autenticado   | Lista movimientos externos de tarjeta propia.     | Expone actividad financiera de la tarjeta despues de validar propiedad local.  |
+| `GET`   | `/api/cardholder/cards/:cardId/sensitive` | `cardholder.cards.sensitive.read-one`  | Tarjetahabiente autenticado   | Consulta datos sensibles de tarjeta propia.       | Expone datos sensibles; requiere permiso dedicado y accion explicita.          |
+| `PATCH` | `/api/cardholder/cards/:cardId/nip`       | `cardholder.cards.nip.update`          | Tarjetahabiente autenticado   | Actualiza NIP de una tarjeta propia.              | Modifica credencial de tarjeta; requiere permiso dedicado y propiedad local.   |
+
+## DocumentsController
+
+Base path: `/api/documents`
+
+| Metodo   | Ruta                          | Permiso               | Alcance  | Para que sirve                             | Por que se necesita                           |
+| -------- | ----------------------------- | --------------------- | -------- | ------------------------------------------ | --------------------------------------------- |
+| `POST`   | `/api/documents`              | `documents.create`    | Compania | Sube y registra documento.                 | Crea archivo y metadata dentro del scope.     |
+| `GET`    | `/api/documents`              | `documents.read-list` | Compania | Lista documentos activos.                  | Expone adjuntos/metadata del scope.           |
+| `GET`    | `/api/documents/:id/download` | `documents.download`  | Compania | Descarga archivo.                          | Acceso al binario requiere permiso separado.  |
+| `GET`    | `/api/documents/:id`          | `documents.read-one`  | Compania | Consulta metadata de documento.            | Permite ver detalle sin descargar archivo.    |
+| `PATCH`  | `/api/documents/:id`          | `documents.update`    | Compania | Actualiza metadata editable.               | Cambia titulo, descripcion o categoria.       |
+| `DELETE` | `/api/documents/:id`          | `documents.delete`    | Compania | Soft delete y elimina archivo del storage. | Accion destructiva sobre documento y archivo. |
+
+## NotificationsController
+
+Base paths: `/api/notifications` y `/api/me/notifications`
+
+| Metodo  | Ruta                                 | Permiso                           | Alcance                 | Para que sirve                                      | Por que se necesita                                       |
+| ------- | ------------------------------------ | --------------------------------- | ----------------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| `POST`  | `/api/notifications`                 | `notifications.create`            | Sistema/compania        | Crea notificacion para usuario activo.              | Permite enviar mensajes administrativos a otros usuarios. |
+| `GET`   | `/api/me/notifications`              | `notifications.read-list`         | Autenticado con permiso | Lista notificaciones propias.                       | Controla si el usuario puede ver bandeja/notificaciones.  |
+| `GET`   | `/api/me/notifications/unread-count` | `notifications.unread-count.read` | Autenticado con permiso | Cuenta no leidas propias.                           | Permite badge/contador sin exponer listado completo.      |
+| `PATCH` | `/api/me/notifications/read-all`     | `notifications.mark-read-all`     | Autenticado con permiso | Marca todas las notificaciones propias como leidas. | Modifica estado de lectura de la bandeja del usuario.     |
+| `PATCH` | `/api/me/notifications/:id/read`     | `notifications.mark-read`         | Autenticado con permiso | Marca una notificacion propia como leida.           | Modifica estado de una notificacion personal.             |
+
+## HealthController
+
+Base path: `/api/health`
+
+| Metodo | Ruta          | Permiso | Alcance | Para que sirve                              | Por que se necesita                                |
+| ------ | ------------- | ------- | ------- | ------------------------------------------- | -------------------------------------------------- |
+| `GET`  | `/api/health` | Ninguno | Publico | Verifica salud del backend y base de datos. | Endpoint de monitoreo, no expone datos operativos. |
+
+## Observaciones
+
+- Los endpoints `Publico` no requieren JWT ni permisos RBAC.
+- Los endpoints `Autenticado propio` no usan permisos porque solo operan sobre recursos del usuario actual.
+- Los endpoints `Sistema` requieren acceso global y no deben depender de `X-Company-Id`.
+- Los endpoints `Compania` requieren `X-Company-Id`; el guard valida compania activa, acceso del usuario y scope por subcompania cuando aplica.
+- Los endpoints `Sistema/compania` son mixtos: sin header operan globalmente; con header se limitan a la compania seleccionada.
+- Los permisos de Cardcloud proxy son granulares porque algunos endpoints consultan datos sensibles o ejecutan operaciones contra el proveedor externo.

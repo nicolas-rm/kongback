@@ -1,0 +1,142 @@
+---
+title: Cardholders API
+description: Endpoint administrativo para consultar usuarios con perfil tarjetahabiente.
+---
+
+## Base
+
+Base path: `/api/cardholders`
+
+Este modulo es administrativo y plural. No debe confundirse con `/api/cardholder`, que es el portal propio del tarjetahabiente autenticado.
+
+## Alcance por compania
+
+Requiere header `X-Company-Id: <companyId>`. El listado queda limitado a usuarios con acceso `cardholder.*` dentro de esa compania. Si el usuario autenticado tiene alcance `scopeKey: "subCompanyId"`, solo ve tarjetahabientes de sus subcompanias permitidas.
+
+## Endpoints
+
+| Metodo | Ruta                | Permiso                  | Descripcion                                      |
+| ------ | ------------------- | ------------------------ | ------------------------------------------------ |
+| `GET`  | `/api/cardholders`  | `cardholders.read-list`  | Lista usuarios con perfil tarjetahabiente.       |
+
+## Listar tarjetahabientes
+
+`GET /api/cardholders`
+
+Query params:
+
+| Campo          | Tipo      | Requerido | Descripcion                                                                 |
+| -------------- | --------- | --------- | --------------------------------------------------------------------------- |
+| `page`         | `number`  | No        | Pagina. Default `1`.                                                        |
+| `limit`        | `number`  | No        | Registros por pagina. Maximo `100`.                                         |
+| `search`       | `string`  | No        | Busca por usuario, correo, nombre, conductor o subcompania.                 |
+| `all`          | `boolean` | No        | Devuelve hasta `100` registros.                                             |
+| `status`       | `Status`  | No        | Filtra por estatus del usuario.                                             |
+| `subCompanyId` | `uuid`    | No        | Filtra tarjetahabientes con acceso a una subcompania especifica.            |
+| `hasDriver`    | `boolean` | No        | `true` solo vinculados a conductor; `false` solo sin conductor visible.      |
+| `hasCards`     | `boolean` | No        | `true` solo con tarjetas vinculadas; `false` solo sin tarjetas visibles.     |
+
+Response `200`:
+
+```json
+{
+    "data": [
+        {
+            "id": "user-id",
+            "username": "juan.perez",
+            "email": "juan@example.com",
+            "fullName": "Juan Perez",
+            "status": "active",
+            "isOperational": true,
+            "counts": {
+                "vehicles": 1,
+                "cards": 1
+            },
+            "accesses": [
+                {
+                    "id": "access-id",
+                    "companyId": "company-id",
+                    "scopeKey": "subCompanyId",
+                    "scopeId": "sub-company-id",
+                    "role": {
+                        "id": "role-id",
+                        "code": "cardholder",
+                        "name": "Tarjetahabiente"
+                    }
+                }
+            ],
+            "driver": {
+                "id": "driver-id",
+                "subCompanyId": "sub-company-id",
+                "name": "Juan Perez",
+                "externalReference": null,
+                "status": "active",
+                "subCompany": {
+                    "id": "sub-company-id",
+                    "companyId": "company-id",
+                    "key": "SUB001",
+                    "cardcloudSubaccountId": "cardcloud-subaccount-id",
+                    "name": "Sucursal Norte",
+                    "status": "active"
+                }
+            },
+            "vehicles": [
+                {
+                    "id": "vehicle-id",
+                    "subCompanyId": "sub-company-id",
+                    "plates": "ABC123A",
+                    "economicNumber": "ECO-001",
+                    "status": "active",
+                    "card": {
+                        "id": "card-id",
+                        "externalId": "cardcloud-card-id",
+                        "status": "active",
+                        "stock": {
+                            "id": "stock-id",
+                            "maskedPan": "XXXXXXXXXXXX1001",
+                            "clientId": "CLIENT-001",
+                            "providerStatus": "active"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "page": 1,
+        "limit": 10,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
+## Reglas
+
+- El endpoint lista usuarios con accesos cuyo rol tenga permisos `cardholder.*`.
+- `isOperational` es `true` solo cuando el usuario tiene conductor visible, al menos un vehiculo visible y al menos una tarjeta visible.
+- Un usuario puede tener rol tarjetahabiente y aun no estar operativo si falta vincular `Driver.userId`, vehiculo o tarjeta.
+- No retorna datos sensibles de tarjeta, NIP, CVV, PAN completo, hashes ni tokens.
+
+## Notas para frontend
+
+Usa este endpoint para la pantalla administrativa de tarjetahabientes. Para la experiencia propia del usuario tarjetahabiente, usa `/api/cardholder/*`.
+
+Campos visibles recomendados:
+
+- Usuario: `fullName`, `email`, `status`.
+- Conductor: `driver.name`.
+- Subcompania: `driver.subCompany.name` o `driver.subCompany.key`.
+- Operativo: derivar de `isOperational`.
+- Vehiculos: `counts.vehicles`.
+- Tarjetas: `counts.cards`.
+
+Filtros recomendados:
+
+- Busqueda libre con `search`.
+- Subcompania con `subCompanyId`.
+- Pendientes de configurar con `hasDriver=false` o `hasCards=false`.
+
+No muestres `scopeKey`, `scopeId`, `companyId` ni `cardcloudSubaccountId` como campos editables. Son datos tecnicos para relacionar accesos y subcuentas.

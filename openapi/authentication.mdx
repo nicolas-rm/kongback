@@ -11,6 +11,20 @@ La API soporta autenticacion con cookies HttpOnly y tambien acepta `Authorizatio
 
 Para frontend web con cookies, usa requests con credenciales incluidas. Las mutaciones autenticadas con cookies requieren `Origin` o `Referer` permitido por la proteccion CSRF. Si se usa `Authorization: Bearer`, la proteccion CSRF no aplica.
 
+## Tiempos de tokens y sesiones
+
+Los tiempos son configurables por ambiente. Estos son los defaults actuales del backend:
+
+| Concepto                         | Default | Configuracion                      | Uso                                                                                                  |
+| -------------------------------- | ------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Access token                     | `15m`   | `JWT_ACCESS_EXPIRES_IN`            | Vigencia del JWT usado en requests autenticados. Tambien aparece como `exp` en el payload.          |
+| Refresh token                    | `7d`    | `JWT_REFRESH_EXPIRES_IN`           | Vigencia maxima del JWT usado para renovar tokens. Se rota en cada `POST /api/authentication/refresh`. |
+| Inactividad de sesion            | `60m`   | `SESSION_IDLE_TIMEOUT_MINUTES`     | Ventana sin actividad permitida antes de invalidar la sesion. Se expone como `idleExpiresAt`.        |
+| Duracion total de sesion         | `7d`    | `SESSION_TOTAL_MINUTES`            | Limite absoluto de vida de la sesion aunque tenga actividad. Se expone como `expiresAt`.             |
+| Actualizacion de actividad       | `30s`   | `SESSION_TOUCH_INTERVAL_SECONDS`   | Intervalo minimo para refrescar `lastActivityAt` e `idleExpiresAt` durante requests autenticados.    |
+
+Una sesion deja de ser valida si fue revocada, si vence `expiresAt`, si vence `idleExpiresAt`, si el refresh token expiro o si el refresh token fue reutilizado despues de rotarse. Cuando esto ocurre, los endpoints protegidos o `refresh` responden `401` y el frontend debe limpiar el estado local de autenticacion.
+
 ## Modelos
 
 ### TokenResponse
@@ -29,6 +43,41 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 | `refreshToken` | `string` | JWT usado para renovar sesion. Tambien se guarda en cookie `refresh_token`.     |
 | `sessionId`    | `string` | UUID v4 de la sesion activa.                                                    |
 
+### JWT payload
+
+El `accessToken` es un JWT firmado por el backend. Si el frontend lo decodifica, puede leer estos campos:
+
+```json
+{
+    "sub": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "username": "admin",
+    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086",
+    "iat": 1785796800,
+    "exp": 1785797700
+}
+```
+
+El `refreshToken` tambien es un JWT, pero solo incluye datos minimos de renovacion:
+
+```json
+{
+    "sub": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086",
+    "iat": 1785796800,
+    "exp": 1786401600
+}
+```
+
+| Campo       | Token            | Descripcion                                            |
+| ----------- | ---------------- | ------------------------------------------------------ |
+| `sub`       | Access y refresh | UUID v4 del usuario.                                   |
+| `username`  | Solo access      | Nombre de usuario al momento de emitir el token.       |
+| `sessionId` | Access y refresh | UUID v4 de la sesion asociada.                         |
+| `iat`       | Access y refresh | Timestamp Unix en segundos en que fue emitido el token. |
+| `exp`       | Access y refresh | Timestamp Unix en segundos en que expira el token.      |
+
+El payload del JWT no incluye permisos, roles, companias disponibles, email, nombre completo ni banderas completas de perfil. Para esos datos usa `GET /api/authentication/me`, `GET /api/authentication/companies` y `GET /api/authentication/capabilities`. No uses el decode del token para autorizar menus, modulos o acciones.
+
 ### TwoFactorChallengeResponse
 
 ```json
@@ -40,12 +89,12 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 }
 ```
 
-| Campo              | Tipo      | Descripcion                                                               |
-| ------------------ | --------- | ------------------------------------------------------------------------- |
-| `requiresTwoFactor` | `boolean` | Indica que el login necesita verificacion 2FA antes de emitir tokens.     |
+| Campo               | Tipo      | Descripcion                                                                |
+| ------------------- | --------- | -------------------------------------------------------------------------- |
+| `requiresTwoFactor` | `boolean` | Indica que el login necesita verificacion 2FA antes de emitir tokens.      |
 | `challengeToken`    | `string`  | Token temporal que debe enviarse a `/api/authentication/2fa/verify-login`. |
-| `expiresInSeconds`  | `number`  | Segundos de vigencia restantes al emitir el desafio.                      |
-| `expiresAt`         | `string`  | Fecha ISO UTC en la que expira el desafio.                                |
+| `expiresInSeconds`  | `number`  | Segundos de vigencia restantes al emitir el desafio.                       |
+| `expiresAt`         | `string`  | Fecha ISO UTC en la que expira el desafio.                                 |
 
 ### Profile
 
@@ -67,21 +116,21 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 }
 ```
 
-| Campo                       | Tipo                              | Descripcion                                                                 |
-| --------------------------- | --------------------------------- | --------------------------------------------------------------------------- |
-| `id`                        | `string`                          | UUID v4 del usuario autenticado.                                            |
-| `username`                  | `string`                          | Nombre de usuario.                                                          |
-| `email`                     | `string`                          | Correo del usuario.                                                         |
-| `fullName`                  | `string \| null`                  | Nombre completo.                                                            |
-| `preferredLanguage`         | `string`                          | Idioma preferido para UI y correos.                                         |
-| `status`                    | `active \| inactive \| suspended` | Estado operativo del usuario; en `/me` normalmente sera `active`.           |
-| `emailVerified`             | `boolean`                         | Indica si el correo ya fue confirmado; derivado de `emailVerifiedAt`.       |
-| `requiresEmailVerification` | `boolean`                         | Indica si la cuenta requiere verificacion antes de poder iniciar sesion.    |
-| `twoFactorEnabled`          | `boolean`                         | Indica si el usuario tiene 2FA activo.                                      |
-| `mustChangePassword`        | `boolean`                         | Indica si debe cambiar contrasena antes de usar endpoints protegidos.       |
-| `isGlobalAdmin`             | `boolean`                         | Indica si tiene acceso admin global.                                        |
-| `companyIds`                | `string[]`                        | Companias a las que tiene acceso directo.                                   |
-| `sessionId`                 | `string \| null`                  | UUID v4 de la sesion activa cuando el token fue emitido con sesion.         |
+| Campo                       | Tipo                              | Descripcion                                                              |
+| --------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
+| `id`                        | `string`                          | UUID v4 del usuario autenticado.                                         |
+| `username`                  | `string`                          | Nombre de usuario.                                                       |
+| `email`                     | `string`                          | Correo del usuario.                                                      |
+| `fullName`                  | `string \| null`                  | Nombre completo.                                                         |
+| `preferredLanguage`         | `string`                          | Idioma preferido para UI y correos.                                      |
+| `status`                    | `active \| inactive \| suspended` | Estado operativo del usuario; en `/me` normalmente sera `active`.        |
+| `emailVerified`             | `boolean`                         | Indica si el correo ya fue confirmado; derivado de `emailVerifiedAt`.    |
+| `requiresEmailVerification` | `boolean`                         | Indica si la cuenta requiere verificacion antes de poder iniciar sesion. |
+| `twoFactorEnabled`          | `boolean`                         | Indica si el usuario tiene 2FA activo.                                   |
+| `mustChangePassword`        | `boolean`                         | Indica si debe cambiar contrasena antes de usar endpoints protegidos.    |
+| `isGlobalAdmin`             | `boolean`                         | Indica si tiene acceso admin global.                                     |
+| `companyIds`                | `string[]`                        | Companias a las que tiene acceso directo.                                |
+| `sessionId`                 | `string \| null`                  | UUID v4 de la sesion activa cuando el token fue emitido con sesion.      |
 
 ### Session
 
@@ -92,10 +141,22 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
     "userAgent": "Mozilla/5.0",
     "ipAddress": "127.0.0.1",
     "lastActivityAt": "2026-07-04T12:00:00.000Z",
+    "idleExpiresAt": "2026-07-04T13:00:00.000Z",
     "expiresAt": "2026-07-05T12:00:00.000Z",
     "isCurrent": true
 }
 ```
+
+| Campo            | Tipo              | Descripcion                                                                 |
+| ---------------- | ----------------- | --------------------------------------------------------------------------- |
+| `id`             | `string`          | UUID v4 de la sesion.                                                       |
+| `deviceName`     | `string \| null`  | Nombre del dispositivo detectado o enviado con `X-Device-Name`.             |
+| `userAgent`      | `string \| null`  | User-Agent registrado al crear la sesion.                                   |
+| `ipAddress`      | `string \| null`  | IP registrada al crear la sesion.                                           |
+| `lastActivityAt` | `string`          | Fecha ISO UTC de la ultima actividad registrada.                            |
+| `idleExpiresAt`  | `string`          | Fecha ISO UTC en la que la sesion vence por inactividad si no hay actividad. |
+| `expiresAt`      | `string`          | Fecha ISO UTC de expiracion total de la sesion.                             |
+| `isCurrent`      | `boolean`         | Indica si corresponde a la sesion actual segun la cookie `refresh_token`.   |
 
 ### CompanyAccess
 
@@ -155,6 +216,7 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 | `GET`    | `/api/authentication/me`                            | Autenticado | Obtiene perfil actual.                                                                         |
 | `GET`    | `/api/authentication/companies`                     | Autenticado | Lista companias disponibles para el usuario actual.                                            |
 | `GET`    | `/api/authentication/capabilities`                  | Autenticado | Lista permisos efectivos del usuario para la compania seleccionada, si se envia header.        |
+| `POST`   | `/api/authentication/heartbeat`                     | Autenticado | Confirma que la sesion autenticada sigue activa.                                               |
 | `PATCH`  | `/api/authentication/me`                            | Autenticado | Actualiza perfil actual.                                                                       |
 | `GET`    | `/api/authentication/sessions`                      | Autenticado | Lista sesiones activas.                                                                        |
 | `DELETE` | `/api/authentication/sessions/:sessionId`           | Autenticado | Revoca una sesion.                                                                             |
@@ -276,7 +338,7 @@ Publico. Rate limit: 3 requests por 60 segundos.
 
 Publico. Rate limit: 20 requests por 60 segundos.
 
-El refresh token puede enviarse en el body o venir desde la cookie `refresh_token`. El backend revoca el refresh token usado, actualiza actividad de sesion y emite nuevos tokens.
+El refresh token puede enviarse en el body o venir desde la cookie `refresh_token`. El backend revoca el refresh token usado, actualiza actividad de sesion y emite nuevos tokens. Si el refresh token, la duracion total de sesion o la ventana de inactividad ya vencieron, responde `401`.
 
 ### Body
 
@@ -360,11 +422,31 @@ Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acci
 
 Si los permisos vienen de un acceso con `scopeKey: "subCompanyId"`, los endpoints operativos aplican ese scope al consultar, crear, actualizar o eliminar datos. `capabilities` devuelve permisos; el filtrado fino de datos se aplica en cada endpoint.
 
+Para mostrar el modulo propio de tarjetahabiente, si el acceso vive en una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para obtener `cardholder.module`. Las rutas `/api/cardholder/*` siguen sin usar `X-Company-Id`; solo usan el usuario autenticado y su conductor vinculado.
+
 Los permisos de endpoints de sistema, como `companies.create`, `companies.update`, acciones globales de `users`, `roles.*`, `permissions.*` y mutaciones de `fuels`, solo se devuelven si el usuario los tiene en un acceso global (`companyId: null`).
 
 ### Response `200`
 
 Devuelve `Capabilities`.
+
+## Heartbeat
+
+`POST /api/authentication/heartbeat`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Sirve como ping autenticado para confirmar que la sesion sigue vigente. Al pasar por el guard JWT, tambien participa en la actualizacion de actividad de sesion segun `SESSION_TOUCH_INTERVAL_SECONDS`.
+
+### Response `200`
+
+```json
+{
+    "ok": true,
+    "userId": "9f5f0f4a-8f88-4f0b-9a18-6eb3f1e9b7a1",
+    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086"
+}
+```
 
 ## Actualizar perfil
 
@@ -414,7 +496,7 @@ Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
 ### Response `200`
 
-Devuelve `Session[]`.
+Devuelve `Session[]` con sesiones no revocadas, no vencidas por duracion total y no vencidas por inactividad.
 
 ## Revocar sesion
 
@@ -703,7 +785,7 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 5. Llamar `GET /api/authentication/companies`, permitir que el usuario seleccione compania y enviar su `id` como `X-Company-Id` en endpoints operativos.
 6. Llamar `GET /api/authentication/capabilities` con `X-Company-Id` para renderizar modulos y acciones disponibles para la compania seleccionada.
 7. Si `mustChangePassword` es `true`, limitar la UI a cambio de contrasena, logout, ver perfil, companias y endpoints marcados como permitidos arriba.
-8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token.
+8. Renovar sesion con `POST /api/authentication/refresh` cuando expire el access token. Si `refresh` responde `401`, limpiar estado local y enviar a login.
 
 Para construir formularios desde esta documentacion, aplica tambien las reglas de `Frontend Guidelines`: no todos los campos del contrato deben mostrarse como controles visibles; algunos se omiten por default, se derivan del contexto o se traducen a nombres de UI.
 
@@ -714,6 +796,13 @@ Este modulo no es CRUD de catalogo, pero aplica las reglas de `Frontend Guidelin
 No generes una pagina de menu llamada `authentication`. Estos endpoints deben alimentar pantallas o componentes concretos: login, perfil, seguridad, sesiones, recuperacion de contrasena, selector de compania y carga de capacidades.
 
 Para aplicaciones web, prefiere cookies HttpOnly con requests usando credenciales incluidas. Si usas cookies, no necesitas guardar tokens en storage del navegador.
+
+Para timers y expiracion de sesion:
+
+- Usa `exp` del access token solo para saber cuando intentar renovar con `POST /api/authentication/refresh`.
+- Usa `GET /api/authentication/sessions` para mostrar sesiones activas, `lastActivityAt`, expiracion por inactividad (`idleExpiresAt`) y expiracion total (`expiresAt`).
+- No calcules autorizacion, modulos ni acciones desde tiempos del token; usa `GET /api/authentication/me` y `GET /api/authentication/capabilities`.
+- Si una llamada protegida o `refresh` responde `401`, trata la sesion como invalida y limpia el estado local de autenticacion.
 
 Campos y datos que no deben mostrarse o persistirse como datos de UI normal:
 
@@ -736,7 +825,25 @@ Para UI de permisos, usa `capabilities.permissions` como lista de acciones habil
 | Estado | Caso                                                                                                         |
 | ------ | ------------------------------------------------------------------------------------------------------------ |
 | `400`  | Body invalido, token de reset/verificacion invalido, codigo 2FA invalido o configuracion 2FA expirada.       |
-| `401`  | Credenciales invalidas, access token ausente/invalido/expirado, refresh token invalido/expirado/reutilizado. |
+| `401`  | Login no valido, sesion no valida, sesion vencida, sesion vencida por inactividad o cierre preventivo de sesion por seguridad. |
 | `403`  | CSRF rechazado o usuario con `mustChangePassword` intentando usar endpoints bloqueados.                      |
 | `409`  | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global.                  |
 | `429`  | Rate limit excedido en endpoints protegidos con throttling.                                                  |
+
+### Mensajes visibles para usuario
+
+| Mensaje | Caso principal |
+| ------- | -------------- |
+| `El usuario o la contrasena no son correctos.` | Login con usuario o contrasena incorrectos. |
+| `Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.` | Login bloqueado por intentos fallidos. |
+| `Verifica tu correo para iniciar sesion.` | Cuenta activa pero con correo pendiente de verificacion. |
+| `Tu sesion no es valida. Inicia sesion nuevamente.` | Token ausente, invalido, sesion revocada o sesion no reconocida. |
+| `Tu sesion expiro. Inicia sesion nuevamente.` | Access token, refresh token o duracion total de sesion vencida. |
+| `Tu sesion expiro por inactividad. Inicia sesion nuevamente.` | Sesion vencida por `idleExpiresAt`. |
+| `Por seguridad cerramos tu sesion. Inicia sesion nuevamente.` | Refresh token reutilizado despues de rotacion. |
+| `No tienes permisos suficientes para este contenido.` | Usuario autenticado sin permisos o roles requeridos. |
+| `No tienes acceso a esta compania.` | Usuario sin acceso a la compania seleccionada. |
+| `Selecciona una compania para continuar.` | Falta seleccionar compania en un endpoint que requiere contexto. |
+| `Selecciona una compania valida para continuar.` | El identificador de compania enviado no es valido. |
+| `Demasiados intentos. Intenta nuevamente mas tarde.` | Rate limit HTTP excedido. |
+| `Se enviaron demasiados correos. Intenta nuevamente mas tarde.` | Rate limit interno de envio de correos. |

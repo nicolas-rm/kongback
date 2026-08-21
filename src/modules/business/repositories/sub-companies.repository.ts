@@ -15,6 +15,12 @@ export class SubCompaniesRepository {
     create(data: Prisma.SubCompanyUncheckedCreateInput, address?: AddressData) {
         return this.prisma.$transaction(async (tx) => {
             const addressId = await this.addresses.create(tx, address);
+            if (data.isDefault === true) {
+                await tx.subCompany.updateMany({
+                    where: { companyId: data.companyId, isDefault: true },
+                    data: { isDefault: false },
+                });
+            }
             return tx.subCompany.create({ data: { ...data, addressId }, select: this.select() });
         });
     }
@@ -38,12 +44,125 @@ export class SubCompaniesRepository {
         return this.prisma.subCompany.findFirst({ where: { AND: [{ id }, subCompanyScopeWhere(scope)] }, select: this.select() });
     }
 
+    findExportTargetById(id: string, scope?: CompanyScope) {
+        return this.prisma.subCompany.findFirst({
+            where: { AND: [{ id }, subCompanyScopeWhere(scope)] },
+            select: {
+                id: true,
+                key: true,
+                name: true,
+            },
+        });
+    }
+
+    findDriversForExport(subCompanyId: string, scope?: CompanyScope) {
+        return this.prisma.driver.findMany({
+            where: { subCompanyId, subCompany: subCompanyScopeWhere(scope) },
+            orderBy: [{ name: 'asc' }, { id: 'asc' }],
+            select: {
+                id: true,
+                name: true,
+                externalReference: true,
+                status: true,
+                vehicles: {
+                    orderBy: [{ plates: 'asc' }, { id: 'asc' }],
+                    select: {
+                        plates: true,
+                        economicNumber: true,
+                        model: true,
+                        card: {
+                            select: {
+                                externalId: true,
+                                stock: {
+                                    select: {
+                                        clientId: true,
+                                        maskedPan: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    findVehiclesForExport(subCompanyId: string, scope?: CompanyScope) {
+        return this.prisma.vehicle.findMany({
+            where: { subCompanyId, subCompany: subCompanyScopeWhere(scope) },
+            orderBy: [{ plates: 'asc' }, { id: 'asc' }],
+            select: {
+                id: true,
+                plates: true,
+                economicNumber: true,
+                model: true,
+                year: true,
+                odometerControl: true,
+                odometerInitial: true,
+                status: true,
+                fuel: { select: this.fuelSummarySelect() },
+                driver: {
+                    select: {
+                        name: true,
+                        externalReference: true,
+                    },
+                },
+                card: {
+                    select: {
+                        externalId: true,
+                        stock: {
+                            select: {
+                                clientId: true,
+                                maskedPan: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    findCardsForExport(subCompanyId: string, scope?: CompanyScope) {
+        return this.prisma.card.findMany({
+            where: { subCompanyId, subCompany: subCompanyScopeWhere(scope) },
+            orderBy: [{ assignedAt: 'desc' }, { id: 'asc' }],
+            select: {
+                id: true,
+                externalId: true,
+                assignmentMode: true,
+                status: true,
+                assignedAt: true,
+                designFuel: { select: this.fuelSummarySelect() },
+                vehicle: {
+                    select: {
+                        plates: true,
+                        economicNumber: true,
+                        model: true,
+                    },
+                },
+                stock: {
+                    select: {
+                        clientId: true,
+                        maskedPan: true,
+                        providerStatus: true,
+                    },
+                },
+            },
+        });
+    }
+
     update(id: string, data: Prisma.SubCompanyUncheckedUpdateInput, address?: AddressData, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
-            const current = await tx.subCompany.findFirst({ where: { AND: [{ id }, subCompanyScopeWhere(scope)] }, select: { id: true, addressId: true } });
+            const current = await tx.subCompany.findFirst({ where: { AND: [{ id }, subCompanyScopeWhere(scope)] }, select: { id: true, companyId: true, addressId: true } });
             if (!current) return null;
 
             const addressId = await this.addresses.upsert(tx, current.addressId, address);
+            if (data.isDefault === true) {
+                await tx.subCompany.updateMany({
+                    where: { companyId: current.companyId, id: { not: current.id }, isDefault: true },
+                    data: { isDefault: false },
+                });
+            }
             await tx.subCompany.update({ where: { id: current.id }, data: { ...data, ...(addressId ? { addressId } : {}) } });
             return tx.subCompany.findFirst({ where: { AND: [{ id: current.id }, subCompanyScopeWhere(scope)] }, select: this.select() });
         });
@@ -88,6 +207,14 @@ export class SubCompaniesRepository {
         return {
             id: true,
             key: true,
+            name: true,
+        };
+    }
+
+    private fuelSummarySelect(): Prisma.FuelSelect {
+        return {
+            id: true,
+            code: true,
             name: true,
         };
     }

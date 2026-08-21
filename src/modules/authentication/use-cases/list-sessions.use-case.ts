@@ -21,6 +21,7 @@ export class ListSessionsUseCase {
                 userAgent: session.userAgent,
                 ipAddress: session.ipAddress,
                 lastActivityAt: session.lastActivityAt,
+                idleExpiresAt: session.idleExpiresAt,
                 expiresAt: session.expiresAt,
                 isCurrent: session.id === currentSessionId,
             })

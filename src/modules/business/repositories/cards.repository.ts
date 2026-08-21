@@ -95,6 +95,35 @@ export class CardsRepository {
         return this.prisma.card.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
     }
 
+    findAssignedStockByClientId(clientId: string, scope?: CompanyScope) {
+        return this.prisma.cardcloud.findMany({
+            where: {
+                clientId,
+                assignedCardId: { not: null },
+                assignedCard: {
+                    is: {
+                        subCompany: subCompanyScopeWhere(scope),
+                    },
+                },
+            },
+            take: 2,
+            select: {
+                externalId: true,
+                clientId: true,
+                maskedPan: true,
+                assignedCard: {
+                    select: {
+                        id: true,
+                        subCompanyId: true,
+                        vehicleId: true,
+                        assignmentMode: true,
+                        status: true,
+                    },
+                },
+            },
+        });
+    }
+
     update(id: string, data: Prisma.CardUncheckedUpdateInput, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.card.updateMany({ where: { id, subCompany: subCompanyScopeWhere(scope) }, data });

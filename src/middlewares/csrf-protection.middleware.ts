@@ -23,7 +23,7 @@ export function csrfProtectionMiddleware(options: CsrfProtectionOptions) {
             buildErrorResponse({
                 statusCode: HttpStatus.FORBIDDEN,
                 code: ERROR_CODES.FORBIDDEN,
-                message: 'Solicitud rechazada por proteccion CSRF',
+                message: 'No pudimos validar la seguridad de la solicitud. Recarga la pagina e intenta nuevamente.',
                 path: request.originalUrl,
             })
         );

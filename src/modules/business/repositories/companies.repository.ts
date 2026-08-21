@@ -18,7 +18,11 @@ export class CompaniesRepository {
         });
     }
 
-    createWithDefaultSubCompany(data: Prisma.CompanyUncheckedCreateInput, defaultSubCompany: Pick<Prisma.SubCompanyUncheckedCreateInput, 'key' | 'cardcloudSubaccountId' | 'name' | 'status' | 'isDefault'>, address?: AddressData) {
+    createWithDefaultSubCompany(
+        data: Prisma.CompanyUncheckedCreateInput,
+        defaultSubCompany: Pick<Prisma.SubCompanyUncheckedCreateInput, 'key' | 'cardcloudSubaccountId' | 'name' | 'status' | 'isDefault'>,
+        address?: AddressData
+    ) {
         return this.prisma.$transaction(async (tx) => {
             const companyAddressId = await this.addresses.create(tx, address);
             const company = await tx.company.create({ data: { ...data, addressId: companyAddressId }, select: this.select() });

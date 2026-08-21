@@ -1,7 +1,18 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
-import { AssignCardsToSubCompanyDto, AssignCardVehicleDto, CreateCardDto, FindCardsDto, FindStatusRecordsDto, SyncSubCompanyCardsDto, UpdateCardDto } from '@/modules/business/dto';
+import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
+import {
+    AssignCardsToSubCompanyDto,
+    AssignCardVehicleDto,
+    CreateCardDto,
+    FindCardsDto,
+    FindStatusRecordsDto,
+    SyncSubCompanyCardsDto,
+    UpdateCardAssignmentDto,
+    UpdateCardDto,
+    ValidateOwnedCardDto,
+} from '@/modules/business/dto';
 import { CardsService } from '@/modules/business/services/cards.service';
 
 @RequireCompany()
@@ -19,6 +30,12 @@ export class CardsController {
     @Permissions('cards.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardsDto) {
         return this.cardsService.findAll(dto, scope);
+    }
+
+    @Post('validate')
+    @Permissions('cards.validate')
+    validateOwnedCard(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: ValidateOwnedCardDto) {
+        return this.cardsService.validateOwnedCard(dto, scope);
     }
 
     @Get('by-design-fuel/:designFuelId')
@@ -39,10 +56,22 @@ export class CardsController {
         return this.cardsService.syncSubCompanyCards(dto, scope);
     }
 
+    @Get(':id/movements')
+    @Permissions('cards.movements.read-list')
+    getMovements(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Query() dto: CardcloudDateRangeQueryDto) {
+        return this.cardsService.getMovements(id, dto, scope);
+    }
+
     @Get(':id')
     @Permissions('cards.read-one')
     findOne(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
         return this.cardsService.findOne(id, scope);
+    }
+
+    @Patch(':id/assignment')
+    @Permissions('cards.assignment.update')
+    updateAssignment(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCardAssignmentDto) {
+        return this.cardsService.updateAssignment(id, dto, scope);
     }
 
     @Patch(':id/assign-vehicle')

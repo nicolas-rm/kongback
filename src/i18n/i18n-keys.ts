@@ -9,6 +9,8 @@ export const I18N_KEYS = {
             invalidRefreshToken: 'errors.authentication.invalidRefreshToken',
             reusedRefreshToken: 'errors.authentication.reusedRefreshToken',
             expiredRefreshToken: 'errors.authentication.expiredRefreshToken',
+            sessionExpired: 'errors.authentication.sessionExpired',
+            sessionIdleExpired: 'errors.authentication.sessionIdleExpired',
             unauthorizedUser: 'errors.authentication.unauthorizedUser',
             invalidCurrentPassword: 'errors.authentication.invalidCurrentPassword',
             invalidVerificationToken: 'errors.authentication.invalidVerificationToken',
@@ -36,6 +38,10 @@ export const I18N_KEYS = {
         },
         users: {
             notFound: 'errors.users.notFound',
+        },
+        business: {
+            companyReferenceExists: 'errors.business.companyReferenceExists',
+            subCompanyKeyExists: 'errors.business.subCompanyKeyExists',
         },
         validation: {
             invalidData: 'errors.validation.invalidData',

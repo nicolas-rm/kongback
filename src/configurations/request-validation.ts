@@ -7,7 +7,7 @@ export class RequestValidationException extends BadRequestException {
         super({
             statusCode: 400,
             code: ERROR_CODES.VALIDATION_ERROR,
-            message: 'La solicitud contiene datos invalidos',
+            message: 'Revisa la informacion enviada.',
             errors,
         });
     }

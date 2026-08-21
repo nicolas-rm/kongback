@@ -52,13 +52,14 @@ En listados, `subCompany` y `user` se devuelven como summaries y `address` no se
 
 ## Endpoints
 
-| Metodo   | Ruta               | Permiso             | Descripcion             |
-| -------- | ------------------ | ------------------- | ----------------------- |
-| `POST`   | `/api/drivers`     | `drivers.create`    | Crea un conductor.      |
-| `GET`    | `/api/drivers`     | `drivers.read-list` | Lista conductores.      |
-| `GET`    | `/api/drivers/:id` | `drivers.read-one`  | Obtiene un conductor.   |
-| `PATCH`  | `/api/drivers/:id` | `drivers.update`    | Actualiza un conductor. |
-| `DELETE` | `/api/drivers/:id` | `drivers.delete`    | Desactiva un conductor. |
+| Metodo   | Ruta                        | Permiso                      | Descripcion                             |
+| -------- | --------------------------- | ---------------------------- | --------------------------------------- |
+| `POST`   | `/api/drivers`              | `drivers.create`             | Crea un conductor.                      |
+| `GET`    | `/api/drivers`              | `drivers.read-list`          | Lista conductores.                      |
+| `GET`    | `/api/drivers/:id/vehicles` | `drivers.vehicles.read-list` | Lista vehiculos asignados al conductor. |
+| `GET`    | `/api/drivers/:id`          | `drivers.read-one`           | Obtiene un conductor.                   |
+| `PATCH`  | `/api/drivers/:id`          | `drivers.update`             | Actualiza un conductor.                 |
+| `DELETE` | `/api/drivers/:id`          | `drivers.delete`             | Desactiva un conductor.                 |
 
 ## Listado
 
@@ -100,6 +101,20 @@ Path params: `id` UUID del conductor.
 
 Response `200`: `Driver` con `subCompany`, `user` y `address`.
 
+## Vehiculos del conductor
+
+`GET /api/drivers/:id/vehicles`
+
+Permiso: `drivers.vehicles.read-list`.
+
+Query params: `page`, `limit`, `search`, `all`, `status`.
+
+`search` busca por `plates`, `economicNumber` y `model`.
+
+Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driver` summaries.
+
+Nota: el modelo actual guarda solo la relacion vigente `vehicle.driverId`; este endpoint no devuelve historial de asignaciones anteriores.
+
 ## Actualizar
 
 `PATCH /api/drivers/:id`
@@ -138,11 +153,15 @@ Campos recomendados para formularios:
 
 No muestres `userId` ni `subCompanyId` como texto libre. Deben ser selects. Para desvincular usuario en editar, envia `userId: null`.
 
+Para tarjetahabientes, `userId` es la relacion que habilita `/api/cardholder/*`. El usuario debe tener rol/permisos `cardholder.*` y el conductor debe estar activo en la misma subcompania usada como alcance del acceso del usuario. Si el conductor se desactiva o se desvincula con `userId: null`, el usuario ya no podra entrar al modulo propio de tarjetahabiente.
+
+Para consultar vehiculos relacionados desde el detalle del conductor usa `GET /api/drivers/:id/vehicles`. No lo uses como historial; hoy representa la asignacion actual.
+
 ## Errores comunes
 
 | Estado | Caso                                             |
 | ------ | ------------------------------------------------ |
-| `400`  | Relacion invalida o parametros invalidos.        |
+| `400`  | Datos relacionados no validos o parametros invalidos. |
 | `401`  | Request sin autenticacion valida.                |
 | `403`  | Usuario autenticado sin el permiso requerido.    |
 | `404`  | Conductor no encontrado.                         |

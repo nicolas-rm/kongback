@@ -62,7 +62,7 @@ export class CardcloudExternalService {
     private async authenticate(): Promise<string> {
         const { username, password } = this.config.cardcloud;
         if (!username || !password) {
-            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'Cardcloud no configurado');
+            throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'No pudimos conectar con el servicio externo. Intenta mas tarde.');
         }
 
         const response = await this.http.post<CardcloudLoginResponse>(this.url('/auth/login'), {

@@ -1,46 +1,52 @@
 {
     "authentication": {
-        "invalidCredentials": "凭据无效",
-        "accountLocked": "账户已锁定。请稍后再试",
-        "emailVerificationRequired": "登录前必须先验证邮箱",
-        "invalidTwoFactorChallenge": "无效的 2FA 验证挑战",
-        "invalidTwoFactorCode": "无效的 2FA 验证码",
-        "invalidRefreshToken": "无效的刷新令牌",
-        "reusedRefreshToken": "刷新令牌已被重复使用",
-        "expiredRefreshToken": "刷新令牌已过期",
-        "unauthorizedUser": "用户未授权",
-        "invalidCurrentPassword": "当前密码无效",
-        "invalidVerificationToken": "验证令牌无效或已过期",
-        "invalidResetToken": "令牌无效或已过期",
-        "twoFactorPendingNotFound": "没有待处理的 2FA 配置",
-        "twoFactorSetupExpired": "2FA 配置已过期。请重新开始流程",
-        "twoFactorNotEnabled": "2FA 未启用"
+        "invalidCredentials": "用户名或密码不正确",
+        "accountLocked": "账户暂时锁定，请稍后再试",
+        "emailVerificationRequired": "请先验证邮箱再登录",
+        "invalidTwoFactorChallenge": "安全验证已失效，请重新登录",
+        "invalidTwoFactorCode": "验证码不正确",
+        "invalidRefreshToken": "会话无效，请重新登录",
+        "reusedRefreshToken": "出于安全原因，我们已关闭你的会话，请重新登录",
+        "expiredRefreshToken": "会话已过期，请重新登录",
+        "sessionExpired": "会话已过期，请重新登录",
+        "sessionIdleExpired": "会话因长时间未操作而过期，请重新登录",
+        "unauthorizedUser": "无法验证你的用户，请重新登录",
+        "invalidCurrentPassword": "当前密码不正确",
+        "invalidVerificationToken": "验证链接无效或已过期",
+        "invalidResetToken": "密码重置链接无效或已过期",
+        "twoFactorPendingNotFound": "请先开始 2FA 设置",
+        "twoFactorSetupExpired": "2FA 设置已过期，请重新开始",
+        "twoFactorNotEnabled": "两步验证未启用"
     },
     "authorization": {
-        "unauthorized": "未授权",
-        "insufficientPermissions": "权限不足",
-        "companyDenied": "无权访问该公司",
-        "mustChangePassword": "继续之前必须修改密码。"
+        "unauthorized": "会话无效，请重新登录",
+        "insufficientPermissions": "你没有足够权限访问此内容",
+        "companyDenied": "你无权访问该公司",
+        "mustChangePassword": "请修改密码后继续"
     },
     "documents": {
-        "notFound": "未找到文档",
-        "fileRequired": "文件是必需的",
+        "notFound": "未找到请求的文档",
+        "fileRequired": "请选择文件后继续",
         "fileTooLarge": "文件过大",
-        "mimeTypeNotAllowed": "不允许的文件类型",
-        "storageFileNotFound": "存储中未找到文件",
-        "invalidFilePath": "文件路径无效"
+        "mimeTypeNotAllowed": "不支持此文件类型",
+        "storageFileNotFound": "未找到请求的文件",
+        "invalidFilePath": "无法处理文件路径"
     },
     "notifications": {
-        "notFound": "未找到通知"
+        "notFound": "未找到请求的通知"
     },
     "users": {
-        "notFound": "未找到用户"
+        "notFound": "未找到请求的用户"
+    },
+    "business": {
+        "companyReferenceExists": "公司参考已存在",
+        "subCompanyKeyExists": "该公司的子公司键已存在"
     },
     "validation": {
-        "invalidData": "请求包含无效数据"
+        "invalidData": "请检查提交的信息"
     },
     "internal": {
-        "unprocessed": "请求无法处理，请稍后重试"
+        "unprocessed": "无法处理请求，请稍后重试"
     },
     "mail": {
         "common": {
@@ -73,15 +79,15 @@
         }
     },
     "prisma": {
-        "uniqueConstraint": "({fields}) 的值已存在",
-        "invalidRelation": "关系无效",
-        "valueTooLong": "值过长",
-        "recordNotFound": "未找到记录",
-        "invalidData": "数据无效",
-        "internalFailure": "服务器内部错误",
+        "uniqueConstraint": "{fields} 已被其他记录使用。",
+        "invalidRelation": "部分关联信息无效",
+        "valueTooLong": "某个字段超出允许长度",
+        "recordNotFound": "未找到请求的记录",
+        "invalidData": "请检查提交的信息",
+        "internalFailure": "无法处理请求，请稍后重试",
         "unknownField": "未知"
     },
     "socket": {
-        "unauthorized": "未授权"
+        "unauthorized": "会话无效，请重新登录"
     }
 }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Status } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
-import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
+import { I18N_KEYS, type I18nKey, I18nUnauthorizedException } from '@/i18n';
 import { RefreshTokenDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
@@ -18,23 +18,34 @@ export class RefreshUseCase {
     ) {}
 
     async execute(dto: RefreshTokenDto, sessionContext: SessionContext = {}) {
-        if (!dto.refreshToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
+        if (!dto.refreshToken)
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', {
+                extra: { reason: 'missing_refresh_token' },
+            });
 
         const storedToken = await this.repository.findStoredRefreshToken(this.cryptoService.hashToken(dto.refreshToken));
-        if (!storedToken) throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
+        if (!storedToken)
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', {
+                extra: { reason: 'refresh_token_not_found' },
+            });
 
         if (storedToken.revokedAt) {
             await this.repository.revokeSession(storedToken.userId, storedToken.sessionId);
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.reusedRefreshToken, 'Refresh token reutilizado');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.reusedRefreshToken, 'Por seguridad cerramos tu sesion. Inicia sesion nuevamente.', {
+                extra: { reason: 'refresh_token_reused' },
+            });
         }
 
-        if (storedToken.user.status !== Status.active || storedToken.session.revokedAt)
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Refresh token invalido');
+        if (storedToken.user.status !== Status.active)
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'user_inactive' } });
+        if (storedToken.session.revokedAt)
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'session_revoked' } });
 
         const now = new Date();
         if (storedToken.expiresAt <= now || storedToken.idleExpiresAt <= now || storedToken.session.expiresAt <= now || storedToken.session.idleExpiresAt <= now) {
             await this.repository.revokeRefreshToken(storedToken.id, now);
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.expiredRefreshToken, 'Refresh token expirado');
+            const error = this.resolveExpiredRefreshError(storedToken, now);
+            throw new I18nUnauthorizedException(error.key, error.message, { extra: { reason: error.reason } });
         }
 
         await this.repository.revokeRefreshToken(storedToken.id, now);
@@ -52,5 +63,29 @@ export class RefreshUseCase {
                 deviceName: sessionContext.deviceName,
             }
         );
+    }
+
+    private resolveExpiredRefreshError(
+        storedToken: {
+            expiresAt: Date;
+            idleExpiresAt: Date;
+            session: {
+                expiresAt: Date;
+                idleExpiresAt: Date;
+            };
+        },
+        now: Date
+    ): { key: I18nKey; message: string; reason: string } {
+        if (storedToken.expiresAt <= now) {
+            return { key: I18N_KEYS.errors.authentication.expiredRefreshToken, message: 'Tu sesion expiro. Inicia sesion nuevamente.', reason: 'refresh_token_expired' };
+        }
+        if (storedToken.idleExpiresAt <= now || storedToken.session.idleExpiresAt <= now) {
+            return {
+                key: I18N_KEYS.errors.authentication.sessionIdleExpired,
+                message: 'Tu sesion expiro por inactividad. Inicia sesion nuevamente.',
+                reason: storedToken.idleExpiresAt <= now ? 'refresh_token_idle_expired' : 'session_idle_expired',
+            };
+        }
+        return { key: I18N_KEYS.errors.authentication.sessionExpired, message: 'Tu sesion expiro. Inicia sesion nuevamente.', reason: 'session_expired' };
     }
 }

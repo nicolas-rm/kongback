@@ -80,14 +80,14 @@ export class AccessControlService {
 
     async updateRole(id: string, dto: UpdateRoleDto) {
         const role = await this.repository.updateRole(id, dto);
-        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
         return RoleResponse.from(role);
     }
 
     async deleteRole(id: string) {
         const result = await this.repository.deleteRole(id);
-        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
         return { id, deleted: true };
     }
@@ -96,7 +96,7 @@ export class AccessControlService {
         await this.assertPermissionsActive(dto.permissionIds);
 
         const role = await this.repository.syncRolePermissions(roleId, dto.permissionIds);
-        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+        if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
         return RoleWithPermissionsResponse.from(role);
     }
@@ -133,14 +133,14 @@ export class AccessControlService {
 
     async updatePermission(id: string, dto: UpdatePermissionDto) {
         const permission = await this.repository.updatePermission(id, dto);
-        if (!permission) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+        if (!permission) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
         return PermissionResponse.from(permission);
     }
 
     async deletePermission(id: string) {
         const result = await this.repository.deletePermission(id);
-        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'Registro no encontrado');
+        if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
         return { id, deleted: true };
     }
@@ -150,6 +150,6 @@ export class AccessControlService {
         if (uniquePermissionIds.length === 0) return;
 
         const activePermissions = await this.repository.countActivePermissions(uniquePermissionIds);
-        if (activePermissions !== uniquePermissionIds.length) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Relacion invalida');
+        if (activePermissions !== uniquePermissionIds.length) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
     }
 }

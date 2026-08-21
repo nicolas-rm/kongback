@@ -1,0 +1,322 @@
+---
+title: Cardholder
+description: Endpoints propios del tarjetahabiente/conductor autenticado.
+---
+
+# Cardholder
+
+Base path: `/api/cardholder`
+
+Este modulo expone la vista propia de un usuario conductor/tarjetahabiente. No usa `X-Company-Id`; el backend resuelve el acceso desde la relacion activa `User -> Driver` y solo devuelve vehiculos/tarjetas asignadas a ese conductor.
+
+## Modelo de acceso
+
+Tarjetahabiente no es un selector de compania ni subcompania. El acceso se valida en dos capas:
+
+1. RBAC: el usuario debe tener un acceso activo con los permisos `cardholder.*` requeridos por el endpoint.
+2. Propiedad operativa: el usuario debe estar vinculado a un `Driver` activo mediante `Driver.userId = User.id`.
+
+El alcance administrativo recomendado para un usuario tarjetahabiente es:
+
+```json
+{
+    "companyId": "company-id",
+    "roleId": "cardholder-role-id",
+    "scopeKey": "subCompanyId",
+    "scopeId": "driver-sub-company-id"
+}
+```
+
+Tambien puede existir un acceso a toda la compania si el rol/usuario lo necesita por reglas de negocio, pero no debe ser el default para tarjetahabientes. Aunque el RBAC permita el modulo, estos endpoints siempre filtran datos por el conductor vinculado.
+
+## Relaciones requeridas
+
+Para que un tarjetahabiente vea tarjetas y pueda operar sobre ellas, debe existir esta cadena activa:
+
+```text
+User -> Driver.userId -> Driver.subCompanyId -> Vehicle.driverId -> Card.vehicleId
+```
+
+| Entidad          | Requisito                                                             | Para que sirve                                                  |
+| ---------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `User`           | Usuario activo con rol/permisos `cardholder.*`.                       | Permite iniciar sesion y pasar guards de autenticacion/RBAC.    |
+| `UserAccess`     | Acceso activo, recomendado con `scopeKey: "subCompanyId"` y `scopeId`. | Limita el rol a la subcompania operativa del conductor.         |
+| `Driver`         | Conductor activo con `userId` igual al usuario autenticado.            | Define la identidad operativa del tarjetahabiente.              |
+| `SubCompany`     | Subcompania activa del conductor, con compania activa.                 | Define el contexto operativo que se muestra en el modulo.       |
+| `Vehicle`        | Vehiculo activo con `driverId` igual al conductor.                     | Define que vehiculos aparecen en `/vehicles`.                   |
+| `Card`           | Tarjeta activa, `assignmentMode: "vehicle"` y `vehicleId` del vehiculo. | Define que tarjetas puede consultar u operar el tarjetahabiente. |
+| `CardcloudStock` | Stock local asociado cuando exista `clientId`, `maskedPan` o `balance`. | Complementa datos visibles y validacion contra Cardcloud.       |
+
+Crear un usuario con rol tarjetahabiente no crea automaticamente el conductor. Si no existe `Driver.userId`, los endpoints responden `403`.
+
+## Flujo de alta administrativo
+
+1. Crear el usuario desde `/api/users` con rol que incluya permisos `cardholder.*`.
+2. Seleccionar alcance `Solo una subcompania` y enviar `access.scopeKey: "subCompanyId"` con `access.scopeId` de la subcompania del conductor.
+3. Crear o actualizar el conductor desde `/api/drivers` asignando `userId` al usuario creado.
+4. Asignar un vehiculo activo al conductor con `/api/vehicles/:id/driver` o desde el CRUD de vehiculos.
+5. Asignar una tarjeta activa al vehiculo con `/api/cards/:id/assign-vehicle` o `/api/cards/:id/assignment`.
+6. Validar la experiencia con `GET /api/cardholder/me`, `GET /api/cardholder/vehicles` y `GET /api/cardholder/cards`.
+
+Si el usuario tiene conductor pero no tiene vehiculos, `/api/cardholder/vehicles` responde arreglo vacio. Si tiene vehiculos pero no tarjetas activas asignadas al vehiculo, `/api/cardholder/cards` responde arreglo vacio.
+
+## Endpoints
+
+| Metodo  | Ruta                                      | Permiso                                  | Alcance                         | Descripcion                                  |
+| ------- | ----------------------------------------- | ---------------------------------------- | ------------------------------- | -------------------------------------------- |
+| `GET`   | `/api/cardholder/me`                      | `cardholder.profile.read`                | Tarjetahabiente autenticado     | Consulta perfil propio y conductor asociado. |
+| `GET`   | `/api/cardholder/sub-company`             | `cardholder.sub-companies.read-one`      | Tarjetahabiente autenticado     | Consulta subcompania propia.                 |
+| `GET`   | `/api/cardholder/vehicles`                | `cardholder.vehicles.read-list`          | Tarjetahabiente autenticado     | Lista vehiculos asignados al conductor.      |
+| `GET`   | `/api/cardholder/cards`                   | `cardholder.cards.read-list`             | Tarjetahabiente autenticado     | Lista tarjetas disponibles para el conductor. |
+| `POST`  | `/api/cardholder/cards/validate`          | `cardholder.cards.validate`              | Tarjetahabiente autenticado     | Valida una tarjeta asignada al conductor.    |
+| `GET`   | `/api/cardholder/cards/:cardId`           | `cardholder.cards.read-one`              | Tarjetahabiente autenticado     | Consulta una tarjeta propia.                 |
+| `POST`  | `/api/cardholder/cards/:cardId/off`       | `cardholder.cards.power.off`             | Tarjetahabiente autenticado     | Bloquea una tarjeta propia en Cardcloud.     |
+| `POST`  | `/api/cardholder/cards/:cardId/on`        | `cardholder.cards.power.on`              | Tarjetahabiente autenticado     | Desbloquea una tarjeta propia en Cardcloud.  |
+| `GET`   | `/api/cardholder/cards/:cardId/movements` | `cardholder.cards.movements.read-list`   | Tarjetahabiente autenticado     | Lista movimientos de una tarjeta propia.     |
+| `GET`   | `/api/cardholder/cards/:cardId/sensitive` | `cardholder.cards.sensitive.read-one`    | Tarjetahabiente autenticado     | Consulta datos sensibles de tarjeta propia.  |
+| `PATCH` | `/api/cardholder/cards/:cardId/nip`       | `cardholder.cards.nip.update`            | Tarjetahabiente autenticado     | Actualiza NIP de una tarjeta propia.         |
+
+## Perfil
+
+`GET /api/cardholder/me`
+
+Response `200`:
+
+```json
+{
+    "id": "019d6f62-8b8a-712e-bdf4-2f05f97f31e0",
+    "username": "conductor01",
+    "email": "conductor@example.com",
+    "fullName": "Conductor Demo",
+    "status": "active",
+    "driver": {
+        "id": "019d6f62-92cc-7897-bff1-4ea51cfae2d7",
+        "name": "Conductor Demo",
+        "externalReference": "DRV-001",
+        "status": "active",
+        "createdAt": "2026-08-19T12:00:00.000Z",
+        "address": null,
+        "subCompany": {
+            "id": "019d6f62-9559-7ab5-9e1d-41ee8953f62b",
+            "companyId": "019d6f62-9775-7b89-8e2e-8bf81a8d64f1",
+            "key": "SUB-001",
+            "cardcloudSubaccountId": "cc-subaccount-id",
+            "name": "Subcompania Operativa",
+            "status": "active",
+            "isDefault": false
+        }
+    }
+}
+```
+
+## Subcompania propia
+
+`GET /api/cardholder/sub-company`
+
+Response `200`:
+
+```json
+{
+    "driverId": "019d6f62-92cc-7897-bff1-4ea51cfae2d7",
+    "subCompany": {
+        "id": "019d6f62-9559-7ab5-9e1d-41ee8953f62b",
+        "companyId": "019d6f62-9775-7b89-8e2e-8bf81a8d64f1",
+        "key": "SUB-001",
+        "cardcloudSubaccountId": "cc-subaccount-id",
+        "name": "Subcompania Operativa",
+        "status": "active",
+        "isDefault": false,
+        "company": {
+            "id": "019d6f62-9775-7b89-8e2e-8bf81a8d64f1",
+            "key": "COMP-001",
+            "name": "Compania Demo",
+            "tradeName": "Compania Demo",
+            "status": "active"
+        }
+    }
+}
+```
+
+## Vehiculos
+
+`GET /api/cardholder/vehicles`
+
+Query params:
+
+| Campo    | Tipo      | Default | Descripcion                                              |
+| -------- | --------- | ------- | -------------------------------------------------------- |
+| `active` | `boolean` | `true`  | Si es `true`, solo devuelve vehiculos activos asignados. |
+
+Response `200`: arreglo de vehiculos asignados al conductor autenticado, incluyendo `fuel` y `card` cuando exista tarjeta asignada al vehiculo.
+
+```json
+[
+    {
+        "id": "019d6f62-a43a-7786-b85a-6e030680d32d",
+        "subCompanyId": "019d6f62-9559-7ab5-9e1d-41ee8953f62b",
+        "fuelId": "019d6f62-a80d-7489-a60c-9de6be165b30",
+        "driverId": "019d6f62-92cc-7897-bff1-4ea51cfae2d7",
+        "plates": "ABC-123",
+        "economicNumber": "ECO-01",
+        "model": "Transit",
+        "year": 2026,
+        "odometerControl": true,
+        "odometerInitial": 15000,
+        "status": "active",
+        "createdAt": "2026-08-19T12:00:00.000Z",
+        "updatedAt": "2026-08-19T12:00:00.000Z",
+        "fuel": {
+            "id": "019d6f62-a80d-7489-a60c-9de6be165b30",
+            "code": "regular",
+            "name": "Gasolina regular"
+        },
+        "card": null
+    }
+]
+```
+
+## Tarjetas
+
+`GET /api/cardholder/cards`
+
+Response `200`: arreglo de tarjetas activas asignadas a vehiculos del conductor autenticado.
+
+```json
+[
+    {
+        "id": "019d6f62-b5a4-78d3-b84e-2a64aa06eebd",
+        "subCompanyId": "019d6f62-9559-7ab5-9e1d-41ee8953f62b",
+        "vehicleId": "019d6f62-a43a-7786-b85a-6e030680d32d",
+        "designFuelId": "019d6f62-a80d-7489-a60c-9de6be165b30",
+        "externalId": "cardcloud-card-id",
+        "assignmentMode": "vehicle",
+        "status": "active",
+        "assignedAt": "2026-08-19T12:00:00.000Z",
+        "createdAt": "2026-08-19T12:00:00.000Z",
+        "updatedAt": "2026-08-19T12:00:00.000Z",
+        "stock": {
+            "id": "019d6f62-b899-781f-8d22-2557a82a1d19",
+            "externalId": "cardcloud-card-id",
+            "maskedPan": "**** **** **** 1234",
+            "clientId": "123456",
+            "balance": "850.00",
+            "providerStatus": "active",
+            "assignedCardId": "019d6f62-b5a4-78d3-b84e-2a64aa06eebd",
+            "isAssigned": true
+        },
+        "vehicle": {
+            "id": "019d6f62-a43a-7786-b85a-6e030680d32d",
+            "plates": "ABC-123",
+            "economicNumber": "ECO-01",
+            "model": "Transit",
+            "year": 2026,
+            "odometerControl": true,
+            "odometerInitial": 15000,
+            "status": "active"
+        },
+        "designFuel": {
+            "id": "019d6f62-a80d-7489-a60c-9de6be165b30",
+            "code": "regular",
+            "name": "Gasolina regular"
+        }
+    }
+]
+```
+
+`GET /api/cardholder/cards/:cardId`
+
+Response `200`: tarjeta propia. Si la tarjeta no pertenece al conductor autenticado, responde `404`.
+
+`POST /api/cardholder/cards/validate`
+
+Body:
+
+| Campo      | Tipo     | Requerido | Descripcion                         |
+| ---------- | -------- | --------- | ----------------------------------- |
+| `clientId` | `string` | Si        | Client ID visible/asociado a stock. |
+| `vigencia` | `string` | Si        | Formato `MMYY` o `MM/YY`.           |
+| `nip`      | `string` | Si        | NIP de 4 digitos.                   |
+
+Este endpoint valida una tarjeta que ya esta asignada a un vehiculo del conductor. El modelo actual no crea una relacion directa `tarjeta -> conductor`; la relacion operativa es `tarjeta -> vehiculo -> conductor`.
+
+Response `200`:
+
+```json
+{
+    "valid": true,
+    "message": "La tarjeta se valido correctamente.",
+    "card": {}
+}
+```
+
+`POST /api/cardholder/cards/:cardId/off`
+
+Bloquea en Cardcloud una tarjeta propia. Responde `200` con la respuesta del proveedor mas `message`. Tambien genera una notificacion para el usuario autenticado.
+
+`POST /api/cardholder/cards/:cardId/on`
+
+Desbloquea en Cardcloud una tarjeta propia. Responde `200` con la respuesta del proveedor mas `message`. Tambien genera una notificacion para el usuario autenticado.
+
+`GET /api/cardholder/cards/:cardId/movements`
+
+Query params opcionales: `from`, `to`.
+
+Consulta movimientos externos en Cardcloud despues de validar que la tarjeta pertenece al conductor autenticado.
+
+`GET /api/cardholder/cards/:cardId/sensitive`
+
+Consulta datos sensibles externos. Debe mostrarse en frontend solo por accion explicita y con confirmacion. Tambien genera una notificacion para el usuario autenticado.
+
+`PATCH /api/cardholder/cards/:cardId/nip`
+
+Body:
+
+| Campo     | Tipo     | Requerido | Descripcion      |
+| --------- | -------- | --------- | ---------------- |
+| `old_nip` | `string` | Si        | NIP actual.      |
+| `new_nip` | `string` | Si        | Nuevo NIP.       |
+
+`new_nip` debe ser distinto de `old_nip`.
+
+## Reglas y seguridad
+
+- Requiere JWT y permisos `cardholder.*`.
+- No requiere ni debe enviar `X-Company-Id`; el backend deriva el contexto desde el conductor vinculado al usuario.
+- Si el usuario no tiene un `Driver` activo vinculado, responde `403`.
+- Solo se consultan tarjetas activas en modo `vehicle` cuyo vehiculo activo tenga `driverId` igual al conductor del usuario.
+- Las rutas por `cardId` responden `404` cuando la tarjeta no pertenece al conductor autenticado, aunque la tarjeta exista en otra subcompania o vehiculo.
+- Para operar contra Cardcloud, la tarjeta debe tener `externalId` local o `stock.externalId`.
+- Las rutas `sensitive`, `nip`, `on` y `off` llaman Cardcloud despues de validar propiedad local.
+- `POST /api/cardholder/cards/validate` no asigna ni crea tarjetas; solo valida una tarjeta ya asignada al conductor por medio del vehiculo.
+- Evidencias de movimientos e historial de odometro no estan incluidos porque el modelo Prisma actual no tiene tablas de evidencias ni historial historico.
+
+## Errores comunes
+
+| Estado | Caso                                                                            | Mensaje esperado                                                                         |
+| ------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `400`  | `vigencia`, `nip`, `old_nip` o `new_nip` no cumplen formato.                    | Mensajes de validacion del DTO.                                                          |
+| `400`  | `new_nip` es igual a `old_nip`.                                                 | `El nuevo NIP debe ser diferente al actual.`                                             |
+| `400`  | La tarjeta no tiene referencia externa local para Cardcloud.                    | `No fue posible consultar la tarjeta en este momento. Intenta nuevamente.`               |
+| `400`  | Cardcloud no permite consultar, validar, bloquear, desbloquear o actualizar NIP. | Mensaje simple del proceso, por ejemplo `No fue posible validar la tarjeta...`.          |
+| `401`  | Request sin JWT valido o sesion expirada.                                       | Error estandar de autenticacion.                                                         |
+| `403`  | Usuario sin permiso `cardholder.*` requerido.                                   | Error estandar de permisos insuficientes.                                                |
+| `403`  | Usuario sin conductor activo vinculado.                                         | `Este apartado esta disponible solo para tarjetahabientes con conductor activo.`         |
+| `404`  | Tarjeta inexistente dentro de la cuenta del conductor.                          | `No encontramos la tarjeta solicitada en tu cuenta.`                                     |
+| `404`  | `clientId` no corresponde a una tarjeta asignada al conductor.                  | `Esta tarjeta no esta asignada a tu cuenta. Verifica los datos o contacta a tu empresa.` |
+| `409`  | El `clientId` coincide con mas de una tarjeta activa del conductor.             | `No pudimos identificar una sola tarjeta con esos datos. Contacta a tu empresa.`         |
+
+## Notas para frontend
+
+La pantalla cardholder debe ser una experiencia propia del conductor, no un CRUD administrativo. No pedir seleccion de compania ni subcompania; el backend resuelve esa informacion.
+
+Usa `GET /api/authentication/capabilities` para mostrar la entrada del modulo si aparece `cardholder.module`. Si el acceso del tarjetahabiente esta dentro de una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para calcular permisos; despues no envies `X-Company-Id` en `/api/cardholder/*`.
+
+Las acciones internas dependen de permisos granulares como `cardholder.cards.power.off`, `cardholder.cards.power.on`, `cardholder.cards.sensitive.read-one` o `cardholder.cards.nip.update`.
+
+Mostrar tarjetas desde `GET /api/cardholder/cards`. Para movimientos, datos sensibles, bloquear/desbloquear, validar tarjeta y cambiar NIP, usar acciones desde el detalle de tarjeta.
+
+No mostrar `companyId`, `subCompanyId`, `scopeKey` ni `scopeId` como controles dentro del modulo cardholder. La subcompania puede mostrarse como texto informativo usando `GET /api/cardholder/sub-company`.
+
+En alta administrativa de usuarios, si el rol seleccionado es tarjetahabiente, el flujo debe recordar que faltan pasos fuera de `/api/users`: vincular o crear conductor con `userId`, asignar vehiculo y asignar tarjeta al vehiculo. Sin esa cadena, el usuario puede iniciar sesion pero no tendra datos operativos en el modulo.
+
+Para validar tarjeta, pedir al usuario solo `clientId`, `vigencia` y `nip`. No pedir UUID de tarjeta para esa accion; el backend busca la tarjeta propia por `clientId`.

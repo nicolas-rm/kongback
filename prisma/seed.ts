@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { CardAssignmentMode, NotificationType, Prisma, PrismaClient, SettingScope, Status } from '@prisma/client';
 import { Pool } from 'pg';
+import { FUEL_CATALOG } from './fuel-catalog';
 import { ALL_PERMISSION_CODES, PERMISSION_CATALOG, type PermissionCode } from './permission-catalog';
 
 const prismaConnectionString = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
@@ -36,12 +37,6 @@ const DEMO_TENANT_COUNT = parseSeedPositiveInt('SEED_DEMO_TENANT_COUNT', DEFAULT
 const DEMO_SUB_COMPANIES_PER_COMPANY = parseSeedPositiveInt('SEED_DEMO_SUB_COMPANIES_PER_COMPANY', DEFAULT_DEMO_SUB_COMPANIES_PER_COMPANY);
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD?.trim() || 'Demo1234';
 const DOCUMENTS_STORAGE_DIR = process.env.DOCUMENTS_STORAGE_DIR?.trim() || path.join('uploads', 'documents');
-
-const DEMO_FUEL_DEFINITIONS = [
-    { code: 'DEMO-DIESEL', name: 'Demo Diesel' },
-    { code: 'DEMO-MAGNA', name: 'Demo Gasolina Magna' },
-    { code: 'DEMO-PREMIUM', name: 'Demo Gasolina Premium' },
-] as const;
 
 type RoleSeed = {
     id: string;
@@ -397,9 +392,10 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             extraPermissionCodes: [
                 'fuels.read-list',
                 'fuels.read-one',
-                'cardcloud.read-list',
-                'cardcloud.sub-company.assign',
-                'cardcloud.sub-company.unassign',
+                'cardcloud-stock.module',
+                'cardcloud-stock.read-list',
+                'cardcloud-stock.sub-company.assign',
+                'cardcloud-stock.sub-company.unassign',
                 'notifications.read-list',
                 'notifications.unread-count.read',
                 'notifications.mark-read',
@@ -440,10 +436,17 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
                 'fuels.read-one',
                 'sub-companies.read-list',
                 'sub-companies.read-one',
-                'cardcloud.read-list',
-                'cardcloud.sub-company.assign',
-                'cardcloud.sub-company.unassign',
+                'cardcloud-stock.module',
+                'cardcloud-stock.read-list',
+                'cardcloud-stock.sub-company.assign',
+                'cardcloud-stock.sub-company.unassign',
             ],
+        },
+        {
+            code: 'demo-cardholder',
+            name: 'Demo Tarjetahabiente',
+            description: 'Acceso propio para usuarios conductores que consultan y operan sus tarjetas asignadas.',
+            prefixes: ['cardholder.'],
         },
         {
             code: 'demo-fuel-administrator',
@@ -518,7 +521,7 @@ function resolveDemoRolePermissionCodes(definition: DemoRoleDefinition): Permiss
 }
 
 function isReadPermissionCode(code: PermissionCode): boolean {
-    return code.includes('.read') || code.endsWith('.download');
+    return code.includes('.read') || code.endsWith('.download') || code.endsWith('.module');
 }
 
 async function seedDemoUsers(): Promise<UserSeed[]> {
@@ -751,7 +754,7 @@ async function seedSubCompanies(companies: CompanySeed[]): Promise<SubCompanySee
 async function seedFuels(): Promise<FuelSeed[]> {
     const fuels: FuelSeed[] = [];
 
-    for (const definition of DEMO_FUEL_DEFINITIONS) {
+    for (const definition of FUEL_CATALOG) {
         const fuel = await prisma.fuel.upsert({
             where: { code: definition.code },
             create: {
@@ -1139,7 +1142,9 @@ async function main(): Promise<void> {
     console.log('Seed completado correctamente.');
     console.log(`Admin global: ${adminUser.username}`);
     console.log(`Usuarios demo (${DEMO_PASSWORD}): ${DEMO_USER_DEFINITIONS.map((user) => user.username).join(', ')}`);
-    console.log(`Datos demo medium: ${DEMO_TENANT_COUNT} companias, ${DEMO_SUB_COMPANIES_PER_COMPANY} subcompanias por compania, ${DEMO_FUEL_DEFINITIONS.length} combustibles, tarjetas y stock Cardcloud locales.`);
+    console.log(
+        `Datos demo medium: ${DEMO_TENANT_COUNT} companias, ${DEMO_SUB_COMPANIES_PER_COMPANY} subcompanias por compania, ${FUEL_CATALOG.length} combustibles, tarjetas y stock Cardcloud locales.`
+    );
 }
 
 main()

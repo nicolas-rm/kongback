@@ -49,14 +49,15 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `fuel` y `
 
 ## Endpoints
 
-| Metodo   | Ruta                       | Permiso                  | Descripcion               |
-| -------- | -------------------------- | ------------------------ | ------------------------- |
-| `POST`   | `/api/vehicles`            | `vehicles.create`        | Crea un vehiculo.         |
-| `GET`    | `/api/vehicles`            | `vehicles.read-list`     | Lista vehiculos.          |
-| `GET`    | `/api/vehicles/:id`        | `vehicles.read-one`      | Obtiene un vehiculo.      |
-| `PATCH`  | `/api/vehicles/:id/driver` | `vehicles.driver.assign` | Asigna o quita conductor. |
-| `PATCH`  | `/api/vehicles/:id`        | `vehicles.update`        | Actualiza un vehiculo.    |
-| `DELETE` | `/api/vehicles/:id`        | `vehicles.delete`        | Desactiva un vehiculo.    |
+| Metodo   | Ruta                        | Permiso                      | Descripcion                              |
+| -------- | --------------------------- | ---------------------------- | ---------------------------------------- |
+| `POST`   | `/api/vehicles`             | `vehicles.create`            | Crea un vehiculo.                        |
+| `GET`    | `/api/vehicles`             | `vehicles.read-list`         | Lista vehiculos.                         |
+| `GET`    | `/api/vehicles/:id/drivers` | `vehicles.drivers.read-list` | Lista conductores asignados al vehiculo. |
+| `GET`    | `/api/vehicles/:id`         | `vehicles.read-one`          | Obtiene un vehiculo.                     |
+| `PATCH`  | `/api/vehicles/:id/driver`  | `vehicles.driver.assign`     | Asigna o quita conductor.                |
+| `PATCH`  | `/api/vehicles/:id`         | `vehicles.update`            | Actualiza un vehiculo.                   |
+| `DELETE` | `/api/vehicles/:id`         | `vehicles.delete`            | Desactiva un vehiculo.                   |
 
 ## Listado
 
@@ -102,6 +103,20 @@ Response `201`: `Vehicle`.
 Path params: `id` UUID del vehiculo.
 
 Response `200`: `Vehicle`.
+
+## Conductores del vehiculo
+
+`GET /api/vehicles/:id/drivers`
+
+Permiso: `vehicles.drivers.read-list`.
+
+Query params: `page`, `limit`, `search`, `all`, `status`.
+
+`search` busca por `name` y `externalReference`.
+
+Response `200`: resultado paginado de `Driver` con `subCompany` y `user` summaries.
+
+Nota: el modelo actual guarda solo la relacion vigente `vehicle.driverId`; este endpoint devuelve cero o un conductor y no historial de asignaciones anteriores.
 
 ## Actualizar
 
@@ -168,11 +183,13 @@ No muestres `fuelId`, `driverId` ni `subCompanyId` como campos de texto. En tabl
 
 Cuando el usuario solo quiera asignar o quitar conductor, usa la accion dedicada `PATCH /api/vehicles/:id/driver`. Reserva `PATCH /api/vehicles/:id` para cambios generales del vehiculo.
 
+Para consultar el conductor relacionado desde el detalle del vehiculo usa `GET /api/vehicles/:id/drivers`. No lo uses como historial; hoy representa la asignacion actual.
+
 ## Errores comunes
 
 | Estado | Caso                                                           |
 | ------ | -------------------------------------------------------------- |
-| `400`  | Relacion invalida, year fuera de rango o parametros invalidos. |
+| `400`  | Datos relacionados no validos, anio fuera de rango o parametros invalidos. |
 | `401`  | Request sin autenticacion valida.                              |
 | `403`  | Usuario autenticado sin el permiso requerido.                  |
 | `404`  | Vehiculo no encontrado.                                        |

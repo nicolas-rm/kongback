@@ -1,46 +1,52 @@
 {
     "authentication": {
-        "invalidCredentials": "Invalid credentials",
-        "accountLocked": "Account locked. Try again later",
-        "emailVerificationRequired": "You must verify your email before signing in",
-        "invalidTwoFactorChallenge": "Invalid 2FA challenge",
-        "invalidTwoFactorCode": "Invalid 2FA code",
-        "invalidRefreshToken": "Invalid refresh token",
-        "reusedRefreshToken": "Refresh token reused",
-        "expiredRefreshToken": "Refresh token expired",
-        "unauthorizedUser": "Unauthorized user",
-        "invalidCurrentPassword": "Invalid current password",
-        "invalidVerificationToken": "Invalid or expired verification token",
-        "invalidResetToken": "Invalid or expired token",
-        "twoFactorPendingNotFound": "There is no pending 2FA configuration",
-        "twoFactorSetupExpired": "The 2FA setup expired. Start the process again",
-        "twoFactorNotEnabled": "2FA is not enabled"
+        "invalidCredentials": "The username or password is incorrect.",
+        "accountLocked": "Your account is temporarily locked. Try again later.",
+        "emailVerificationRequired": "Verify your email to sign in.",
+        "invalidTwoFactorChallenge": "The security verification is no longer valid. Sign in again.",
+        "invalidTwoFactorCode": "The verification code is incorrect.",
+        "invalidRefreshToken": "Your session is not valid. Sign in again.",
+        "reusedRefreshToken": "We closed your session for security. Sign in again.",
+        "expiredRefreshToken": "Your session expired. Sign in again.",
+        "sessionExpired": "Your session expired. Sign in again.",
+        "sessionIdleExpired": "Your session expired due to inactivity. Sign in again.",
+        "unauthorizedUser": "We could not validate your user. Sign in again.",
+        "invalidCurrentPassword": "The current password is incorrect.",
+        "invalidVerificationToken": "The verification link is not valid or expired.",
+        "invalidResetToken": "The password reset link is not valid or expired.",
+        "twoFactorPendingNotFound": "Start the 2FA setup first.",
+        "twoFactorSetupExpired": "The 2FA setup expired. Start the process again.",
+        "twoFactorNotEnabled": "Two-step verification is not enabled."
     },
     "authorization": {
-        "unauthorized": "Unauthorized",
-        "insufficientPermissions": "Insufficient permissions",
-        "companyDenied": "Access denied to this company",
-        "mustChangePassword": "You must change your password before continuing."
+        "unauthorized": "Your session is not valid. Sign in again.",
+        "insufficientPermissions": "You do not have enough permissions for this content.",
+        "companyDenied": "You do not have access to this company.",
+        "mustChangePassword": "Change your password to continue."
     },
     "documents": {
-        "notFound": "Document not found",
-        "fileRequired": "File is required",
-        "fileTooLarge": "File is too large",
-        "mimeTypeNotAllowed": "File type is not allowed",
-        "storageFileNotFound": "File not found in storage",
-        "invalidFilePath": "Invalid file path"
+        "notFound": "We could not find the requested document.",
+        "fileRequired": "Select a file to continue.",
+        "fileTooLarge": "The file is too large.",
+        "mimeTypeNotAllowed": "This file type is not allowed.",
+        "storageFileNotFound": "We could not find the requested file.",
+        "invalidFilePath": "We could not process the file path."
     },
     "notifications": {
-        "notFound": "Notification not found"
+        "notFound": "We could not find the requested notification."
     },
     "users": {
-        "notFound": "User not found"
+        "notFound": "We could not find the requested user."
+    },
+    "business": {
+        "companyReferenceExists": "The company reference already exists.",
+        "subCompanyKeyExists": "The subcompany key already exists for this company."
     },
     "validation": {
-        "invalidData": "The request contains invalid data"
+        "invalidData": "Review the information sent."
     },
     "internal": {
-        "unprocessed": "Request could not be processed, please try again later"
+        "unprocessed": "We could not process the request. Try again later."
     },
     "mail": {
         "common": {
@@ -52,7 +58,7 @@
             "emailLabel": "Email",
             "usernameLabel": "Username",
             "temporaryPasswordLabel": "Temporary password",
-            "rateLimited": "Too many emails have been sent. Try again later."
+            "rateLimited": "Too many emails were sent. Try again later."
         },
         "passwordReset": {
             "subject": "Reset password",
@@ -73,15 +79,15 @@
         }
     },
     "prisma": {
-        "uniqueConstraint": "The value of ({fields}) already exists",
-        "invalidRelation": "Invalid relation",
-        "valueTooLong": "Value is too long",
-        "recordNotFound": "Record not found",
-        "invalidData": "Invalid data",
-        "internalFailure": "Internal server failure",
+        "uniqueConstraint": "{fields} {existsVerb}.",
+        "invalidRelation": "Some related information is not valid.",
+        "valueTooLong": "One of the fields exceeds the allowed length.",
+        "recordNotFound": "We could not find the requested record.",
+        "invalidData": "Review the information sent.",
+        "internalFailure": "We could not process the request. Try again later.",
         "unknownField": "unknown"
     },
     "socket": {
-        "unauthorized": "Unauthorized"
+        "unauthorized": "Your session is not valid. Sign in again."
     }
 }

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
-import { CreateVehicleDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
+import { CreateVehicleDto, FindStatusRecordsDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { VehiclesService } from '@/modules/business/services/vehicles.service';
 
 @RequireCompany()
@@ -19,6 +19,12 @@ export class VehiclesController {
     @Permissions('vehicles.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindVehiclesDto) {
         return this.vehiclesService.findAll(dto, scope);
+    }
+
+    @Get(':id/drivers')
+    @Permissions('vehicles.drivers.read-list')
+    findDrivers(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Query() dto: FindStatusRecordsDto) {
+        return this.vehiclesService.findDrivers(id, dto, scope);
     }
 
     @Get(':id')

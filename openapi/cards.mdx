@@ -49,18 +49,21 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 
 ## Endpoints
 
-| Metodo   | Ruta                                      | Permiso                  | Descripcion                               |
-| -------- | ----------------------------------------- | ------------------------ | ----------------------------------------- |
-| `POST`   | `/api/cards`                              | `cards.create`           | Crea una tarjeta.                         |
-| `POST`   | `/api/cards/assign-sub-company`           | `cards.create`           | Asigna tarjetas Cardcloud a subcompania.  |
-| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`             | Sincroniza tarjetas de una subcompania.   |
-| `GET`    | `/api/cards`                              | `cards.read-list`        | Lista tarjetas.                           |
-| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read` | Lista tarjetas por combustible de diseno. |
-| `GET`    | `/api/cards/:id`                          | `cards.read-one`         | Obtiene una tarjeta.                      |
-| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`   | Asigna tarjeta a vehiculo.                |
-| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`         | Quita asignacion de tarjeta.              |
-| `PATCH`  | `/api/cards/:id`                          | `cards.update`           | Actualiza una tarjeta.                    |
-| `DELETE` | `/api/cards/:id`                          | `cards.delete`           | Desactiva una tarjeta.                    |
+| Metodo   | Ruta                                      | Permiso                     | Descripcion                                |
+| -------- | ----------------------------------------- | --------------------------- | ------------------------------------------ |
+| `POST`   | `/api/cards`                              | `cards.create`              | Crea una tarjeta.                          |
+| `POST`   | `/api/cards/assign-sub-company`           | `cards.create`              | Asigna tarjetas Cardcloud a subcompania.   |
+| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                | Sincroniza tarjetas de una subcompania.    |
+| `POST`   | `/api/cards/validate`                     | `cards.validate`            | Valida una tarjeta local contra Cardcloud. |
+| `GET`    | `/api/cards`                              | `cards.read-list`           | Lista tarjetas.                            |
+| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`    | Lista tarjetas por combustible de diseno.  |
+| `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list` | Lista movimientos externos de la tarjeta.  |
+| `GET`    | `/api/cards/:id`                          | `cards.read-one`            | Obtiene una tarjeta.                       |
+| `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`   | Actualiza asignacion operativa parcial.    |
+| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`      | Asigna tarjeta a vehiculo.                 |
+| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`            | Quita asignacion de tarjeta.               |
+| `PATCH`  | `/api/cards/:id`                          | `cards.update`              | Actualiza una tarjeta.                     |
+| `DELETE` | `/api/cards/:id`                          | `cards.delete`              | Desactiva una tarjeta.                     |
 
 ## Listado
 
@@ -85,6 +88,42 @@ Query params: `page`, `limit`, `search`, `all`, `status`.
 Valida que el combustible exista y este activo. `search` busca por `externalId`.
 
 Response `200`: resultado paginado de `Card` filtrado por `designFuelId`.
+
+## Validar tarjeta local
+
+`POST /api/cards/validate`
+
+Permiso: `cards.validate`.
+
+```json
+{
+    "clientId": "CLI-001",
+    "nip": "1234",
+    "vigencia": "1228"
+}
+```
+
+Requeridos: `clientId`, `nip`, `vigencia`.
+
+El backend busca una tarjeta local asignada al `clientId` dentro del alcance del usuario, obtiene datos sensibles desde Cardcloud y valida contra el proveedor. Si la validacion no corresponde al `externalId` local, responde error.
+
+Response `200`:
+
+```json
+{
+    "valid": true,
+    "card": {
+        "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+        "externalId": "019cd4ad-38dd-7125-a68a-209519d79869",
+        "clientId": "CLI-001",
+        "maskedPan": "****1234",
+        "status": "active",
+        "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+        "assignmentMode": "vehicle"
+    }
+}
+```
 
 ## Crear
 
@@ -216,6 +255,18 @@ Path params: `id` UUID de la tarjeta.
 
 Response `200`: `Card`.
 
+## Movimientos
+
+`GET /api/cards/:id/movements`
+
+Permiso: `cards.movements.read-list`.
+
+Query params: `from`, `to`.
+
+El backend valida que la tarjeta local pertenezca al alcance de la compania y usa `externalId` para consultar movimientos externos en Cardcloud.
+
+Response `200`: respuesta cruda del proveedor Cardcloud para movimientos de tarjeta.
+
 ## Actualizar
 
 `PATCH /api/cards/:id`
@@ -247,6 +298,24 @@ Response:
     "assignedAt": "2026-07-04T00:00:00.000Z"
 }
 ```
+
+## Actualizar asignacion
+
+`PATCH /api/cards/:id/assignment`
+
+Permiso: `cards.assignment.update`.
+
+```json
+{
+    "assignmentMode": "vehicle",
+    "vehicleId": "db28024c-9ed7-4318-84df-eb399ebd9e7e",
+    "assignedAt": "2026-07-04"
+}
+```
+
+`assignmentMode` acepta `vehicle` o `unassigned`. Si `assignmentMode` es `unassigned` o `vehicleId` es `null`, el backend quita la asignacion. Si se asigna a vehiculo, aplica las mismas reglas de `PATCH /api/cards/:id/assign-vehicle`.
+
+Nota: el modelo actual no tiene asignacion directa a conductor ni modo `locked`; este endpoint es compatible de path, pero funcionalmente cubre solo `vehicle` y `unassigned`.
 
 ## Quitar asignacion
 
@@ -295,6 +364,8 @@ No muestres `assignmentMode` como campo editable. Es un estado derivado por back
 
 Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcompania. Para quitar asignacion, usa la accion dedicada `PATCH /api/cards/:id/unassign`.
 
+Si el front quiere una sola accion compatible con el contrato anterior, puede usar `PATCH /api/cards/:id/assignment`; internamente solo soporta asignar a vehiculo o quitar asignacion.
+
 Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`.
 
 Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignacion como accion posterior. Si se crea desde el detalle de un vehiculo, deriva `vehicleId`, `subCompanyId` y `assignedAt` desde ese contexto cuando aplique.
@@ -303,7 +374,7 @@ Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignac
 
 | Estado | Caso                                                      |
 | ------ | --------------------------------------------------------- |
-| `400`  | Relacion invalida, fecha invalida o parametros invalidos. |
+| `400`  | Datos relacionados no validos, fecha invalida o parametros invalidos. |
 | `401`  | Request sin autenticacion valida.                         |
 | `403`  | Usuario autenticado sin el permiso requerido.             |
 | `404`  | Tarjeta no encontrada.                                    |

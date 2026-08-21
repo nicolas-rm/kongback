@@ -7,7 +7,7 @@ description: Endpoints para gestionar sub-companias asociadas a companias.
 
 Base path: `/api/sub-companies`
 
-Todos los endpoints requieren autenticacion y permisos `sub-companies.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+Todos los endpoints requieren autenticacion. El CRUD usa permisos `sub-companies.*`; las descargas usan el permiso del modulo de datos exportado (`drivers.download`, `vehicles.download` o `cards.download`). El borrado desactiva el registro cambiando `status` a `inactive`.
 
 ## Alcance por compania
 
@@ -48,13 +48,16 @@ En listados, `company` se devuelve como summary y `address` no se devuelve. `add
 
 ## Endpoints
 
-| Metodo   | Ruta                     | Permiso                   | Descripcion                 |
-| -------- | ------------------------ | ------------------------- | --------------------------- |
-| `POST`   | `/api/sub-companies`     | `sub-companies.create`    | Crea una sub-compania.      |
-| `GET`    | `/api/sub-companies`     | `sub-companies.read-list` | Lista sub-companias.        |
-| `GET`    | `/api/sub-companies/:id` | `sub-companies.read-one`  | Obtiene una sub-compania.   |
-| `PATCH`  | `/api/sub-companies/:id` | `sub-companies.update`    | Actualiza una sub-compania. |
-| `DELETE` | `/api/sub-companies/:id` | `sub-companies.delete`    | Desactiva una sub-compania. |
+| Metodo   | Ruta                                       | Permiso                   | Descripcion                              |
+| -------- | ------------------------------------------ | ------------------------- | ---------------------------------------- |
+| `POST`   | `/api/sub-companies`                       | `sub-companies.create`    | Crea una sub-compania.                   |
+| `GET`    | `/api/sub-companies`                       | `sub-companies.read-list` | Lista sub-companias.                     |
+| `GET`    | `/api/sub-companies/:id/drivers/download`  | `drivers.download`        | Descarga conductores de la sub-compania. |
+| `GET`    | `/api/sub-companies/:id/vehicles/download` | `vehicles.download`       | Descarga vehiculos de la sub-compania.   |
+| `GET`    | `/api/sub-companies/:id/cards/download`    | `cards.download`          | Descarga tarjetas de la sub-compania.    |
+| `GET`    | `/api/sub-companies/:id`                   | `sub-companies.read-one`  | Obtiene una sub-compania.                |
+| `PATCH`  | `/api/sub-companies/:id`                   | `sub-companies.update`    | Actualiza una sub-compania.              |
+| `DELETE` | `/api/sub-companies/:id`                   | `sub-companies.delete`    | Desactiva una sub-compania.              |
 
 ## Listado
 
@@ -93,6 +96,8 @@ Opcionales: `status`, `isDefault`, `address`.
 
 Al crear, el backend primero crea la subcuenta en Cardcloud con `ExternalId = company.key + "__" + key` y `Description = name`. Si Cardcloud falla o no devuelve un identificador de subcuenta valido, no se crea la `SubCompany` local. El `cardcloudSubaccountId` se guarda con el identificador devuelto por Cardcloud y no debe enviarse en el body de creacion.
 
+Si `isDefault` se envia como `true`, la subcompania creada queda como predeterminada y el backend desmarca cualquier otra subcompania predeterminada de la misma compania en la misma transaccion.
+
 Response `201`: `SubCompany` con `company` summary y `address`.
 
 ## Obtener
@@ -103,6 +108,28 @@ Path params: `id` UUID de la sub-compania.
 
 Response `200`: `SubCompany` con `company` summary y `address`.
 
+## Descargas
+
+`GET /api/sub-companies/:id/drivers/download`
+
+Permiso: `drivers.download`.
+
+Descarga un archivo Excel (`.xlsx`) con los conductores de la sub-compania, vehiculos actualmente asignados y tarjetas vinculadas a esos vehiculos.
+
+`GET /api/sub-companies/:id/vehicles/download`
+
+Permiso: `vehicles.download`.
+
+Descarga un archivo Excel (`.xlsx`) con los vehiculos de la sub-compania, combustible, conductor actual y tarjeta asignada.
+
+`GET /api/sub-companies/:id/cards/download`
+
+Permiso: `cards.download`.
+
+Descarga un archivo Excel (`.xlsx`) con las tarjetas de la sub-compania, estado local, estado Cardcloud, vehiculo y combustible de diseno.
+
+Las descargas respetan `X-Company-Id` y el scope por subcompania del usuario autenticado. Si la sub-compania no pertenece al alcance del usuario, responde como no encontrada o no autorizada segun el guard.
+
 ## Actualizar
 
 `PATCH /api/sub-companies/:id`
@@ -110,6 +137,8 @@ Response `200`: `SubCompany` con `company` summary y `address`.
 Acepta `name`, `status`, `isDefault` y `address`, todos opcionales. No cambia `companyId`, `key` ni `cardcloudSubaccountId`.
 
 `key` y `cardcloudSubaccountId` no son editables porque forman el vínculo con la subcuenta Cardcloud creada para la subcompania.
+
+Si `isDefault` se actualiza a `true`, esa subcompania queda como predeterminada y el backend desmarca la predeterminada anterior de la misma compania.
 
 Response `200`: `SubCompany` actualizada con `company` summary y `address`.
 
@@ -137,7 +166,7 @@ Campos recomendados para formularios:
 - Clave: `key`.
 - Nombre: `name`.
 - Subcuenta Cardcloud: `cardcloudSubaccountId`, siempre solo lectura. Lo genera backend al crear la subcuenta en Cardcloud.
-- Predeterminada: `isDefault`, checkbox.
+- Predeterminada: `isDefault`, checkbox. Si se marca, mueve la predeterminada de la compania a esa subcompania.
 - Estado: `status`, con `active` como valor inicial.
 - Direccion: grupo colapsable u opcional basado en `address`.
 
@@ -145,13 +174,15 @@ En tablas, evita mostrar UUIDs. Usa `company.name`, `company.key`, `key` y `name
 
 No permitas editar `key` ni `cardcloudSubaccountId` desde el formulario. Si se necesita corregir esa relacion, debe hacerse como proceso operativo controlado.
 
+Las acciones de descarga son botones secundarios de exportacion; no requieren pantalla CRUD propia. El front debe tratar la respuesta como archivo binario y usar el nombre recibido en `Content-Disposition`.
+
 ## Errores comunes
 
 | Estado | Caso                                             |
 | ------ | ------------------------------------------------ |
-| `400`  | Relacion invalida o parametros invalidos.        |
+| `400`  | Datos relacionados no validos o parametros invalidos. |
 | `401`  | Request sin autenticacion valida.                |
 | `403`  | Usuario autenticado sin el permiso requerido.    |
 | `404`  | Sub-compania no encontrada.                      |
 | `409`  | Conflictos de unicidad segun constraints Prisma. |
-| `502`  | Cardcloud no devolvio una subcuenta valida.      |
+| `502`  | No se pudo completar la operacion con el servicio externo. |

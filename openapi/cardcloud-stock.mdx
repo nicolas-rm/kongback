@@ -1,0 +1,176 @@
+---
+title: Cardcloud Stock
+description: Endpoints del espejo local de stock Cardcloud y su asignacion a subcompanias.
+---
+
+# Cardcloud Stock
+
+Base path: `/api/cardcloud-stock`
+
+Este modulo administra el espejo local de stock Cardcloud. La tabla local se mantiene por sincronizacion con el proveedor y no expone CRUD manual sobre datos sincronizados.
+
+## Endpoints
+
+| Metodo  | Ruta                                            | Permiso                                | Alcance          | Descripcion                       |
+| ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | --------------------------------- |
+| `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock.      |
+| `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local de stock. |
+| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock a una subcompania.   |
+| `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita stock de una subcompania.   |
+
+## Listar stock local
+
+`GET /api/cardcloud-stock`
+
+Requiere `RequireSystemOrCompanyAccess` y permiso `cardcloud-stock.read-list`.
+
+Lista el espejo local de stock Cardcloud. No llama a la API externa.
+
+Sin `X-Company-Id`, requiere acceso global y devuelve todas las tarjetas sincronizadas desde Cardcloud, tengan o no subcompania asignada.
+
+Con `X-Company-Id`, opera dentro de la compania seleccionada: devuelve stock sin asignar y stock asignado a subcompanias visibles para el usuario. No devuelve stock asignado a otras companias.
+
+Query params:
+
+| Campo            | Tipo     | Requerido | Descripcion                                                                    |
+| ---------------- | -------- | --------- | ------------------------------------------------------------------------------ |
+| `page`           | `number` | No        | Pagina. Default `1`.                                                           |
+| `limit`          | `number` | No        | Registros por pagina. Maximo `100`.                                            |
+| `search`         | `string` | No        | Busca en id sincronizado del proveedor, `maskedPan`, `clientId` y subcompania. |
+| `providerStatus` | `string` | No        | Filtra por el status crudo recibido de Cardcloud.                              |
+| `subCompanyId`   | `string` | No        | Filtra por subcompania asignada.                                               |
+
+Response `200`:
+
+```json
+{
+    "data": [
+        {
+            "id": "stock-id",
+            "subCompanyId": null,
+            "assignedCardId": null,
+            "maskedPan": "XXXXXXXXXXXX1001",
+            "clientId": "CLIENT-001",
+            "balance": "1000.00",
+            "providerStatus": "blocked",
+            "assignedCard": null,
+            "subCompany": null
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "page": 1,
+        "limit": 25,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
+Reglas:
+
+- Usa `GET /api/cardcloud-stock?page=1&limit=25&search=` para la tabla de stock.
+- En modo administracion global, no envies `X-Company-Id`.
+- En modo operacion de compania, envia `X-Company-Id` para limitar el stock a tarjetas sin asignar o asociadas a subcompanias visibles.
+- El listado sin header es completo/global porque representa el espejo de las tarjetas que vienen de Cardcloud externo.
+- No permite crear, editar ni borrar datos sincronizados del proveedor.
+
+## Sincronizar espejo local
+
+`POST /api/cardcloud-stock/sync`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud-stock.sync`.
+
+Sincroniza todas las tarjetas disponibles desde Cardcloud hacia el espejo local global de stock. No usa `X-Company-Id` porque todavia no esta asignando operacion a una compania o subcompania.
+
+No sincroniza datos sensibles como CVV, NIP o PAN completo.
+
+Response `200`:
+
+```json
+{
+    "synced": 20,
+    "skipped": 0,
+    "removed": 1
+}
+```
+
+Reglas:
+
+- Si Cardcloud no esta configurado, devuelve `400`.
+- `providerStatus` se guarda como texto crudo recibido desde Cardcloud; no se normaliza al enum local.
+- `maskedPan` guarda el PAN enmascarado con `X` y deja visibles solo los ultimos 4 digitos de `masked_pan`. Ejemplo: `516152XXXXXX4398` se guarda como `XXXXXXXXXXXX4398`.
+- `externalId` se toma solo de `card_id`; el campo externo `card_external_id` no se usa para crear o actualizar el espejo.
+- `skipped` cuenta tarjetas sin `card_id` util o duplicadas.
+- Las tarjetas que ya no vengan en Cardcloud se marcan como `inactive` en el espejo local.
+- El sync actualiza datos del proveedor (`externalId`, `maskedPan`, `clientId`, `balance`, `providerStatus`) sin cambiar la asignacion local a subcompania. `externalId` se conserva solo para sincronizacion interna y no se devuelve en las respuestas del stock local.
+- `balance` se guarda cifrado en base de datos y se devuelve descifrado como string decimal.
+
+## Asignacion local de stock
+
+Estas acciones no llaman a la API externa. Solo administran a que subcompania pertenece una tarjeta dentro del espejo local.
+
+`PATCH /api/cardcloud-stock/:id/assign-sub-company`
+
+Requiere `RequireSystemOrCompanyAccess` y permiso `cardcloud-stock.sub-company.assign`.
+
+Body:
+
+| Campo          | Tipo     | Requerido | Descripcion                          |
+| -------------- | -------- | --------- | ------------------------------------ |
+| `subCompanyId` | `string` | Si        | Subcompania destino del stock local. |
+
+Response `200`:
+
+```json
+{
+    "id": "stock-id",
+    "subCompanyId": "sub-company-id",
+    "assignedCardId": null,
+    "maskedPan": "XXXXXXXXXXXX1001",
+    "clientId": "CLIENT-001",
+    "balance": "1000.00",
+    "providerStatus": "blocked",
+    "assignedCard": null,
+    "subCompany": {
+        "id": "sub-company-id",
+        "companyId": "company-id",
+        "key": "DEMO-SUB-01",
+        "name": "Demo Sub Company 01"
+    }
+}
+```
+
+Reglas:
+
+- `subCompanyId` debe existir, estar activo y ser visible dentro del alcance del usuario.
+- Sin `X-Company-Id`, requiere acceso global y la subcompania determina a que compania queda asociado el stock.
+- Con `X-Company-Id`, `subCompanyId` debe pertenecer a esa compania y respetar el alcance por subcompania del usuario.
+- Con `X-Company-Id`, solo puede asignar stock sin subcompania o stock ya asignado a una subcompania visible para ese usuario.
+- Si la subcompania no existe o esta inactiva, devuelve `400`.
+- Si el stock no existe, devuelve `404`.
+
+`PATCH /api/cardcloud-stock/:id/unassign-sub-company`
+
+Requiere `RequireSystemOrCompanyAccess` y permiso `cardcloud-stock.sub-company.unassign`.
+
+No recibe body.
+
+Response `200`: mismo formato que asignacion, con `subCompanyId: null` y `subCompany: null`.
+
+Reglas:
+
+- Sin `X-Company-Id`, requiere acceso global.
+- Con `X-Company-Id`, solo puede quitar asignaciones de stock asociado a subcompanias visibles para ese usuario.
+- Quita la relacion local con subcompania; no modifica la tarjeta en Cardcloud externo.
+
+## Notas para frontend
+
+Para mostrar el stock local en administracion global, consume `GET /api/cardcloud-stock?page=1&limit=25&search=` sin `X-Company-Id`. Para operacion dentro de una compania, envia `X-Company-Id`; el backend limitara la tabla a stock sin asignar y stock de subcompanias visibles.
+
+La accion `Sincronizar stock Cardcloud` debe ser un boton/accion tecnica de administracion global, no una pagina separada ni una accion por compania. Solo mostrarla cuando `capabilities.permissions` incluya `cardcloud-stock.sync` y el usuario tenga acceso de sistema.
+
+Para asignar stock a una subcompania, usa `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde una accion del inventario/stock. En modo compania, envia `X-Company-Id`. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual.
+
+No crees una pantalla CRUD manual para modificar datos sincronizados como `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra enmascarado con `X` y solo los ultimos 4 digitos visibles. Usa `id` para identificar el stock local; no dependas de ids externos en la UI.

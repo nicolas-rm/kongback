@@ -20,22 +20,22 @@ export class LoginUseCase {
 
     async execute(dto: LoginDto, sessionContext: SessionContext = {}) {
         const user = await this.repository.findLoginUser(dto.username);
-        if (!user || user.status !== 'active') throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'Credenciales invalidas');
+        if (!user || user.status !== 'active') throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.accountLocked, 'Cuenta bloqueada. Intenta de nuevo mas tarde');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.accountLocked, 'Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.');
         }
 
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.password);
         if (!validPassword) {
             await this.registerFailedAttempt(user.id, user.failedLoginAttempts);
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'Credenciales invalidas');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
         }
 
         await this.repository.resetLoginState(user.id);
 
         if (user.requiresEmailVerification && !user.emailVerifiedAt) {
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.emailVerificationRequired, 'Debes verificar tu correo antes de iniciar sesion');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.emailVerificationRequired, 'Verifica tu correo para iniciar sesion.');
         }
 
         if (user.twoFactorEnabled) {
@@ -73,18 +73,18 @@ export class LoginUseCase {
     async verifyTwoFactorLogin(dto: VerifyTwoFactorLoginDto, sessionContext: SessionContext = {}) {
         const challenge = await this.repository.findTwoFactorLoginChallenge(this.cryptoService.hashToken(dto.challengeToken));
         if (!challenge || !challenge.user.twoFactorEnabled || !challenge.user.twoFactorSecret || challenge.user.status !== 'active') {
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
         if (challenge.attemptCount >= this.config.twoFactor.loginChallengeMaxAttempts) {
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'Desafio 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
         const validCode = await this.verifySecondFactor(challenge.user.id, challenge.user.twoFactorSecret, dto);
 
         if (!validCode) {
             await this.repository.incrementTwoFactorChallengeAttempt(challenge.id);
-            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'Codigo 2FA invalido');
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
         }
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);
