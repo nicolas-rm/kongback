@@ -3,6 +3,7 @@ import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, WebSocketGat
 import { I18nService } from 'nestjs-i18n';
 import type { Server, Socket } from 'socket.io';
 import { I18N_KEYS } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { NotificationsSerializerService, SerializableNotificationData } from '@/modules/notifications/services/notifications-serializer.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { NotificationsSocketAuthenticationService } from '@/modules/notifications/notifications-socket-authentication.service';
@@ -28,7 +29,8 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         private readonly socketAuthenticationService: NotificationsSocketAuthenticationService,
         private readonly serializer: NotificationsSerializerService,
         private readonly notificationsService: NotificationsService,
-        private readonly i18n: I18nService
+        private readonly i18n: I18nService,
+        private readonly audit: AuditService
     ) {}
 
     async handleConnection(@ConnectedSocket() client: Socket) {
@@ -39,13 +41,18 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
             await client.join(this.getUserRoom(user.id));
             await this.emitUnreadCount(user.id);
             client.emit('notifications.connected', { userId: user.id, connectedAt: new Date().toISOString() });
+            void this.audit.recordSecurity({ action: 'notifications_socket_connected', result: 'success', actorUserId: user.id, metadata: { socketId: client.id } });
         } catch {
+            void this.audit.recordSecurity({ action: 'notifications_socket_unauthorized', result: 'denied', statusCode: 401, metadata: { socketId: client.id } });
             client.emit('notifications.error', { message: this.translateSocket(client, I18N_KEYS.socket.unauthorized, 'Tu sesion no es valida. Inicia sesion nuevamente.') });
             client.disconnect(true);
         }
     }
 
-    handleDisconnect() {}
+    handleDisconnect(@ConnectedSocket() client: Socket) {
+        const userId = typeof client.data.userId === 'string' ? client.data.userId : undefined;
+        void this.audit.recordSecurity({ action: 'notifications_socket_disconnected', result: 'success', actorUserId: userId, metadata: { socketId: client.id } });
+    }
 
     async emitNotificationCreated(notification: GatewayNotification): Promise<void> {
         this.server.to(this.getUserRoom(notification.userId)).emit('notifications.new', this.serializer.serialize(notification));

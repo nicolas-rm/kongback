@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { ERROR_CODES } from '@/errors/error-codes';
 import { I18N_KEYS, I18nHttpException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
@@ -15,7 +16,8 @@ export class CompaniesService {
 
     constructor(
         private readonly repository: CompaniesRepository,
-        private readonly cardcloud: CardcloudService
+        private readonly cardcloud: CardcloudService,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateCompanyDto) {
@@ -27,7 +29,7 @@ export class CompaniesService {
         });
 
         try {
-            return await this.repository.createWithDefaultSubCompany(
+            const company = await this.repository.createWithDefaultSubCompany(
                 {
                     key: dto.key,
                     externalId: dto.externalId ?? null,
@@ -44,6 +46,8 @@ export class CompaniesService {
                 },
                 toAddressData(dto.address)
             );
+            void this.audit.recordBusiness({ action: 'company_created', resourceType: 'Company', resourceId: company.company.id, after: company });
+            return company;
         } catch (error) {
             this.logger.error(`No se pudo crear Company local despues de crear subcuenta Cardcloud ${cardcloudSubaccountId}`, error instanceof Error ? error.stack : undefined);
             throw error;
@@ -79,12 +83,14 @@ export class CompaniesService {
             toAddressData(dto.address)
         );
         if (!company) throw notFound();
+        void this.audit.recordBusiness({ action: 'company_updated', resourceType: 'Company', resourceId: company.id, metadata: dto, after: company });
         return company;
     }
 
     async deactivate(id: string) {
         const company = await this.repository.deactivate(id);
         if (!company) throw notFound();
+        void this.audit.recordBusiness({ action: 'company_deactivated', resourceType: 'Company', resourceId: company.id, after: { id: company.id, status: company.status } });
         return { id: company.id, status: company.status };
     }
 

@@ -3,6 +3,7 @@ import { Prisma, Status } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { ERROR_CODES } from '@/errors/error-codes';
 import { I18N_KEYS, I18nHttpException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { hasCompanyWideScope, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { invalidRelation, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
@@ -28,7 +29,8 @@ export class SubCompaniesService {
     constructor(
         private readonly repository: SubCompaniesRepository,
         private readonly relations: BusinessRelationsRepository,
-        private readonly cardcloud: CardcloudService
+        private readonly cardcloud: CardcloudService,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateSubCompanyDto, scope?: CompanyScope) {
@@ -45,7 +47,7 @@ export class SubCompaniesService {
         const cardcloudSubaccountId = await this.createCardcloudSubaccount(company.key, dto.key, dto.name);
 
         try {
-            return await this.repository.create(
+            const subCompany = await this.repository.create(
                 {
                     companyId: dto.companyId,
                     key: dto.key,
@@ -56,6 +58,8 @@ export class SubCompaniesService {
                 },
                 toAddressData(dto.address)
             );
+            void this.audit.recordBusiness({ action: 'sub_company_created', resourceType: 'SubCompany', resourceId: subCompany.id, after: subCompany });
+            return subCompany;
         } catch (error) {
             this.logger.error(`No se pudo crear SubCompany local despues de crear subcuenta Cardcloud ${cardcloudSubaccountId}`, error instanceof Error ? error.stack : undefined);
             throw error;
@@ -93,6 +97,7 @@ export class SubCompaniesService {
         if (!subCompany) throw notFound();
 
         const drivers = await this.repository.findDriversForExport(id, scope);
+        void this.audit.recordBusiness({ action: 'sub_company_drivers_downloaded', resourceType: 'SubCompany', resourceId: id, metadata: { rows: drivers.length } });
         const headers = ['ID', 'Nombre', 'Referencia externa', 'Estado', 'Vehículos asignados', 'Tarjetas asignadas'];
         const rows = drivers.map<ExcelCellValue[]>((driver) => [
             driver.id,
@@ -111,6 +116,7 @@ export class SubCompaniesService {
         if (!subCompany) throw notFound();
 
         const vehicles = await this.repository.findVehiclesForExport(id, scope);
+        void this.audit.recordBusiness({ action: 'sub_company_vehicles_downloaded', resourceType: 'SubCompany', resourceId: id, metadata: { rows: vehicles.length } });
         const headers = ['ID', 'Placas', 'Número económico', 'Modelo', 'Año', 'Combustible', 'Control de odómetro', 'Odómetro inicial', 'Estado', 'Conductor asignado', 'Tarjeta asignada'];
         const rows = vehicles.map<ExcelCellValue[]>((vehicle) => [
             vehicle.id,
@@ -134,6 +140,7 @@ export class SubCompaniesService {
         if (!subCompany) throw notFound();
 
         const cards = await this.repository.findCardsForExport(id, scope);
+        void this.audit.recordCard({ action: 'sub_company_cards_downloaded', resourceType: 'SubCompany', resourceId: id, metadata: { rows: cards.length } });
         const headers = ['ID', 'External ID', 'Client ID', 'PAN enmascarado', 'Estado local', 'Estado Cardcloud', 'Modo de asignación', 'Vehículo', 'Combustible de diseño', 'Asignada el'];
         const rows = cards.map<ExcelCellValue[]>((card) => [
             card.id,
@@ -163,12 +170,14 @@ export class SubCompaniesService {
             scope
         );
         if (!subCompany) throw notFound();
+        void this.audit.recordBusiness({ action: 'sub_company_updated', resourceType: 'SubCompany', resourceId: subCompany.id, metadata: dto, after: subCompany });
         return subCompany;
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
         const subCompany = await this.repository.deactivate(id, scope);
         if (!subCompany) throw notFound();
+        void this.audit.recordBusiness({ action: 'sub_company_deactivated', resourceType: 'SubCompany', resourceId: subCompany.id, after: { id: subCompany.id, status: subCompany.status } });
         return { id: subCompany.id, status: subCompany.status };
     }
 

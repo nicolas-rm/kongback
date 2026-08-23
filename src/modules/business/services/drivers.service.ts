@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
@@ -13,7 +14,8 @@ export class DriversService {
     constructor(
         private readonly repository: DriversRepository,
         private readonly relations: BusinessRelationsRepository,
-        private readonly vehicles: VehiclesRepository
+        private readonly vehicles: VehiclesRepository,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateDriverDto, scope?: CompanyScope) {
@@ -21,7 +23,7 @@ export class DriversService {
             { ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) },
             { ids: [dto.userId], count: (ids) => this.relations.countActiveUsers(ids) },
         ]);
-        return this.repository.create(
+        const driver = await this.repository.create(
             {
                 subCompanyId: dto.subCompanyId,
                 userId: dto.userId ?? null,
@@ -31,6 +33,8 @@ export class DriversService {
             },
             toAddressData(dto.address)
         );
+        void this.audit.recordBusiness({ action: 'driver_created', resourceType: 'Driver', resourceId: driver.id, after: driver });
+        return driver;
     }
 
     async findAll(dto: FindDriversDto, scope?: CompanyScope) {
@@ -79,12 +83,14 @@ export class DriversService {
             scope
         );
         if (!driver) throw notFound();
+        void this.audit.recordBusiness({ action: 'driver_updated', resourceType: 'Driver', resourceId: driver.id, metadata: dto, after: driver });
         return driver;
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
         const driver = await this.repository.deactivate(id, scope);
         if (!driver) throw notFound();
+        void this.audit.recordBusiness({ action: 'driver_deactivated', resourceType: 'Driver', resourceId: driver.id, after: { id: driver.id, status: driver.status } });
         return { id: driver.id, status: driver.status };
     }
 }

@@ -5,10 +5,14 @@ import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '@/decorators/public.decorator';
 import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
 import { extractAccessTokenFromRequest } from '@/modules/authentication/utils/token-extractor';
+import { AuditService } from '@/modules/audit/audit.service';
 
 @Injectable()
 export class JwtAuthenticationGuard extends AuthGuard('jwt') {
-    constructor(private readonly reflector: Reflector) {
+    constructor(
+        private readonly reflector: Reflector,
+        private readonly audit: AuditService
+    ) {
         super();
     }
 
@@ -25,6 +29,16 @@ export class JwtAuthenticationGuard extends AuthGuard('jwt') {
         const request = context.switchToHttp().getRequest<Request>();
         const message = err instanceof Error ? err.message : info instanceof Error ? info.message : 'Tu sesion no es valida. Inicia sesion nuevamente.';
         const reason = this.resolveUnauthorizedReason(message, this.getAccessToken(request));
+        void this.audit.recordSecurity({
+            action: reason,
+            result: 'denied',
+            statusCode: 401,
+            reason,
+            metadata: {
+                path: request.originalUrl,
+                method: request.method,
+            },
+        });
         if (reason === 'access_token_expired') {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.sessionExpired, 'Tu sesion expiro. Inicia sesion nuevamente.', { extra: { reason } });
         }

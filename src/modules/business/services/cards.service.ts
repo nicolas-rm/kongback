@@ -19,6 +19,7 @@ import { CardsRepository } from '@/modules/business/repositories/cards.repositor
 import { VehiclesRepository } from '@/modules/business/repositories/vehicles.repository';
 import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
+import { AuditService } from '@/modules/audit/audit.service';
 
 type CardcloudSubaccountCard = {
     card_id?: string | null;
@@ -36,7 +37,8 @@ export class CardsService {
         private readonly repository: CardsRepository,
         private readonly relations: BusinessRelationsRepository,
         private readonly vehicles: VehiclesRepository,
-        private readonly cardcloud: CardcloudService
+        private readonly cardcloud: CardcloudService,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateCardDto, scope?: CompanyScope) {
@@ -53,7 +55,7 @@ export class CardsService {
             if (dto.designFuelId && vehicle.fuelId !== dto.designFuelId) throw invalidRelation();
         }
 
-        return this.repository.create({
+        const card = await this.repository.create({
             subCompanyId: dto.subCompanyId,
             vehicleId: dto.vehicleId ?? null,
             designFuelId: dto.designFuelId ?? null,
@@ -62,6 +64,8 @@ export class CardsService {
             status: dto.status ?? Status.active,
             assignedAt: assignmentMode === CardAssignmentMode.unassigned ? null : (dto.assignedAt ?? new Date()),
         });
+        void this.audit.recordCard({ action: 'card_created', resourceType: 'Card', resourceId: card.id, after: card });
+        return card;
     }
 
     async findAll(dto: FindCardsDto, scope?: CompanyScope) {
@@ -104,6 +108,13 @@ export class CardsService {
         if (!validatedCardId) throw new BadRequestException('No pudimos validar la tarjeta con el proveedor. Intenta nuevamente.');
         if (validatedCardId !== stock.externalId) throw new BadRequestException('Los datos no corresponden a la tarjeta seleccionada.');
 
+        void this.audit.recordCard({
+            action: 'card_validated',
+            resourceType: 'Card',
+            resourceId: stock.assignedCard.id,
+            metadata: { clientId: stock.clientId, externalId: stock.externalId },
+        });
+
         return {
             valid: true,
             card: {
@@ -124,7 +135,9 @@ export class CardsService {
         if (!card) throw notFound();
         if (!card.externalId) throw invalidRelation();
 
-        return this.cardcloud.getCardMovements(card.externalId, dto);
+        const movements = await this.cardcloud.getCardMovements(card.externalId, dto);
+        void this.audit.recordCard({ action: 'card_movements_consulted', resourceType: 'Card', resourceId: card.id, metadata: { from: dto.from, to: dto.to } });
+        return movements;
     }
 
     async findByDesignFuel(designFuelId: string, dto: FindStatusRecordsDto, scope?: CompanyScope) {
@@ -149,6 +162,13 @@ export class CardsService {
         const externalIds = this.resolveCardIdsFromResponse(response, dto.cards);
         const result = await this.repository.syncExternalCardsToSubCompany(target.id, externalIds);
 
+        void this.audit.recordCard({
+            action: 'cards_assigned_to_sub_company',
+            resourceType: 'SubCompany',
+            resourceId: target.id,
+            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, requested: dto.cards.length, resolved: externalIds.length, result },
+        });
+
         return {
             subCompanyId: target.id,
             cardcloudSubaccountId: target.cardcloudSubaccountId,
@@ -161,6 +181,13 @@ export class CardsService {
         const cards = await this.fetchAllSubaccountCards(target.cardcloudSubaccountId);
         const externalIds = cards.map((card) => this.resolveCardExternalId(card)).filter((externalId): externalId is string => Boolean(externalId));
         const result = await this.repository.syncExternalCardsToSubCompany(target.id, externalIds);
+
+        void this.audit.recordCard({
+            action: 'sub_company_cards_synced',
+            resourceType: 'SubCompany',
+            resourceId: target.id,
+            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, fetched: cards.length, resolved: externalIds.length, result },
+        });
 
         return {
             subCompanyId: target.id,
@@ -189,12 +216,14 @@ export class CardsService {
 
         const card = await this.repository.update(id, data, scope);
         if (!card) throw notFound();
+        void this.audit.recordCard({ action: 'card_updated', resourceType: 'Card', resourceId: card.id, before: current, metadata: dto, after: card });
         return card;
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
         const card = await this.repository.deactivate(id, scope);
         if (!card) throw notFound();
+        void this.audit.recordCard({ action: 'card_deactivated', resourceType: 'Card', resourceId: card.id, after: { id: card.id, status: card.status } });
         return { id: card.id, status: card.status };
     }
 
@@ -220,6 +249,13 @@ export class CardsService {
             scope
         );
         if (!card) throw notFound();
+        void this.audit.recordCard({
+            action: 'card_vehicle_assigned',
+            resourceType: 'Card',
+            resourceId: card.id,
+            before: { vehicleId: current.vehicleId, assignmentMode: current.assignmentMode, assignedAt: current.assignedAt },
+            after: { vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt },
+        });
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
     }
 
@@ -247,6 +283,13 @@ export class CardsService {
             scope
         );
         if (!card) throw notFound();
+        void this.audit.recordCard({
+            action: 'card_unassigned',
+            resourceType: 'Card',
+            resourceId: card.id,
+            before: { vehicleId: current.vehicleId, assignmentMode: current.assignmentMode, assignedAt: current.assignedAt },
+            after: { vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt },
+        });
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
     }
 

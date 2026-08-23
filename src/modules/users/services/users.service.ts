@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AppMailerService } from '@/mailer/mailer.service';
+import { AuditService } from '@/modules/audit/audit.service';
 import { PermissionResponse } from '@/modules/access-control/responses';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { generateSecurePassword } from '@/utilities/password/generate-password';
@@ -23,7 +24,8 @@ export class UsersService {
     constructor(
         private readonly repository: UsersRepository,
         private readonly cryptoService: CryptoService,
-        private readonly mailerService: AppMailerService
+        private readonly mailerService: AppMailerService,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateUserDto, contextScope?: CompanyScope) {
@@ -53,6 +55,7 @@ export class UsersService {
             await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, { recipientUserId: user.id, language: user.preferredLanguage });
         }
 
+        void this.audit.recordAccess({ action: 'user_created', resourceType: 'User', resourceId: user.id, after: user, metadata: { hasInitialAccess: Boolean(access) } });
         return UserResponse.from(user);
     }
 
@@ -101,6 +104,7 @@ export class UsersService {
             preferredLanguage: dto.preferredLanguage,
         });
         if (!user) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
+        void this.audit.recordAccess({ action: 'user_updated', resourceType: 'User', resourceId: user.id, metadata: dto, after: user });
         return UserResponse.from(user);
     }
 
@@ -108,6 +112,7 @@ export class UsersService {
         const result = await this.repository.delete(id);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordAccess({ action: 'user_deleted', resourceType: 'User', resourceId: id });
         return { id, deleted: true };
     }
 
@@ -124,6 +129,7 @@ export class UsersService {
             scopeKey: access.scopeKey,
             scopeId: access.scopeId,
         });
+        void this.audit.recordAccess({ action: 'user_access_assigned', resourceType: 'User', resourceId: userId, metadata: access });
         return this.listAccess(userId, contextScope);
     }
 
@@ -144,6 +150,7 @@ export class UsersService {
             })),
             contextScope
         );
+        void this.audit.recordAccess({ action: 'user_access_replaced', resourceType: 'User', resourceId: userId, metadata: { accessCount: accessInputs.length, accesses: accessInputs } });
         return accesses.map((access) => UserAccessResponse.from(access));
     }
 
@@ -158,6 +165,7 @@ export class UsersService {
         const result = await this.repository.removeAccess(userId, accessId, scope);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'user_access_removed', resourceType: 'UserAccess', resourceId: accessId, metadata: { userId } });
         return { id: accessId, deleted: true };
     }
 
@@ -171,6 +179,7 @@ export class UsersService {
         const result = await this.repository.updatePassword(userId, await this.cryptoService.hashPassword(dto.password), dto.mustChangePassword ?? false);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordSecurity({ action: 'user_password_changed_by_admin', resourceType: 'User', resourceId: userId, metadata: { mustChangePassword: dto.mustChangePassword ?? false } });
         return { passwordChanged: true };
     }
 
@@ -178,6 +187,7 @@ export class UsersService {
         const result = await this.repository.resetTwoFactor(userId);
         if (!result) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordSecurity({ action: 'user_2fa_unlinked_by_admin', resourceType: 'User', resourceId: userId });
         return { twoFactorUnlinked: true };
     }
 
@@ -194,6 +204,7 @@ export class UsersService {
 
         await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, mailContext, dispatchId);
 
+        void this.audit.recordSecurity({ action: 'user_credentials_resent', resourceType: 'User', resourceId: user.id, metadata: { triggeredByUserId } });
         return { credentialsSent: true };
     }
 

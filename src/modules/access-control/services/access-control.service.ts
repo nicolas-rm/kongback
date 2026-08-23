@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignRolePermissionsDto, CreatePermissionDto, CreateRoleDto, FindAccessControlDto, UpdatePermissionDto, UpdateRoleDto } from '@/modules/access-control/dto';
@@ -9,7 +10,10 @@ import { PermissionResponse, RoleResponse, RoleWithPermissionsResponse } from '@
 
 @Injectable()
 export class AccessControlService {
-    constructor(private readonly repository: AccessControlRepository) {}
+    constructor(
+        private readonly repository: AccessControlRepository,
+        private readonly audit: AuditService
+    ) {}
 
     async userHasAnyRole(userId: string, requiredRoles: string[], companyId?: string | null): Promise<boolean> {
         if (requiredRoles.length === 0) return true;
@@ -58,6 +62,7 @@ export class AccessControlService {
 
     async createRole(dto: CreateRoleDto) {
         const role = await this.repository.createRole(dto);
+        void this.audit.recordAccess({ action: 'role_created', resourceType: 'Role', resourceId: role.id, after: role });
         return RoleResponse.from(role);
     }
 
@@ -82,6 +87,7 @@ export class AccessControlService {
         const role = await this.repository.updateRole(id, dto);
         if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'role_updated', resourceType: 'Role', resourceId: role.id, metadata: dto, after: role });
         return RoleResponse.from(role);
     }
 
@@ -89,6 +95,7 @@ export class AccessControlService {
         const result = await this.repository.deleteRole(id);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'role_deleted', resourceType: 'Role', resourceId: id });
         return { id, deleted: true };
     }
 
@@ -98,6 +105,7 @@ export class AccessControlService {
         const role = await this.repository.syncRolePermissions(roleId, dto.permissionIds);
         if (!role) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'role_permissions_updated', resourceType: 'Role', resourceId: roleId, metadata: { permissionIds: dto.permissionIds } });
         return RoleWithPermissionsResponse.from(role);
     }
 
@@ -111,6 +119,7 @@ export class AccessControlService {
 
     async createPermission(dto: CreatePermissionDto) {
         const permission = await this.repository.createPermission(dto);
+        void this.audit.recordAccess({ action: 'permission_created', resourceType: 'Permission', resourceId: permission.id, after: permission });
         return PermissionResponse.from(permission);
     }
 
@@ -135,6 +144,7 @@ export class AccessControlService {
         const permission = await this.repository.updatePermission(id, dto);
         if (!permission) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'permission_updated', resourceType: 'Permission', resourceId: permission.id, metadata: dto, after: permission });
         return PermissionResponse.from(permission);
     }
 
@@ -142,6 +152,7 @@ export class AccessControlService {
         const result = await this.repository.deletePermission(id);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        void this.audit.recordAccess({ action: 'permission_deleted', resourceType: 'Permission', resourceId: id });
         return { id, deleted: true };
     }
 

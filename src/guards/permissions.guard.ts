@@ -11,13 +11,15 @@ import { ERROR_CODES } from '@/errors/error-codes';
 import { I18N_KEYS, I18nForbiddenException } from '@/i18n';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import { AuditService } from '@/modules/audit/audit.service';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
     constructor(
         private readonly reflector: Reflector,
-        private readonly accessControl: AccessControlService
+        private readonly accessControl: AccessControlService,
+        private readonly audit: AuditService
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -41,6 +43,13 @@ export class PermissionsGuard implements CanActivate {
         if (requiredRoles.length > 0) {
             const hasRole = await this.accessControl.userHasAnyRole(user.id, requiredRoles, accessCompanyId);
             if (!hasRole) {
+                void this.audit.recordSecurity({
+                    action: 'insufficient_roles',
+                    result: 'denied',
+                    statusCode: 403,
+                    reason: 'missing_required_role',
+                    metadata: { requiredRoles, companyId: accessCompanyId },
+                });
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'No tienes permisos suficientes para este contenido.');
             }
         }
@@ -48,6 +57,13 @@ export class PermissionsGuard implements CanActivate {
         if (requiredPermissions.length > 0) {
             const hasPermissions = await this.accessControl.userHasAllPermissions(user.id, requiredPermissions, accessCompanyId);
             if (!hasPermissions) {
+                void this.audit.recordSecurity({
+                    action: 'insufficient_permissions',
+                    result: 'denied',
+                    statusCode: 403,
+                    reason: 'missing_required_permission',
+                    metadata: { requiredPermissions, companyId: accessCompanyId },
+                });
                 throw new I18nForbiddenException(I18N_KEYS.errors.authorization.insufficientPermissions, 'No tienes permisos suficientes para este contenido.');
             }
         }
@@ -64,6 +80,13 @@ export class PermissionsGuard implements CanActivate {
 
         const scope = await this.accessControl.resolveCompanyScope(user.id, companyId, requiredPermissions, requiredRoles);
         if (!scope) {
+            void this.audit.recordSecurity({
+                action: 'company_scope_denied',
+                result: 'denied',
+                statusCode: 403,
+                reason: 'company_scope_not_resolved',
+                metadata: { companyId, requiredPermissions, requiredRoles },
+            });
             throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
@@ -82,10 +105,24 @@ export class PermissionsGuard implements CanActivate {
         }
 
         if (!(await this.accessControl.companyIsActive(companyId))) {
+            void this.audit.recordSecurity({
+                action: 'company_denied',
+                result: 'denied',
+                statusCode: 403,
+                reason: 'company_not_active',
+                metadata: { companyId },
+            });
             throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
         if (!user.isGlobalAdmin && !(await this.accessControl.userCanAccessCompany(user.id, companyId))) {
+            void this.audit.recordSecurity({
+                action: 'company_denied',
+                result: 'denied',
+                statusCode: 403,
+                reason: 'user_cannot_access_company',
+                metadata: { companyId },
+            });
             throw new I18nForbiddenException(I18N_KEYS.errors.authorization.companyDenied, 'No tienes acceso a esta compania.');
         }
 
@@ -93,6 +130,12 @@ export class PermissionsGuard implements CanActivate {
     }
 
     private invalidCompanyHeader(message: string, detail: string): BadRequestException {
+        void this.audit.recordSecurity({
+            action: 'invalid_company_header',
+            result: 'denied',
+            statusCode: 400,
+            reason: detail,
+        });
         return new BadRequestException({
             statusCode: 400,
             code: ERROR_CODES.VALIDATION_ERROR,

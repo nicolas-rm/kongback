@@ -11,6 +11,7 @@ import { DocumentsRepository } from '@/modules/documents/repositories/documents.
 import { DocumentResponse } from '@/modules/documents/responses';
 import { DocumentsStorageService } from '@/modules/documents/services/documents-storage.service';
 import type { UploadedFile } from '@/modules/documents/types/uploaded-file.type';
+import { AuditService } from '@/modules/audit/audit.service';
 
 @Injectable()
 export class DocumentsService {
@@ -18,7 +19,8 @@ export class DocumentsService {
         private readonly config: AppConfigService,
         private readonly repository: DocumentsRepository,
         private readonly relations: BusinessRelationsRepository,
-        private readonly storage: DocumentsStorageService
+        private readonly storage: DocumentsStorageService,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateDocumentDto, file: UploadedFile, userId?: string | null, scope?: CompanyScope) {
@@ -41,6 +43,12 @@ export class DocumentsService {
             uploadedByUserId: userId ?? null,
             createdByUserId: userId ?? null,
             ...storedFile,
+        });
+        void this.audit.recordBusiness({
+            action: 'document_created',
+            resourceType: 'Document',
+            resourceId: document.id,
+            metadata: { title: document.title, category: document.category, mimeType: document.mimeType, scopeKey: document.scopeKey, scopeId: document.scopeId },
         });
         return DocumentResponse.from(document);
     }
@@ -84,6 +92,7 @@ export class DocumentsService {
         const document = await this.repository.update(id, { ...dto, updatedByUserId: userId ?? null }, scope);
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
+        void this.audit.recordBusiness({ action: 'document_updated', resourceType: 'Document', resourceId: document.id, metadata: dto, after: DocumentResponse.from(document) });
         return DocumentResponse.from(document);
     }
 
@@ -92,6 +101,12 @@ export class DocumentsService {
         if (!document) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         await this.storage.assertFileExists(document.storageKey);
+        void this.audit.recordBusiness({
+            action: 'document_downloaded',
+            resourceType: 'Document',
+            resourceId: document.id,
+            metadata: { originalName: document.originalName, mimeType: document.mimeType },
+        });
         return { document, stream: this.storage.createStream(document.storageKey) };
     }
 
@@ -103,6 +118,7 @@ export class DocumentsService {
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.documents.notFound, 'No encontramos el documento solicitado.');
 
         await this.storage.removeFile(document.storageKey);
+        void this.audit.recordBusiness({ action: 'document_deleted', resourceType: 'Document', resourceId: id, metadata: { originalName: document.originalName, mimeType: document.mimeType } });
         return { id, deleted: true };
     }
 

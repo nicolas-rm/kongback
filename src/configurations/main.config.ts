@@ -5,6 +5,9 @@ import { AppConfigService } from '@/configurations/app-config.service';
 import { csrfProtectionMiddleware } from '@/middlewares/csrf-protection.middleware';
 import { requestContextMiddleware } from '@/middlewares/request-context.middleware';
 import { securityHeadersMiddleware } from '@/middlewares/security-headers.middleware';
+import { AuditContextService } from '@/modules/audit/audit-context.service';
+import { auditRequestMiddleware } from '@/modules/audit/audit.middleware';
+import { AuditService } from '@/modules/audit/audit.service';
 
 const logger = new Logger('Bootstrap');
 
@@ -21,13 +24,16 @@ export function registerProcessHandlers(): void {
 
 export function configureApp(app: INestApplication): void {
     const config = app.get(AppConfigService);
+    const audit = app.get(AuditService, { strict: false });
+    const auditContext = app.get(AuditContextService, { strict: false });
     const isProduction = config.nodeEnv === 'production';
     const allowedOrigins = config.security.allowedOrigins.length > 0 ? config.security.allowedOrigins : isProduction ? [config.webUrl] : true;
 
     app.use(securityHeadersMiddleware(isProduction));
     app.use(requestContextMiddleware);
     app.use(cookieParser());
-    app.use(csrfProtectionMiddleware({ allowedOrigins: [config.webUrl, ...config.security.allowedOrigins] }));
+    app.use(auditRequestMiddleware(audit, auditContext));
+    app.use(csrfProtectionMiddleware({ allowedOrigins: [config.webUrl, ...config.security.allowedOrigins], audit }));
     app.enableCors({
         origin: allowedOrigins,
         credentials: true,

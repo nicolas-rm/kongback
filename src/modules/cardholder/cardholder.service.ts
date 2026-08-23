@@ -6,6 +6,7 @@ import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-pr
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import { FindCardholderVehiclesDto, UpdateCardholderCardNipDto, ValidateCardholderCardDto } from '@/modules/cardholder/dto';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { AuditService } from '@/modules/audit/audit.service';
 import { PrismaService } from '@/prisma/prisma.service';
 
 const DRIVER_SELECT = {
@@ -132,11 +133,13 @@ export class CardholderService {
         private readonly prisma: PrismaService,
         private readonly cardcloud: CardcloudService,
         private readonly crypto: CryptoService,
-        private readonly notifications: NotificationsService
+        private readonly notifications: NotificationsService,
+        private readonly audit: AuditService
     ) {}
 
     async getProfile(user: RequestUser) {
         const driver = await this.findCurrentDriver(user);
+        void this.audit.recordCard({ action: 'cardholder_profile_consulted', resourceType: 'Driver', resourceId: driver.id });
 
         return {
             id: user.id,
@@ -150,6 +153,7 @@ export class CardholderService {
 
     async findMySubCompany(user: RequestUser) {
         const driver = await this.findCurrentDriver(user);
+        void this.audit.recordCard({ action: 'cardholder_sub_company_consulted', resourceType: 'SubCompany', resourceId: driver.subCompanyId });
         return {
             driverId: driver.id,
             subCompany: driver.subCompany,
@@ -169,6 +173,7 @@ export class CardholderService {
             select: VEHICLE_SELECT,
         });
 
+        void this.audit.recordCard({ action: 'cardholder_vehicles_consulted', resourceType: 'Driver', resourceId: driver.id, metadata: { count: vehicles.length, activeOnly } });
         return vehicles.map((vehicle) => this.mapVehicle(vehicle));
     }
 
@@ -180,11 +185,13 @@ export class CardholderService {
             select: CARD_SELECT,
         });
 
+        void this.audit.recordCard({ action: 'cardholder_cards_consulted', resourceType: 'Driver', resourceId: driver.id, metadata: { count: cards.length } });
         return cards.map((card) => this.mapCard(card));
     }
 
     async findMyCard(user: RequestUser, cardId: string) {
         const { card } = await this.findOwnedCard(user, cardId);
+        void this.audit.recordCard({ action: 'cardholder_card_consulted', resourceType: 'Card', resourceId: card.id });
         return this.mapCard(card);
     }
 
@@ -192,6 +199,7 @@ export class CardholderService {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.blockCard(externalId), 'No fue posible bloquear la tarjeta en este momento. Intenta nuevamente.');
         await this.notify(user.id, 'Tarjeta apagada', 'Tu tarjeta se bloqueo correctamente.', `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`, NotificationType.warning);
+        void this.audit.recordCard({ action: 'cardholder_card_blocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return this.withMessage(result, 'La tarjeta se bloqueo correctamente.');
     }
 
@@ -199,18 +207,22 @@ export class CardholderService {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.unblockCard(externalId), 'No fue posible desbloquear la tarjeta en este momento. Intenta nuevamente.');
         await this.notify(user.id, 'Tarjeta encendida', 'Tu tarjeta se desbloqueo correctamente.', `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`, NotificationType.success);
+        void this.audit.recordCard({ action: 'cardholder_card_unblocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return this.withMessage(result, 'La tarjeta se desbloqueo correctamente.');
     }
 
     async getMovements(user: RequestUser, cardId: string, query: CardcloudDateRangeQueryDto) {
-        const { externalId } = await this.findOwnedCardExternalTarget(user, cardId);
-        return this.executeCardcloudAction(() => this.cardcloud.getCardMovements(externalId, query), 'No fue posible consultar los movimientos de la tarjeta en este momento. Intenta nuevamente.');
+        const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
+        const movements = await this.executeCardcloudAction(() => this.cardcloud.getCardMovements(externalId, query), 'No fue posible consultar los movimientos de la tarjeta en este momento. Intenta nuevamente.');
+        void this.audit.recordCard({ action: 'cardholder_card_movements_consulted', resourceType: 'Card', resourceId: card.id, metadata: { externalId, from: query.from, to: query.to } });
+        return movements;
     }
 
     async getSensitiveData(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.getCardSensitiveData(externalId), 'No fue posible consultar los datos de la tarjeta en este momento. Intenta nuevamente.');
         await this.notify(user.id, 'Consulta de datos de tarjeta', 'Consultaste los datos de tu tarjeta.', `Tarjeta ${this.maskReference(this.extractPan(result) ?? card.stock?.maskedPan ?? card.id)}`, NotificationType.warning);
+        void this.audit.recordCard({ action: 'cardholder_card_sensitive_data_consulted', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return result;
     }
 
@@ -219,8 +231,10 @@ export class CardholderService {
             throw new BadRequestException('El nuevo NIP debe ser diferente al actual.');
         }
 
-        const { externalId } = await this.findOwnedCardExternalTarget(user, cardId);
-        return this.executeCardcloudAction(() => this.cardcloud.updateCardNip(externalId, dto), 'No fue posible actualizar el NIP de la tarjeta en este momento. Intenta nuevamente.');
+        const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
+        const result = await this.executeCardcloudAction(() => this.cardcloud.updateCardNip(externalId, dto), 'No fue posible actualizar el NIP de la tarjeta en este momento. Intenta nuevamente.');
+        void this.audit.recordCard({ action: 'cardholder_card_nip_updated', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
+        return result;
     }
 
     async validatePhysicalCard(user: RequestUser, dto: ValidateCardholderCardDto) {
@@ -269,6 +283,8 @@ export class CardholderService {
         if (!validatedCardId || validatedCardId !== externalId) {
             throw new BadRequestException('No pudimos validar la tarjeta con los datos capturados. Verifica la vigencia y el NIP.');
         }
+
+        void this.audit.recordCard({ action: 'cardholder_physical_card_validated', resourceType: 'Card', resourceId: card.id, metadata: { externalId, clientId: dto.clientId } });
 
         return {
             valid: true,
