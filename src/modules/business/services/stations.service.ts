@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
@@ -11,13 +12,14 @@ import { StationsRepository } from '@/modules/business/repositories/stations.rep
 export class StationsService {
     constructor(
         private readonly repository: StationsRepository,
-        private readonly relations: BusinessRelationsRepository
+        private readonly relations: BusinessRelationsRepository,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateStationDto, scope?: CompanyScope) {
         await assertActive([{ ids: [dto.subCompanyId], count: (ids) => this.relations.countActiveSubCompanies(ids, scope) }]);
 
-        return this.repository.create(
+        const station = await this.repository.create(
             {
                 subCompanyId: dto.subCompanyId,
                 stationNumber: dto.stationNumber,
@@ -28,6 +30,8 @@ export class StationsService {
             },
             toAddressData(dto.address)
         );
+        void this.audit.recordBusiness({ action: 'station_created', resourceType: 'Station', resourceId: station.id, after: station });
+        return station;
     }
 
     async findAll(dto: FindStationsDto, scope?: CompanyScope) {
@@ -61,12 +65,14 @@ export class StationsService {
             scope
         );
         if (!station) throw notFound();
+        void this.audit.recordBusiness({ action: 'station_updated', resourceType: 'Station', resourceId: station.id, metadata: dto, after: station });
         return station;
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
         const station = await this.repository.deactivate(id, scope);
         if (!station) throw notFound();
+        void this.audit.recordBusiness({ action: 'station_deactivated', resourceType: 'Station', resourceId: station.id, after: { id: station.id, status: station.status } });
         return { id: station.id, status: station.status };
     }
 }

@@ -6,6 +6,9 @@ export type PermissionSeed = {
 };
 
 export const PERMISSION_CATALOG = [
+    { code: 'audit.module', name: 'Acceder al modulo de auditoria', description: 'Permite ver y entrar al modulo de auditoria en el frontend.' },
+    { code: 'audit.read-list', name: 'Listar eventos de auditoria', description: 'Permite consultar eventos de auditoria del sistema.' },
+    { code: 'audit.read-one', name: 'Ver evento de auditoria', description: 'Permite consultar el detalle de un evento de auditoria.' },
     { code: 'companies.module', name: 'Acceder al modulo de empresas', description: 'Permite ver y entrar al modulo de empresas en el frontend.' },
     { code: 'companies.create', name: 'Crear empresa', description: 'Permite crear empresas operativas.', requiresSystemAccess: true },
     { code: 'companies.read-list', name: 'Listar empresas', description: 'Permite consultar el listado de empresas operativas.' },

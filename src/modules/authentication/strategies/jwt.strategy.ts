@@ -6,6 +6,7 @@ import { I18N_KEYS, type I18nKey, I18nUnauthorizedException } from '@/i18n';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { extractAccessTokenFromRequest } from '@/modules/authentication/utils/token-extractor';
+import { AuditService } from '@/modules/audit/audit.service';
 
 type JwtPayload = {
     sub: string;
@@ -19,7 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     constructor(
         private readonly repository: AuthenticationRepository,
-        private readonly config: AppConfigService
+        private readonly config: AppConfigService,
+        private readonly audit: AuditService
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([extractAccessTokenFromRequest]),
@@ -145,6 +147,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         context: { sessionId?: string; userId?: string; expiresAt?: Date; idleExpiresAt?: Date }
     ): never {
         this.logUnauthorized(reason, message, context);
+        void this.audit.recordSecurity({
+            action: reason,
+            result: 'denied',
+            statusCode: 401,
+            reason,
+            metadata: context,
+        });
         throw new I18nUnauthorizedException(key, message, { extra: { reason } });
     }
 

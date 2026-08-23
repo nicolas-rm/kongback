@@ -8,18 +8,21 @@ import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
 import { NotificationResponse } from '@/modules/notifications/responses';
+import { AuditService } from '@/modules/audit/audit.service';
 
 @Injectable()
 export class NotificationsService {
     constructor(
         private readonly repository: NotificationsRepository,
-        private readonly i18n: I18nService
+        private readonly i18n: I18nService,
+        private readonly audit: AuditService
     ) {}
 
     async createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
         const notification = await this.repository.createForUser(userId, data);
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordBusiness({ action: 'notification_created_for_user', resourceType: 'Notification', resourceId: notification.id, metadata: { userId, type: notification.type } });
         return notification;
     }
 
@@ -45,6 +48,7 @@ export class NotificationsService {
         });
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordBusiness({ action: 'system_notification_created_for_user', resourceType: 'Notification', resourceId: notification.id, metadata: { userId, type: notification.type } });
         return notification;
     }
 
@@ -56,6 +60,7 @@ export class NotificationsService {
         const notification = await this.repository.createForUser(dto.userId, dto, scope);
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        void this.audit.recordBusiness({ action: 'notification_created', resourceType: 'Notification', resourceId: notification.id, metadata: { userId: dto.userId, type: notification.type } });
         return {
             notification,
             response: NotificationResponse.from(notification),
@@ -80,6 +85,7 @@ export class NotificationsService {
     async findOneForUser(userId: string, notificationId: string) {
         const notification = await this.repository.findOne({ id: notificationId, userId });
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'No encontramos la notificacion solicitada.');
+        void this.audit.recordBusiness({ action: 'notification_consulted', resourceType: 'Notification', resourceId: notification.id, metadata: { userId } });
         return notification;
     }
 
@@ -88,14 +94,17 @@ export class NotificationsService {
         const notification = await this.repository.markRead(notificationId, userId);
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'No encontramos la notificacion solicitada.');
 
+        void this.audit.recordBusiness({ action: 'notification_marked_read', resourceType: 'Notification', resourceId: notification.id, metadata: { userId } });
         return {
             notification,
             response: NotificationResponse.from(notification),
         };
     }
 
-    markAllRead(userId: string) {
-        return this.repository.markAllRead(userId);
+    async markAllRead(userId: string) {
+        const result = await this.repository.markAllRead(userId);
+        void this.audit.recordBusiness({ action: 'notifications_marked_read_all', resourceType: 'Notification', metadata: { userId, updatedCount: result.count } });
+        return result;
     }
 
     private translate(lang: string, key: I18nKey, fallback: string, args?: Record<string, unknown>): string {

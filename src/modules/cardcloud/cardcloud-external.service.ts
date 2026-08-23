@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { I18N_KEYS, I18nBadRequestException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { HttpClientService } from '@/modules/integrations/http-client.service';
 
 export type CardcloudQueryParams = Record<string, string | number | boolean | null | undefined>;
@@ -22,29 +23,36 @@ export class CardcloudExternalService {
 
     constructor(
         private readonly http: HttpClientService,
-        private readonly config: AppConfigService
+        private readonly config: AppConfigService,
+        private readonly audit: AuditService
     ) {}
 
     async get<T>(path: string, params?: CardcloudQueryParams): Promise<T> {
         const token = await this.getToken();
-        return this.http.get<T>(this.url(path), {
-            headers: { Authorization: `Bearer ${token}` },
-            params: this.compactParams(params),
-        });
+        return this.executeExternal<T>('GET', path, () =>
+            this.http.get<T>(this.url(path), {
+                headers: { Authorization: `Bearer ${token}` },
+                params: this.compactParams(params),
+            })
+        );
     }
 
     async post<T>(path: string, body?: unknown): Promise<T> {
         const token = await this.getToken();
-        return this.http.post<T>(this.url(path), body, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        return this.executeExternal<T>('POST', path, () =>
+            this.http.post<T>(this.url(path), body, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+        );
     }
 
     async patch<T>(path: string, body?: unknown): Promise<T> {
         const token = await this.getToken();
-        return this.http.patch<T>(this.url(path), body, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
+        return this.executeExternal<T>('PATCH', path, () =>
+            this.http.patch<T>(this.url(path), body, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+        );
     }
 
     private async getToken(): Promise<string> {
@@ -65,10 +73,12 @@ export class CardcloudExternalService {
             throw new I18nBadRequestException(I18N_KEYS.errors.validation.invalidData, 'No pudimos conectar con el servicio externo. Intenta mas tarde.');
         }
 
-        const response = await this.http.post<CardcloudLoginResponse>(this.url('/auth/login'), {
-            email: username,
-            password,
-        });
+        const response = await this.executeExternal<CardcloudLoginResponse>('POST', '/auth/login', () =>
+            this.http.post<CardcloudLoginResponse>(this.url('/auth/login'), {
+                email: username,
+                password,
+            })
+        );
 
         return this.saveToken(response);
     }
@@ -76,10 +86,13 @@ export class CardcloudExternalService {
     private async refreshOrAuthenticate(): Promise<string> {
         if (!this.tokenCache) return this.authenticate();
 
+        const token = this.tokenCache.token;
         try {
-            const response = await this.http.post<CardcloudLoginResponse>(this.url('/auth/refresh'), undefined, {
-                headers: { Authorization: `Bearer ${this.tokenCache.token}` },
-            });
+            const response = await this.executeExternal<CardcloudLoginResponse>('POST', '/auth/refresh', () =>
+                this.http.post<CardcloudLoginResponse>(this.url('/auth/refresh'), undefined, {
+                    headers: { Authorization: `Bearer ${token}` },
+                })
+            );
             return this.saveToken(response);
         } catch {
             this.tokenCache = null;
@@ -112,5 +125,33 @@ export class CardcloudExternalService {
     private compactParams(params?: CardcloudQueryParams): CardcloudQueryParams | undefined {
         if (!params) return undefined;
         return Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
+
+    private async executeExternal<T>(method: string, path: string, operation: () => Promise<T>): Promise<T> {
+        try {
+            const result = await operation();
+            void this.audit.recordCardcloud({
+                action: 'cardcloud_external_request',
+                result: 'success',
+                externalPath: path,
+                metadata: { method },
+            });
+            return result;
+        } catch (error) {
+            void this.audit.recordCardcloud({
+                action: 'cardcloud_external_request',
+                result: 'failure',
+                statusCode: this.resolveExternalStatus(error),
+                externalPath: path,
+                reason: error instanceof Error ? error.message : 'cardcloud_external_error',
+                metadata: { method },
+            });
+            throw error;
+        }
+    }
+
+    private resolveExternalStatus(error: unknown): number | null {
+        const response = (error as { response?: { status?: unknown } } | null)?.response;
+        return typeof response?.status === 'number' ? response.status : null;
     }
 }

@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nUnauthorizedException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { LoginDto, VerifyTwoFactorLoginDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
@@ -15,26 +16,33 @@ export class LoginUseCase {
         private readonly config: AppConfigService,
         private readonly repository: AuthenticationRepository,
         private readonly cryptoService: CryptoService,
-        private readonly authenticationTokensService: AuthenticationTokensService
+        private readonly authenticationTokensService: AuthenticationTokensService,
+        private readonly audit: AuditService
     ) {}
 
     async execute(dto: LoginDto, sessionContext: SessionContext = {}) {
         const user = await this.repository.findLoginUser(dto.username);
-        if (!user || user.status !== 'active') throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
+        if (!user || user.status !== 'active') {
+            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'invalid_credentials', metadata: { username: dto.username } });
+            throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
+        }
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
+            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'account_locked', metadata: { userId: user.id, lockedUntil: user.lockedUntil } });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.accountLocked, 'Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.');
         }
 
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.password);
         if (!validPassword) {
             await this.registerFailedAttempt(user.id, user.failedLoginAttempts);
+            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'invalid_password', metadata: { userId: user.id } });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
         }
 
         await this.repository.resetLoginState(user.id);
 
         if (user.requiresEmailVerification && !user.emailVerifiedAt) {
+            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'email_verification_required', metadata: { userId: user.id } });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.emailVerificationRequired, 'Verifica tu correo para iniciar sesion.');
         }
 
@@ -50,9 +58,11 @@ export class LoginUseCase {
                 ipAddress: sessionContext.ipAddress,
             });
 
+            void this.audit.recordSecurity({ action: 'login_two_factor_required', result: 'success', metadata: { userId: user.id, expiresAt } });
             return { requiresTwoFactor: true, challengeToken, expiresInSeconds, expiresAt };
         }
 
+        void this.audit.recordSecurity({ action: 'login_success', result: 'success', metadata: { userId: user.id } });
         return this.authenticationTokensService.issueTokens(
             { id: user.id, username: user.username },
             {
@@ -73,10 +83,12 @@ export class LoginUseCase {
     async verifyTwoFactorLogin(dto: VerifyTwoFactorLoginDto, sessionContext: SessionContext = {}) {
         const challenge = await this.repository.findTwoFactorLoginChallenge(this.cryptoService.hashToken(dto.challengeToken));
         if (!challenge || !challenge.user.twoFactorEnabled || !challenge.user.twoFactorSecret || challenge.user.status !== 'active') {
+            void this.audit.recordSecurity({ action: 'two_factor_login_failed', result: 'denied', statusCode: 401, reason: 'invalid_challenge' });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
         if (challenge.attemptCount >= this.config.twoFactor.loginChallengeMaxAttempts) {
+            void this.audit.recordSecurity({ action: 'two_factor_login_failed', result: 'denied', statusCode: 401, reason: 'max_attempts', metadata: { userId: challenge.user.id } });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
@@ -84,10 +96,12 @@ export class LoginUseCase {
 
         if (!validCode) {
             await this.repository.incrementTwoFactorChallengeAttempt(challenge.id);
+            void this.audit.recordSecurity({ action: 'two_factor_login_failed', result: 'denied', statusCode: 401, reason: 'invalid_code', metadata: { userId: challenge.user.id } });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
         }
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);
+        void this.audit.recordSecurity({ action: 'two_factor_login_success', result: 'success', metadata: { userId: challenge.user.id } });
         return this.authenticationTokensService.issueTokens(
             { id: challenge.user.id, username: challenge.user.username },
             {

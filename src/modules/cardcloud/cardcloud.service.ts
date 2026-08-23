@@ -25,6 +25,7 @@ import {
 } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import type { UploadedFile } from '@/modules/documents/types/uploaded-file.type';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { AuditService } from '@/modules/audit/audit.service';
 
 type SyncCardcloudStockResult = {
     synced: number;
@@ -138,65 +139,95 @@ export class CardcloudService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly external: CardcloudExternalService,
-        private readonly cryptoService: CryptoService
+        private readonly cryptoService: CryptoService,
+        private readonly audit: AuditService
     ) {}
 
-    getCardMovement(uuid: string) {
-        return this.external.get(`/v1/card/movement/${uuid}`);
+    async getCardMovement(uuid: string) {
+        const movement = await this.external.get(`/v1/card/movement/${uuid}`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_movement_consulted', resourceType: 'CardcloudCardMovement', resourceId: uuid, externalPath: `/v1/card/movement/${uuid}` });
+        return movement;
     }
 
-    getCard(uuid: string) {
-        return this.external.get(`/v1/card/${uuid}`);
+    async getCard(uuid: string) {
+        const card = await this.external.get(`/v1/card/${uuid}`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}` });
+        return card;
     }
 
-    getCardMovements(uuid: string, query: CardcloudDateRangeQueryDto) {
-        return this.external.get(`/v1/card/${uuid}/movements`, this.dateRangeParams(query));
+    async getCardMovements(uuid: string, query: CardcloudDateRangeQueryDto) {
+        const movements = await this.external.get(`/v1/card/${uuid}/movements`, this.dateRangeParams(query));
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_movements_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/movements`, metadata: { from: query.from, to: query.to } });
+        return movements;
     }
 
-    getCardSensitiveData(uuid: string) {
-        return this.external.get(`/v1/card/${uuid}/sensitive`);
+    async getCardSensitiveData(uuid: string) {
+        const data = await this.external.get(`/v1/card/${uuid}/sensitive`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_sensitive_data_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/sensitive` });
+        return data;
     }
 
-    getCardCvv(uuid: string) {
-        return this.external.get(`/v1/card/${uuid}/cvv`);
+    async getCardCvv(uuid: string) {
+        const cvv = await this.external.get(`/v1/card/${uuid}/cvv`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_cvv_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/cvv` });
+        return cvv;
     }
 
-    updateCardNip(uuid: string, dto: UpdateCardcloudCardNipDto) {
-        return this.external.patch(`/v1/card/${uuid}/update_nip`, dto);
+    async updateCardNip(uuid: string, dto: UpdateCardcloudCardNipDto) {
+        const result = await this.external.patch(`/v1/card/${uuid}/update_nip`, dto);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_nip_updated', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/update_nip` });
+        return result;
     }
 
-    validateCard(dto: ValidateCardcloudCardDto) {
-        return this.external.post('/card/validate', dto);
+    async validateCard(dto: ValidateCardcloudCardDto) {
+        const result = await this.external.post('/card/validate', dto);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_validated', resourceType: 'CardcloudCard', externalPath: '/card/validate' });
+        return result;
     }
 
-    blockCard(uuid: string) {
-        return this.external.post(`/v1/card/${uuid}/block`);
+    async blockCard(uuid: string) {
+        const result = await this.external.post(`/v1/card/${uuid}/block`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_blocked', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/block` });
+        return result;
     }
 
-    unblockCard(uuid: string) {
-        return this.external.post(`/v1/card/${uuid}/unblock`);
+    async unblockCard(uuid: string) {
+        const result = await this.external.post(`/v1/card/${uuid}/unblock`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_card_unblocked', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/unblock` });
+        return result;
     }
 
     async getSubaccounts(scope?: CompanyScope) {
         const response = await this.external.get('/v1/subaccounts');
-        if (!scope?.companyId) return response;
+        if (!scope?.companyId) {
+            void this.audit.recordCardcloud({ action: 'cardcloud_subaccounts_consulted', resourceType: 'CardcloudSubaccount', externalPath: '/v1/subaccounts' });
+            return response;
+        }
 
         const linkedSubaccounts = await this.findLinkedCardcloudSubaccounts(scope);
-        return this.filterLinkedSubaccountsResponse(response, linkedSubaccounts);
+        const filtered = this.filterLinkedSubaccountsResponse(response, linkedSubaccounts);
+        void this.audit.recordCardcloud({ action: 'cardcloud_subaccounts_consulted', resourceType: 'CardcloudSubaccount', externalPath: '/v1/subaccounts', metadata: { linked: linkedSubaccounts.size } });
+        return filtered;
     }
 
     async getSubaccount(uuid: string, scope?: CompanyScope) {
         await this.assertLinkedSubaccount(uuid, scope);
-        return this.external.get(`/v1/subaccounts/${uuid}`);
+        const subaccount = await this.external.get(`/v1/subaccounts/${uuid}`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_subaccount_consulted', resourceType: 'CardcloudSubaccount', resourceId: uuid, externalPath: `/v1/subaccounts/${uuid}` });
+        return subaccount;
     }
 
     async getSubaccountCards(uuid: string, query: CardcloudPageQueryDto, scope?: CompanyScope) {
         await this.assertLinkedSubaccount(uuid, scope);
-        return this.external.get(`/v1/subaccounts/${uuid}/cards`, { page: query.page });
+        const cards = await this.external.get(`/v1/subaccounts/${uuid}/cards`, { page: query.page });
+        void this.audit.recordCardcloud({ action: 'cardcloud_subaccount_cards_consulted', resourceType: 'CardcloudSubaccount', resourceId: uuid, externalPath: `/v1/subaccounts/${uuid}/cards`, metadata: { page: query.page } });
+        return cards;
     }
 
-    createSubaccount(dto: CreateCardcloudSubaccountDto) {
-        return this.external.post('/v1/subaccounts', dto);
+    async createSubaccount(dto: CreateCardcloudSubaccountDto) {
+        const subaccount = await this.external.post('/v1/subaccounts', dto);
+        void this.audit.recordCardcloud({ action: 'cardcloud_subaccount_created', resourceType: 'CardcloudSubaccount', resourceId: this.resolveSubaccountId(subaccount) ?? undefined, externalPath: '/v1/subaccounts' });
+        return subaccount;
     }
 
     async createSubaccountAndResolveId(dto: CreateCardcloudSubaccountDto): Promise<string> {
@@ -211,19 +242,33 @@ export class CardcloudService {
 
     async getSubaccountMovements(uuid: string, query: CardcloudDateRangeQueryDto, scope?: CompanyScope) {
         await this.assertLinkedSubaccount(uuid, scope);
-        return this.external.get(`/v1/subaccounts/${uuid}/movements`, this.dateRangeParams(query));
+        const movements = await this.external.get(`/v1/subaccounts/${uuid}/movements`, this.dateRangeParams(query));
+        void this.audit.recordCardcloud({ action: 'cardcloud_subaccount_movements_consulted', resourceType: 'CardcloudSubaccount', resourceId: uuid, externalPath: `/v1/subaccounts/${uuid}/movements`, metadata: { from: query.from, to: query.to } });
+        return movements;
     }
 
-    assignCards(dto: AssignCardcloudCardsDto) {
-        return this.external.post('/v1/account/cards/assign', dto);
+    async assignCards(dto: AssignCardcloudCardsDto) {
+        const result = await this.external.post('/v1/account/cards/assign', dto);
+        void this.audit.recordCardcloud({ action: 'cardcloud_cards_assigned', resourceType: 'CardcloudCard', externalPath: '/v1/account/cards/assign', metadata: { subaccountId: dto.subaccount_id } });
+        return result;
     }
 
-    assignCardsBulk(dto: AssignCardcloudCardsBulkDto) {
-        return this.external.post('/v1/account/cards/assign_bulk', dto);
+    async assignCardsBulk(dto: AssignCardcloudCardsBulkDto) {
+        const result = await this.external.post('/v1/account/cards/assign_bulk', dto);
+        void this.audit.recordCardcloud({ action: 'cardcloud_cards_assigned_bulk', resourceType: 'CardcloudCard', externalPath: '/v1/account/cards/assign_bulk', metadata: { subaccountId: dto.subaccount_id, count: dto.cards.length } });
+        return result;
     }
 
-    transferFunds(dto: TransferCardcloudFundsDto) {
-        return this.external.post('/v1/transfer', this.normalizeTransfer(dto));
+    async transferFunds(dto: TransferCardcloudFundsDto) {
+        const normalized = this.normalizeTransfer(dto);
+        const result = await this.external.post('/v1/transfer', normalized);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_transfer_created',
+            resourceType: 'CardcloudTransfer',
+            externalPath: '/v1/transfer',
+            metadata: { sourceType: normalized.sourceType, destinationType: normalized.destinationType, amount: normalized.amount },
+        });
+        return result;
     }
 
     async transferFundsBulk(dto: TransferCardcloudFundsBulkDto) {
@@ -239,6 +284,12 @@ export class CardcloudService {
         }
 
         const succeeded = results.filter((result) => result.success).length;
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_transfer_bulk_processed',
+            resourceType: 'CardcloudTransfer',
+            externalPath: '/v1/transfer',
+            metadata: { total: results.length, succeeded, failed: results.length - succeeded },
+        });
         return {
             results,
             summary: {
@@ -276,6 +327,7 @@ export class CardcloudService {
         this.autosizeWorksheet(instructionsSheet);
 
         const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+        void this.audit.recordCardcloud({ action: 'cardcloud_transfer_bulk_template_downloaded', resourceType: 'CardcloudTransfer', metadata: { subCompanyId: dto.subCompanyId ?? null, rows: cards.length } });
         return {
             filename: TRANSFER_BULK_EXCEL_FILENAME,
             mimeType: EXCEL_MIME_TYPE,
@@ -321,6 +373,7 @@ export class CardcloudService {
             omitted: orderedResults.filter((result) => result.status === 'omitted').length,
         };
 
+        void this.audit.recordCardcloud({ action: 'cardcloud_transfer_bulk_excel_processed', resourceType: 'CardcloudTransfer', metadata: { subCompanyId: subCompany.id, ...summary } });
         return {
             subCompanyId: subCompany.id,
             results: orderedResults,
@@ -328,12 +381,16 @@ export class CardcloudService {
         };
     }
 
-    getAccount() {
-        return this.external.get('/v1/account');
+    async getAccount() {
+        const account = await this.external.get('/v1/account');
+        void this.audit.recordCardcloud({ action: 'cardcloud_account_consulted', resourceType: 'CardcloudAccount', externalPath: '/v1/account' });
+        return account;
     }
 
-    getAccountMovements(query: CardcloudDateRangeQueryDto) {
-        return this.external.get('/v1/account/movements', this.dateRangeParams(query));
+    async getAccountMovements(query: CardcloudDateRangeQueryDto) {
+        const movements = await this.external.get('/v1/account/movements', this.dateRangeParams(query));
+        void this.audit.recordCardcloud({ action: 'cardcloud_account_movements_consulted', resourceType: 'CardcloudAccount', externalPath: '/v1/account/movements', metadata: { from: query.from, to: query.to } });
+        return movements;
     }
 
     async findStock(dto: FindCardcloudStockDto, scope?: CompanyScope) {
@@ -359,6 +416,7 @@ export class CardcloudService {
             this.prisma.cardcloud.count({ where }),
         ]);
 
+        void this.audit.recordCardcloud({ action: 'cardcloud_stock_consulted', resourceType: 'CardcloudStock', metadata: { total, returned: records.length, subCompanyId: dto.subCompanyId, providerStatus: dto.providerStatus } });
         return paginate(
             records.map((record) => this.serializeLocalStock(record)),
             total,
@@ -389,6 +447,7 @@ export class CardcloudService {
         });
 
         this.logger.log(`Cardcloud stock sync global synced=${synced} skipped=${skipped} removed=${removed.count}`);
+        void this.audit.recordCardcloud({ action: 'cardcloud_stock_synced', resourceType: 'CardcloudStock', metadata: { synced, skipped, removed: removed.count } });
         return { synced, skipped, removed: removed.count };
     }
 
@@ -403,7 +462,9 @@ export class CardcloudService {
         });
 
         if (updated.count === 0) throw notFound();
-        return this.findLocalStock(id, scope);
+        const stock = await this.findLocalStock(id, scope);
+        void this.audit.recordCardcloud({ action: 'cardcloud_stock_sub_company_assigned', resourceType: 'CardcloudStock', resourceId: id, metadata: { subCompanyId: dto.subCompanyId } });
+        return stock;
     }
 
     async unassignSubCompany(id: string, scope?: CompanyScope) {
@@ -415,7 +476,9 @@ export class CardcloudService {
         });
 
         if (updated.count === 0) throw notFound();
-        return this.findLocalStock(id, scope);
+        const stock = await this.findLocalStock(id, scope);
+        void this.audit.recordCardcloud({ action: 'cardcloud_stock_sub_company_unassigned', resourceType: 'CardcloudStock', resourceId: id });
+        return stock;
     }
 
     private dateRangeParams(query: CardcloudDateRangeQueryDto) {

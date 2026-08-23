@@ -2,9 +2,11 @@ import { HttpStatus } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { ERROR_CODES } from '@/errors/error-codes';
 import { buildErrorResponse } from '@/errors/error-response';
+import type { AuditService } from '@/modules/audit/audit.service';
 
 type CsrfProtectionOptions = {
     allowedOrigins: string[];
+    audit?: AuditService;
 };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -18,6 +20,19 @@ export function csrfProtectionMiddleware(options: CsrfProtectionOptions) {
 
         const requestOrigin = resolveRequestOrigin(request);
         if (requestOrigin && allowedOrigins.has(requestOrigin)) return next();
+
+        void options.audit?.recordSecurity({
+            action: 'csrf_rejected',
+            result: 'denied',
+            statusCode: HttpStatus.FORBIDDEN,
+            reason: 'origin_not_allowed',
+            metadata: {
+                origin: request.get('origin') ?? null,
+                referer: request.get('referer') ?? null,
+                method: request.method,
+                path: request.originalUrl,
+            },
+        });
 
         response.status(HttpStatus.FORBIDDEN).json(
             buildErrorResponse({

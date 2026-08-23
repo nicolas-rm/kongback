@@ -624,3 +624,182 @@ model EmailDispatch {
   @@index([ipAddress, createdAt])
   @@map("email_dispatches")
 }
+
+model RequestLog {
+  id          String   @id @default(uuid())
+  requestId   String
+  actorUserId String?
+  companyId   String?
+  method      String
+  path        String
+  statusCode  Int
+  durationMs  Int
+  origin      String?
+  ipAddress   String?
+  userAgent   String?
+  hasCookie   Boolean  @default(false)
+  query       Json?
+  body        Json?
+  cookies     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([requestId])
+  @@index([companyId])
+  @@index([method, path])
+  @@index([statusCode])
+  @@index([createdAt])
+  @@map("request_logs")
+}
+
+model SecurityAuditLog {
+  id            String   @id @default(uuid())
+  requestId     String?
+  actorUserId   String?
+  actorUsername String?
+  companyId     String?
+  scopeKey      String?
+  scopeId       String?
+  action        String
+  result        String
+  statusCode    Int?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([companyId])
+  @@index([action])
+  @@index([result])
+  @@index([createdAt])
+  @@map("security_audit_logs")
+}
+
+model AccessAuditLog {
+  id            String   @id @default(uuid())
+  requestId     String?
+  actorUserId   String?
+  actorUsername String?
+  companyId     String?
+  scopeKey      String?
+  scopeId       String?
+  action        String
+  resourceType  String?
+  resourceId    String?
+  result        String
+  statusCode    Int?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  metadata      Json?
+  beforeData    Json?    @map("before")
+  afterData     Json?    @map("after")
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([companyId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([result])
+  @@index([createdAt])
+  @@map("access_audit_logs")
+}
+
+model BusinessAuditLog {
+  id            String   @id @default(uuid())
+  requestId     String?
+  actorUserId   String?
+  actorUsername String?
+  companyId     String?
+  scopeKey      String?
+  scopeId       String?
+  action        String
+  resourceType  String?
+  resourceId    String?
+  result        String
+  statusCode    Int?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  metadata      Json?
+  beforeData    Json?    @map("before")
+  afterData     Json?    @map("after")
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([companyId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([result])
+  @@index([createdAt])
+  @@map("business_audit_logs")
+}
+
+model CardAuditLog {
+  id            String   @id @default(uuid())
+  requestId     String?
+  actorUserId   String?
+  actorUsername String?
+  companyId     String?
+  scopeKey      String?
+  scopeId       String?
+  action        String
+  resourceType  String?
+  resourceId    String?
+  result        String
+  statusCode    Int?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  metadata      Json?
+  beforeData    Json?    @map("before")
+  afterData     Json?    @map("after")
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([companyId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([result])
+  @@index([createdAt])
+  @@map("card_audit_logs")
+}
+
+model CardcloudAuditLog {
+  id            String   @id @default(uuid())
+  requestId     String?
+  actorUserId   String?
+  actorUsername String?
+  companyId     String?
+  scopeKey      String?
+  scopeId       String?
+  action        String
+  resourceType  String?
+  resourceId    String?
+  result        String
+  statusCode    Int?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+  externalPath  String?
+  metadata      Json?
+  beforeData    Json?    @map("before")
+  afterData     Json?    @map("after")
+  createdAt     DateTime @default(now())
+
+  @@index([requestId])
+  @@index([actorUserId])
+  @@index([companyId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([result])
+  @@index([externalPath])
+  @@index([createdAt])
+  @@map("cardcloud_audit_logs")
+}

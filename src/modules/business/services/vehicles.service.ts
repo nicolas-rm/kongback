@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
@@ -13,7 +14,8 @@ export class VehiclesService {
     constructor(
         private readonly repository: VehiclesRepository,
         private readonly relations: BusinessRelationsRepository,
-        private readonly drivers: DriversRepository
+        private readonly drivers: DriversRepository,
+        private readonly audit: AuditService
     ) {}
 
     async create(dto: CreateVehicleDto, scope?: CompanyScope) {
@@ -23,7 +25,7 @@ export class VehiclesService {
             { ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, dto.subCompanyId, scope) },
         ]);
 
-        return this.repository.create({
+        const vehicle = await this.repository.create({
             subCompanyId: dto.subCompanyId,
             fuelId: dto.fuelId,
             driverId: dto.driverId ?? null,
@@ -35,6 +37,8 @@ export class VehiclesService {
             odometerInitial: dto.odometerInitial ?? null,
             status: dto.status ?? Status.active,
         });
+        void this.audit.recordBusiness({ action: 'vehicle_created', resourceType: 'Vehicle', resourceId: vehicle.id, after: vehicle });
+        return vehicle;
     }
 
     async findAll(dto: FindVehiclesDto, scope?: CompanyScope) {
@@ -96,6 +100,7 @@ export class VehiclesService {
             scope
         );
         if (!vehicle) throw notFound();
+        void this.audit.recordBusiness({ action: 'vehicle_updated', resourceType: 'Vehicle', resourceId: vehicle.id, metadata: dto, before: current, after: vehicle });
         return vehicle;
     }
 
@@ -108,12 +113,14 @@ export class VehiclesService {
 
         const vehicle = await this.repository.update(id, { driverId: dto.driverId }, scope);
         if (!vehicle) throw notFound();
+        void this.audit.recordBusiness({ action: 'vehicle_driver_assigned', resourceType: 'Vehicle', resourceId: vehicle.id, before: { driverId: current.driverId }, after: { driverId: vehicle.driverId } });
         return { id: vehicle.id, driverId: vehicle.driverId };
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
         const vehicle = await this.repository.deactivate(id, scope);
         if (!vehicle) throw notFound();
+        void this.audit.recordBusiness({ action: 'vehicle_deactivated', resourceType: 'Vehicle', resourceId: vehicle.id, after: { id: vehicle.id, status: vehicle.status } });
         return { id: vehicle.id, status: vehicle.status };
     }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { SUB_COMPANY_SCOPE_KEY, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { AuditService } from '@/modules/audit/audit.service';
 import { FindCardholdersDto } from '@/modules/cardholders/dto';
 import { CardholdersRepository, type CardholderUserRecord } from '@/modules/cardholders/repositories/cardholders.repository';
 
@@ -9,11 +10,20 @@ const CARDHOLDER_PERMISSION_PREFIX = 'cardholder.';
 
 @Injectable()
 export class CardholdersService {
-    constructor(private readonly repository: CardholdersRepository) {}
+    constructor(
+        private readonly repository: CardholdersRepository,
+        private readonly audit: AuditService
+    ) {}
 
     async findAll(dto: FindCardholdersDto, scope?: CompanyScope) {
         const where = this.buildWhere(dto, scope);
         const [records, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
+
+        void this.audit.recordCard({
+            action: 'cardholders_list_consulted',
+            resourceType: 'Cardholder',
+            metadata: { total, returned: records.length, subCompanyId: dto.subCompanyId, hasDriver: dto.hasDriver, hasCards: dto.hasCards, status: dto.status },
+        });
 
         return paginate(
             records.map((record) => this.serialize(record, scope)),

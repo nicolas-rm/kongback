@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { notFound, textSearch } from '@/modules/business/business.helpers';
 import { CreateFuelDto, FindStatusRecordsDto, UpdateFuelDto } from '@/modules/business/dto';
@@ -7,14 +8,19 @@ import { FuelsRepository } from '@/modules/business/repositories/fuels.repositor
 
 @Injectable()
 export class FuelsService {
-    constructor(private readonly repository: FuelsRepository) {}
+    constructor(
+        private readonly repository: FuelsRepository,
+        private readonly audit: AuditService
+    ) {}
 
-    create(dto: CreateFuelDto) {
-        return this.repository.create({
+    async create(dto: CreateFuelDto) {
+        const fuel = await this.repository.create({
             code: dto.code,
             name: dto.name,
             status: dto.status ?? Status.active,
         });
+        void this.audit.recordBusiness({ action: 'fuel_created', resourceType: 'Fuel', resourceId: fuel.id, after: fuel });
+        return fuel;
     }
 
     async findAll(dto: FindStatusRecordsDto) {
@@ -39,12 +45,14 @@ export class FuelsService {
             status: dto.status,
         });
         if (!fuel) throw notFound();
+        void this.audit.recordBusiness({ action: 'fuel_updated', resourceType: 'Fuel', resourceId: fuel.id, metadata: dto, after: fuel });
         return fuel;
     }
 
     async deactivate(id: string) {
         const fuel = await this.repository.deactivate(id);
         if (!fuel) throw notFound();
+        void this.audit.recordBusiness({ action: 'fuel_deactivated', resourceType: 'Fuel', resourceId: fuel.id, after: { id: fuel.id, status: fuel.status } });
         return { id: fuel.id, status: fuel.status };
     }
 }

@@ -1,0 +1,203 @@
+---
+title: Audit API
+description: Endpoints independientes para consultar auditoria, trazabilidad, seguridad y operaciones.
+---
+
+## Base
+
+Base path: `/api/audit`
+
+Este controlador es de solo lectura. Cada grupo de auditoria tiene su propio endpoint para que el frontend pueda consumirlos sin armar consultas generalizadas por `source`.
+
+## Alcance
+
+Requiere autenticacion y acceso de sistema o compania.
+
+Si la peticion incluye `X-Company-Id`, el backend limita la consulta a eventos de esa compania. Un usuario global sin `X-Company-Id` puede consultar todos los eventos o filtrar por `companyId`.
+
+## Endpoints
+
+| Metodo | Ruta                         | Permiso           | Descripcion                                                       |
+| ------ | ---------------------------- | ----------------- | ----------------------------------------------------------------- |
+| `GET`  | `/api/audit/requests`        | `audit.read-list` | Lista logs tecnicos HTTP (`RequestLog`).                          |
+| `GET`  | `/api/audit/requests/:id`    | `audit.read-one`  | Detalle de un log tecnico HTTP.                                   |
+| `GET`  | `/api/audit/security`        | `audit.read-list` | Lista eventos de seguridad, auth, sesiones y permisos.            |
+| `GET`  | `/api/audit/security/:id`    | `audit.read-one`  | Detalle de un evento de seguridad.                                |
+| `GET`  | `/api/audit/access`          | `audit.read-list` | Lista eventos de usuarios, roles, permisos y accesos.             |
+| `GET`  | `/api/audit/access/:id`      | `audit.read-one`  | Detalle de un evento de acceso.                                   |
+| `GET`  | `/api/audit/business`        | `audit.read-list` | Lista eventos operativos de negocio.                              |
+| `GET`  | `/api/audit/business/:id`    | `audit.read-one`  | Detalle de un evento operativo.                                   |
+| `GET`  | `/api/audit/cards`           | `audit.read-list` | Lista eventos de tarjetas locales y portal tarjetahabiente.       |
+| `GET`  | `/api/audit/cards/:id`       | `audit.read-one`  | Detalle de un evento de tarjeta.                                  |
+| `GET`  | `/api/audit/cardcloud`       | `audit.read-list` | Lista eventos de Cardcloud, stock, subcuentas y llamadas externas. |
+| `GET`  | `/api/audit/cardcloud/:id`   | `audit.read-one`  | Detalle de un evento Cardcloud.                                   |
+| `GET`  | `/api/audit/transfers`       | `audit.read-list` | Lista historial auditado de transferencias Cardcloud.             |
+| `GET`  | `/api/audit/transfers/:id`   | `audit.read-one`  | Detalle de una transferencia auditada.                            |
+| `GET`  | `/api/audit/card-assignments` | `audit.read-list` | Lista historial auditado de asignaciones de tarjetas.             |
+| `GET`  | `/api/audit/card-assignments/cards/:id` | `audit.read-one` | Detalle de una asignacion auditada en tarjetas locales. |
+| `GET`  | `/api/audit/card-assignments/cardcloud/:id` | `audit.read-one` | Detalle de una asignacion auditada en Cardcloud. |
+
+## Query params comunes
+
+Estos filtros aplican a los listados. Algunos campos solo tienen efecto en ciertos endpoints.
+
+| Campo          | Tipo      | Requerido | Descripcion                                                               |
+| -------------- | --------- | --------- | ------------------------------------------------------------------------- |
+| `page`         | `number`  | No        | Pagina. Default `1`.                                                      |
+| `limit`        | `number`  | No        | Registros por pagina. Maximo `100`.                                       |
+| `search`       | `string`  | No        | Busca por accion, usuario, motivo, requestId, recurso o ruta externa.     |
+| `all`          | `boolean` | No        | Devuelve hasta `100` registros.                                           |
+| `result`       | `string`  | No        | `success`, `failure` o `denied`.                                          |
+| `action`       | `string`  | No        | Filtra por nombre de accion.                                              |
+| `method`       | `string`  | No        | Filtra requests HTTP por metodo. Solo aplica en `/requests`.              |
+| `path`         | `string`  | No        | Filtra requests HTTP por ruta o Cardcloud por ruta externa.               |
+| `actorUserId`  | `uuid`    | No        | Filtra por usuario actor.                                                 |
+| `companyId`    | `uuid`    | No        | Filtra por compania. Se ignora si `X-Company-Id` ya fija otro alcance.    |
+| `requestId`    | `string`  | No        | Correlaciona request tecnico con eventos especificos.                     |
+| `resourceType` | `string`  | No        | Filtra por tipo de recurso, por ejemplo `Card`, `SubCompany`, `Document`. |
+| `resourceId`   | `string`  | No        | Filtra por id del recurso afectado.                                       |
+| `from`         | `isoDate` | No        | Fecha/hora inicial.                                                       |
+| `to`           | `isoDate` | No        | Fecha/hora final.                                                         |
+
+## Listar eventos por grupo
+
+Ejemplo:
+
+```txt
+GET /api/audit/cards?action=assigned&from=2026-08-01T00:00:00.000Z
+GET /api/audit/cardcloud?path=/v1/transfer
+GET /api/audit/security?result=denied
+GET /api/audit/requests?method=POST&path=/api/cards
+```
+
+Response `200`:
+
+```json
+{
+    "data": [
+        {
+            "id": "audit-event-id",
+            "source": "cardcloud",
+            "requestId": "request-id",
+            "action": "cardcloud_transfer_created",
+            "result": "success",
+            "statusCode": null,
+            "actorUserId": "user-id",
+            "actorUsername": "admin",
+            "companyId": "company-id",
+            "scopeKey": null,
+            "scopeId": null,
+            "resourceType": "CardcloudTransfer",
+            "resourceId": null,
+            "externalPath": "/v1/transfer",
+            "reason": null,
+            "createdAt": "2026-08-21T18:00:00.000Z"
+        }
+    ],
+    "meta": {
+        "total": 1,
+        "page": 1,
+        "limit": 10,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
+## Consultar detalle por grupo
+
+Ejemplos:
+
+```txt
+GET /api/audit/cards/<id>
+GET /api/audit/cardcloud/<id>
+GET /api/audit/security/<id>
+GET /api/audit/requests/<id>
+```
+
+Response `200`:
+
+```json
+{
+    "id": "audit-event-id",
+    "source": "card",
+    "requestId": "request-id",
+    "action": "card_vehicle_assigned",
+    "result": "success",
+    "statusCode": null,
+    "actorUserId": "user-id",
+    "actorUsername": "admin",
+    "companyId": "company-id",
+    "scopeKey": null,
+    "scopeId": null,
+    "resourceType": "Card",
+    "resourceId": "card-id",
+    "reason": null,
+    "ipAddress": "127.0.0.1",
+    "userAgent": "Mozilla/5.0",
+    "metadata": null,
+    "before": {
+        "vehicleId": null,
+        "assignmentMode": "unassigned",
+        "assignedAt": null
+    },
+    "after": {
+        "vehicleId": "vehicle-id",
+        "assignmentMode": "vehicle",
+        "assignedAt": "2026-08-21T18:00:00.000Z"
+    },
+    "createdAt": "2026-08-21T18:00:00.000Z"
+}
+```
+
+## Endpoints operativos directos
+
+Historial de transferencias:
+
+```txt
+GET /api/audit/transfers
+GET /api/audit/transfers?result=success
+GET /api/audit/transfers?requestId=<requestId>
+GET /api/audit/transfers?from=2026-08-01T00:00:00.000Z&to=2026-08-31T23:59:59.999Z
+GET /api/audit/transfers/<id>
+```
+
+Internamente filtra eventos Cardcloud con `resourceType=CardcloudTransfer`.
+
+Historial de asignaciones de tarjetas:
+
+```txt
+GET /api/audit/card-assignments
+GET /api/audit/card-assignments?resourceId=<cardId>
+GET /api/audit/card-assignments?requestId=<requestId>
+GET /api/audit/card-assignments/cards/<id>
+GET /api/audit/card-assignments/cardcloud/<id>
+```
+
+Internamente consulta eventos `card` y `cardcloud` cuya accion contiene `assign`, por ejemplo:
+
+- `card_vehicle_assigned`
+- `card_unassigned`
+- `cards_assigned_to_sub_company`
+- `cardcloud_cards_assigned`
+- `cardcloud_cards_assigned_bulk`
+- `cardcloud_stock_sub_company_assigned`
+- `cardcloud_stock_sub_company_unassigned`
+
+## Seguridad de datos
+
+Los valores sensibles se guardan sanitizados desde `AuditService`. No se deben mostrar passwords, hashes, access tokens, refresh tokens, NIP, CVV, PAN completo, secretos 2FA ni cookies completas.
+
+## Notas para frontend
+
+Pantallas recomendadas:
+
+- Auditoria HTTP: consumir `/api/audit/requests`.
+- Seguridad: consumir `/api/audit/security`.
+- Accesos: consumir `/api/audit/access`.
+- Operacion: consumir `/api/audit/business`.
+- Tarjetas: consumir `/api/audit/cards` y `/api/audit/card-assignments`.
+- Cardcloud: consumir `/api/audit/cardcloud` y `/api/audit/transfers`.
+
+En los detalles, muestra `metadata`, `before`, `after`, `ipAddress`, `userAgent`, `path` y `externalPath` solo cuando existan. Oculta `body`, `cookies` y `query` de `RequestLog` salvo a perfiles auditores de alta confianza.
