@@ -28,9 +28,10 @@ const prisma = new PrismaClient({
     adapter: new PrismaPg(pool),
 });
 
-const ADMIN_ROLE_CODE = 'admin';
+const ADMIN_ROLE_CODE = 'administrador-global';
 const ADMIN_ROLE_NAME = 'Administrador global';
-const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso completo a todos los permisos del sistema.';
+const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso a los permisos administrativos del sistema.';
+const ADMIN_EXCLUDED_PERMISSION_PREFIXES = ['cardholder.'] as const;
 const DEFAULT_DEMO_TENANT_COUNT = 2;
 const DEFAULT_DEMO_SUB_COMPANIES_PER_COMPANY = 2;
 const DEMO_TENANT_COUNT = parseSeedPositiveInt('SEED_DEMO_TENANT_COUNT', DEFAULT_DEMO_TENANT_COUNT);
@@ -76,49 +77,49 @@ const DEMO_USER_DEFINITIONS = [
         username: 'demo.company.manager',
         email: 'demo.company.manager@example.com',
         fullName: 'Demo Company Manager',
-        roleCode: 'demo-company-manager',
+        roleCode: 'demo-operador-compania',
         accessScope: 'company',
     },
     {
         username: 'demo.company.viewer',
         email: 'demo.company.viewer@example.com',
         fullName: 'Demo Company Viewer',
-        roleCode: 'demo-company-viewer',
+        roleCode: 'demo-consulta-compania',
         accessScope: 'company',
     },
     {
         username: 'demo.subcompany.manager',
         email: 'demo.subcompany.manager@example.com',
         fullName: 'Demo Subcompany Manager',
-        roleCode: 'demo-company-manager',
+        roleCode: 'demo-operador-compania',
         accessScope: 'subCompany',
     },
     {
         username: 'demo.cards.manager',
         email: 'demo.cards.manager@example.com',
         fullName: 'Demo Cards Manager',
-        roleCode: 'demo-card-administrator',
+        roleCode: 'demo-tarjetas-administrador',
         accessScope: 'company',
     },
     {
         username: 'demo.stations.manager',
         email: 'demo.stations.manager@example.com',
         fullName: 'Demo Stations Manager',
-        roleCode: 'demo-station-administrator',
+        roleCode: 'demo-estaciones-administrador',
         accessScope: 'company',
     },
     {
         username: 'demo.users.admin',
         email: 'demo.users.admin@example.com',
         fullName: 'Demo Users Admin',
-        roleCode: 'demo-user-administrator',
+        roleCode: 'demo-usuarios-administrador',
         accessScope: 'global',
     },
     {
         username: 'demo.rbac.admin',
         email: 'demo.rbac.admin@example.com',
         fullName: 'Demo RBAC Admin',
-        roleCode: 'demo-rbac-administrator',
+        roleCode: 'demo-roles-permisos-administrador',
         accessScope: 'global',
     },
 ] as const satisfies readonly DemoUserDefinition[];
@@ -264,7 +265,7 @@ function findActiveRoleByCode(code: string) {
 }
 
 async function syncRolePermissions(roleId: string): Promise<void> {
-    await syncRolePermissionsByCodes(roleId, [...ALL_PERMISSION_CODES]);
+    await syncRolePermissionsByCodes(roleId, resolveAdminPermissionCodes());
 }
 
 async function syncRolePermissionsByCodes(roleId: string, codes: string[]): Promise<void> {
@@ -295,6 +296,10 @@ async function syncRolePermissionsByCodes(roleId: string, codes: string[]): Prom
             skipDuplicates: true,
         });
     });
+}
+
+function resolveAdminPermissionCodes(): PermissionCode[] {
+    return ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix)));
 }
 
 async function seedAdminUser(roleId: string): Promise<UserSeed> {
@@ -372,60 +377,59 @@ async function ensureGlobalAdminAccess(userId: string, roleId: string): Promise<
 async function seedDemoRoles(): Promise<RoleSeed[]> {
     const roleDefinitions = [
         {
-            code: 'demo-user-administrator',
+            code: 'demo-usuarios-administrador',
             name: 'Demo Administracion de usuarios',
             description: 'Administra usuarios, accesos y consulta roles/permisos disponibles.',
             prefixes: ['users.'],
             extraPermissionCodes: ['roles.read-list', 'roles.read-one', 'permissions.read-list', 'permissions.read-one'],
         },
         {
-            code: 'demo-rbac-administrator',
+            code: 'demo-roles-permisos-administrador',
             name: 'Demo Administracion de roles y permisos',
             description: 'Administra el catalogo de roles, permisos y asignaciones de permisos por rol.',
             prefixes: ['roles.', 'permissions.'],
         },
         {
-            code: 'demo-company-manager',
+            code: 'demo-operador-compania',
             name: 'Demo Operador de compania',
-            description: 'Administra los modulos operativos principales dentro de una compania.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'users.'],
+            description: 'Administra la operacion diaria de una compania sin permisos globales de seguridad.',
+            prefixes: ['sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'cardholders.'],
             extraPermissionCodes: [
+                'companies.module',
+                'companies.read-list',
+                'companies.read-one',
                 'fuels.read-list',
                 'fuels.read-one',
+                'users.read-list',
+                'users.read-one',
                 'cardcloud-stock.module',
                 'cardcloud-stock.read-list',
                 'cardcloud-stock.sub-company.assign',
                 'cardcloud-stock.sub-company.unassign',
+                'notifications.module',
                 'notifications.read-list',
                 'notifications.unread-count.read',
                 'notifications.mark-read',
                 'notifications.mark-read-all',
             ],
-            excludePermissionCodes: ['companies.create', 'companies.update', 'companies.delete'],
         },
         {
-            code: 'demo-company-viewer',
+            code: 'demo-consulta-compania',
             name: 'Demo Consulta de compania',
             description: 'Consulta los modulos operativos principales dentro de una compania sin permisos de escritura.',
-            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'notifications.', 'users.'],
+            prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'cardholders.', 'cardcloud-stock.', 'notifications.'],
+            extraPermissionCodes: ['users.read-list', 'users.read-one', 'notifications.mark-read', 'notifications.mark-read-all'],
             readOnly: true,
         },
         {
-            code: 'demo-driver-administrator',
-            name: 'Demo Administracion de choferes',
-            description: 'Administra choferes y consulta subcompanias necesarias para asignarlos correctamente.',
-            prefixes: ['drivers.'],
-            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
+            code: 'demo-flota-administrador',
+            name: 'Demo Administracion de flota',
+            description: 'Administra conductores, vehiculos y asignaciones de chofer dentro de una compania.',
+            prefixes: ['drivers.', 'vehicles.'],
+            extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one', 'users.read-list', 'users.read-one'],
         },
         {
-            code: 'demo-vehicle-administrator',
-            name: 'Demo Administracion de vehiculos',
-            description: 'Administra vehiculos, asignacion de choferes y catalogos necesarios para la flota.',
-            prefixes: ['vehicles.'],
-            extraPermissionCodes: ['drivers.read-list', 'drivers.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
-        },
-        {
-            code: 'demo-card-administrator',
+            code: 'demo-tarjetas-administrador',
             name: 'Demo Administracion de tarjetas',
             description: 'Administra tarjetas, asignaciones a vehiculos y stock Cardcloud.',
             prefixes: ['cards.'],
@@ -443,35 +447,57 @@ async function seedDemoRoles(): Promise<RoleSeed[]> {
             ],
         },
         {
-            code: 'demo-cardholder',
+            code: 'demo-cardcloud-administrador',
+            name: 'Demo Administracion Cardcloud',
+            description: 'Administra cuenta, subcuentas, tarjetas externas, transferencias y stock Cardcloud.',
+            prefixes: ['cardcloud.', 'cardcloud-stock.'],
+            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one', 'cards.read-list', 'cards.read-one'],
+        },
+        {
+            code: 'demo-tarjetahabientes-administrador',
+            name: 'Demo Administracion de tarjetahabientes',
+            description: 'Consulta usuarios con perfil tarjetahabiente y su contexto operativo.',
+            prefixes: ['cardholders.'],
+            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
+        },
+        {
+            code: 'demo-tarjetahabiente',
             name: 'Demo Tarjetahabiente',
             description: 'Acceso propio para usuarios conductores que consultan y operan sus tarjetas asignadas.',
             prefixes: ['cardholder.'],
         },
         {
-            code: 'demo-fuel-administrator',
+            code: 'demo-combustibles-administrador',
             name: 'Demo Administracion de combustibles',
             description: 'Administra el catalogo de combustibles.',
             prefixes: ['fuels.'],
         },
         {
-            code: 'demo-station-administrator',
+            code: 'demo-estaciones-administrador',
             name: 'Demo Administracion de estaciones',
             description: 'Administra estaciones y combustibles disponibles por estacion.',
             prefixes: ['stations.', 'station-fuels.'],
             extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
         },
         {
-            code: 'demo-document-administrator',
+            code: 'demo-documentos-administrador',
             name: 'Demo Administracion de documentos',
             description: 'Administra documentos de la compania seleccionada.',
             prefixes: ['documents.'],
+            extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
         },
         {
-            code: 'demo-notification-administrator',
+            code: 'demo-notificaciones-administrador',
             name: 'Demo Administracion de notificaciones',
             description: 'Administra notificaciones y consulta la bandeja del usuario.',
             prefixes: ['notifications.'],
+        },
+        {
+            code: 'demo-consulta-auditoria',
+            name: 'Demo Consulta de auditoria',
+            description: 'Consulta eventos de auditoria del sistema sin permisos de escritura.',
+            prefixes: ['audit.'],
+            readOnly: true,
         },
     ] as const satisfies readonly DemoRoleDefinition[];
 

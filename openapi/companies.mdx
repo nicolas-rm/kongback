@@ -168,6 +168,27 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Companias`: `sidebar.companies.canEnter`.
+- Pantalla `Companias`: `modules.companies.canEnter`.
+- Crear compania: `modules.companies.actions.openCreate` y `modules.companies.actions.create`.
+- Pestañas de crear `Formulario` y `Direccion`: `modules.companies.actions.openCreateForm` y `modules.companies.actions.openCreateAddress`.
+- Consultar listado: `modules.companies.actions.readList`.
+- Refrescar listado: `modules.companies.actions.refreshList`.
+- Configurar columnas: `modules.companies.actions.configureColumns`.
+- Exportar listado desde el front: `modules.companies.actions.exportList`.
+- Abrir detalle: `modules.companies.actions.openDetail` u `modules.companies.actions.openDetailDrawer`.
+- Pestañas de detalle `Formulario` y `Direccion`: `modules.companies.actions.openDetailForm` y `modules.companies.actions.openDetailAddress`.
+- Editar compania: `modules.companies.actions.openEdit` u `modules.companies.actions.openEditDrawer`.
+- Pestañas de editar `Formulario` y `Direccion`: `modules.companies.actions.openEditForm` y `modules.companies.actions.openEditAddress`.
+- Actualizar compania: `modules.companies.actions.update`.
+- Desactivar compania: `modules.companies.actions.openDeactivate`, `modules.companies.actions.openDeactivateDialog` o `modules.companies.actions.deactivate`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la compania, no borrado fisico.
+
 Este modulo administra clientes/tenants. No debe depender de la compania seleccionada y no debe enviar `X-Company-Id`.
 
 No generes un modulo separado de `workspaces`. En este proyecto, la compania es el tenant/cliente operativo. El selector de contexto del usuario debe mostrar companias accesibles, no workspaces independientes.

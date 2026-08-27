@@ -23,6 +23,22 @@ export class VehiclesRepository {
         return this.prisma.vehicle.findFirst({ where: { id, subCompany: subCompanyScopeWhere(scope) }, select: this.select() });
     }
 
+    findNotificationTarget(id: string, scope?: CompanyScope) {
+        return this.prisma.vehicle.findFirst({
+            where: { id, subCompany: subCompanyScopeWhere(scope) },
+            select: {
+                id: true,
+                plates: true,
+                economicNumber: true,
+                driver: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+    }
+
     update(id: string, data: Prisma.VehicleUncheckedUpdateInput, scope?: CompanyScope) {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.vehicle.updateMany({ where: { id, subCompany: subCompanyScopeWhere(scope) }, data });

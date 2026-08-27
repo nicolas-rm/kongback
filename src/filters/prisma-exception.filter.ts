@@ -102,8 +102,7 @@ export class PrismaExceptionFilter implements ExceptionFilter {
                 return this.buildPrismaError(host, HttpStatus.BAD_REQUEST, ERROR_CODES.INVALID_RELATION, I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
             if (exception.code === 'P2000')
                 return this.buildPrismaError(host, HttpStatus.BAD_REQUEST, ERROR_CODES.VALUE_TOO_LONG, I18N_KEYS.prisma.valueTooLong, 'Uno de los campos supera el tamano permitido.');
-            if (exception.code === 'P2025')
-                return this.buildPrismaError(host, HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
+            if (exception.code === 'P2025') return this.buildPrismaError(host, HttpStatus.NOT_FOUND, ERROR_CODES.NOT_FOUND, I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
         }
 
         if (exception instanceof Prisma.PrismaClientValidationError)

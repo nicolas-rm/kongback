@@ -87,8 +87,8 @@ export class AuthenticationController {
 
     @Get('me')
     @SkipMustChangePassword()
-    me(@CurrentUser() user: RequestUser) {
-        return this.authenticationService.getProfile(user);
+    me(@CurrentUser() user: RequestUser, @CurrentCompanyId() companyId: string | undefined) {
+        return this.authenticationService.getProfile(user, companyId);
     }
 
     @Get('companies')

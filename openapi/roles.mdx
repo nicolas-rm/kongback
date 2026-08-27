@@ -254,6 +254,26 @@ No generes una pagina separada para `/api/roles/:id/permissions`. La lectura y r
 
 Para usuarios no tecnicos, muestra `name` como etiqueta principal del rol y deja `code` como dato secundario o tecnico.
 
+### Capabilities para UI
+
+Usa `capabilities.modules.roles.actions` para mostrar u ocultar controles:
+
+| Control UI                       | Capability                                                 | Permiso base                      |
+| -------------------------------- | ---------------------------------------------------------- | --------------------------------- |
+| Entrar al modulo                 | `capabilities.sidebar.roles.canEnter`                      | `roles.module`                    |
+| Boton `Crear rol`                | `roles.actions.openCreate` o `roles.actions.create`        | `roles.create`                    |
+| Busqueda/listado/refrescar tabla | `roles.actions.readList` o `roles.actions.refreshList`     | `roles.read-list`                 |
+| Configurar columnas              | `roles.actions.configureColumns`                           | `roles.read-list`                 |
+| Exportar listado local           | `roles.actions.exportList`                                 | `roles.read-list`                 |
+| Ver detalle                      | `roles.actions.openDetailDrawer` o `roles.actions.readOne` | `roles.read-one`                  |
+| Editar datos base                | `roles.actions.openEditDrawer` o `roles.actions.update`    | `roles.update`                    |
+| Abrir pestana de permisos        | `roles.actions.openPermissionsTab`                         | `roles.permissions.read` o assign |
+| Consultar permisos asignados     | `roles.actions.readPermissions`                            | `roles.permissions.read`          |
+| Guardar permisos del rol         | `roles.actions.replacePermissions`                         | `roles.permissions.assign`        |
+| Eliminar rol                     | `roles.actions.openDeleteDialog` o `roles.actions.delete`  | `roles.delete`                    |
+
+`configureColumns` y `exportList` representan acciones locales del listado; no implican endpoints adicionales mientras el front use los datos ya cargados por `GET /api/roles`.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                   |

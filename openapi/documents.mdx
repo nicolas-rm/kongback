@@ -134,6 +134,29 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu, entrada por ruta directa y acciones visibles:
+
+| Control UI                        | Capability                                                                                                                              | Permiso base              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Menu `Documentos`                 | `capabilities.sidebar.documents.canEnter`                                                                                               | `documents.module`        |
+| Pantalla `Documentos`             | `modules.documents.canEnter`                                                                                                            | `documents.module`        |
+| Busqueda/listado/refrescar tabla  | `modules.documents.actions.readList` o `modules.documents.actions.refreshList`                                                          | `documents.read-list`     |
+| Configurar columnas               | `modules.documents.actions.configureColumns`                                                                                            | `documents.read-list`     |
+| Exportar listado local            | `modules.documents.actions.exportList`                                                                                                  | `documents.read-list`     |
+| Abrir modal de alta               | `modules.documents.actions.openCreate`                                                                                                  | `documents.create`        |
+| Subir documento                   | `modules.documents.actions.create`                                                                                                      | `documents.create`        |
+| Selector `Subcompania`            | `modules.documents.actions.openSubCompanySelect` y `modules.subCompanies.actions.readList` o `modules.subCompanies.actions.refreshList` | `sub-companies.read-list` |
+| Ver detalle                       | `modules.documents.actions.openDetail`, `modules.documents.actions.openDetailDialog` o `modules.documents.actions.readOne`              | `documents.read-one`      |
+| Descargar archivo                 | `modules.documents.actions.download`                                                                                                    | `documents.download`      |
+| Abrir modal de edicion            | `modules.documents.actions.openEdit` u `modules.documents.actions.openEditDialog`                                                       | `documents.update`        |
+| Actualizar metadata               | `modules.documents.actions.update`                                                                                                      | `documents.update`        |
+| Abrir confirmacion de eliminacion | `modules.documents.actions.openDelete` u `modules.documents.actions.openDeleteDialog`                                                   | `documents.delete`        |
+| Eliminar documento                | `modules.documents.actions.delete`                                                                                                      | `documents.delete`        |
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. Si el alta usa alcance por subcompania, la visibilidad del selector debe depender tambien del modulo propietario del catalogo: `modules.subCompanies.actions.readList` o `modules.subCompanies.actions.refreshList`.
+
 El front debe enviar `X-Company-Id`. `companyId` se toma del header y no debe pedirse como campo visible.
 
 Campos recomendados para formularios:
@@ -158,9 +181,9 @@ Cuando el documento pertenece a una compania, subcompania, vehiculo, conductor, 
 
 ## Errores comunes
 
-| Estado | Caso                                                                       |
-| ------ | -------------------------------------------------------------------------- |
+| Estado | Caso                                                                                             |
+| ------ | ------------------------------------------------------------------------------------------------ |
 | `400`  | Archivo faltante, tipo de archivo no permitido, tamano excedido o datos relacionados no validos. |
-| `401`  | Request sin autenticacion valida.                                          |
-| `403`  | Usuario autenticado sin el permiso requerido.                              |
-| `404`  | Documento o archivo almacenado no encontrado.                              |
+| `401`  | Request sin autenticacion valida.                                                                |
+| `403`  | Usuario autenticado sin el permiso requerido.                                                    |
+| `404`  | Documento o archivo almacenado no encontrado.                                                    |

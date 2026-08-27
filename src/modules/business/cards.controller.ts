@@ -45,7 +45,7 @@ export class CardsController {
     }
 
     @Post('assign-sub-company')
-    @Permissions('cards.create')
+    @Permissions('cardcloud-stock.sub-company.assign')
     assignCardsToSubCompany(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: AssignCardsToSubCompanyDto) {
         return this.cardsService.assignCardsToSubCompany(dto, scope);
     }

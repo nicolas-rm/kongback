@@ -198,7 +198,13 @@ export class CardholderService {
     async powerOff(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.blockCard(externalId), 'No fue posible bloquear la tarjeta en este momento. Intenta nuevamente.');
-        await this.notify(user.id, 'Tarjeta apagada', 'Tu tarjeta se bloqueo correctamente.', `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`, NotificationType.warning);
+        await this.notify(
+            user.id,
+            'Tarjeta apagada',
+            'Tu tarjeta se bloqueo correctamente.',
+            `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`,
+            NotificationType.warning
+        );
         void this.audit.recordCard({ action: 'cardholder_card_blocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return this.withMessage(result, 'La tarjeta se bloqueo correctamente.');
     }
@@ -206,22 +212,40 @@ export class CardholderService {
     async powerOn(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.unblockCard(externalId), 'No fue posible desbloquear la tarjeta en este momento. Intenta nuevamente.');
-        await this.notify(user.id, 'Tarjeta encendida', 'Tu tarjeta se desbloqueo correctamente.', `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`, NotificationType.success);
+        await this.notify(
+            user.id,
+            'Tarjeta encendida',
+            'Tu tarjeta se desbloqueo correctamente.',
+            `Tarjeta ${this.maskReference(card.stock?.maskedPan ?? card.externalId ?? card.id)}`,
+            NotificationType.success
+        );
         void this.audit.recordCard({ action: 'cardholder_card_unblocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return this.withMessage(result, 'La tarjeta se desbloqueo correctamente.');
     }
 
     async getMovements(user: RequestUser, cardId: string, query: CardcloudDateRangeQueryDto) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
-        const movements = await this.executeCardcloudAction(() => this.cardcloud.getCardMovements(externalId, query), 'No fue posible consultar los movimientos de la tarjeta en este momento. Intenta nuevamente.');
+        const movements = await this.executeCardcloudAction(
+            () => this.cardcloud.getCardMovements(externalId, query),
+            'No fue posible consultar los movimientos de la tarjeta en este momento. Intenta nuevamente.'
+        );
         void this.audit.recordCard({ action: 'cardholder_card_movements_consulted', resourceType: 'Card', resourceId: card.id, metadata: { externalId, from: query.from, to: query.to } });
         return movements;
     }
 
     async getSensitiveData(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
-        const result = await this.executeCardcloudAction(() => this.cardcloud.getCardSensitiveData(externalId), 'No fue posible consultar los datos de la tarjeta en este momento. Intenta nuevamente.');
-        await this.notify(user.id, 'Consulta de datos de tarjeta', 'Consultaste los datos de tu tarjeta.', `Tarjeta ${this.maskReference(this.extractPan(result) ?? card.stock?.maskedPan ?? card.id)}`, NotificationType.warning);
+        const result = await this.executeCardcloudAction(
+            () => this.cardcloud.getCardSensitiveData(externalId),
+            'No fue posible consultar los datos de la tarjeta en este momento. Intenta nuevamente.'
+        );
+        await this.notify(
+            user.id,
+            'Consulta de datos de tarjeta',
+            'Consultaste los datos de tu tarjeta.',
+            `Tarjeta ${this.maskReference(this.extractPan(result) ?? card.stock?.maskedPan ?? card.id)}`,
+            NotificationType.warning
+        );
         void this.audit.recordCard({ action: 'cardholder_card_sensitive_data_consulted', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
         return result;
     }

@@ -169,7 +169,28 @@ Reglas:
 
 Para mostrar el stock local en administracion global, consume `GET /api/cardcloud-stock?page=1&limit=25&search=` sin `X-Company-Id`. Para operacion dentro de una compania, envia `X-Company-Id`; el backend limitara la tabla a stock sin asignar y stock de subcompanias visibles.
 
-La accion `Sincronizar stock Cardcloud` debe ser un boton/accion tecnica de administracion global, no una pagina separada ni una accion por compania. Solo mostrarla cuando `capabilities.permissions` incluya `cardcloud-stock.sync` y el usuario tenga acceso de sistema.
+### Capabilities para UI
+
+Usa `capabilities.sidebar.cardcloudStock.canEnter` para mostrar el menu `Stock` y `capabilities.modules.cardcloudStock.canEnter` para permitir la pantalla.
+
+Acciones sugeridas:
+
+| Accion UI                                  | Capability                                                                                                              | Endpoint relacionado                                  |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Listar, buscar y refrescar stock           | `modules.cardcloudStock.actions.readList` / `modules.cardcloudStock.actions.refreshList`                                | `GET /api/cardcloud-stock`                            |
+| Configurar columnas                        | `modules.cardcloudStock.actions.configureColumns`                                                                       | Frontend                                              |
+| Exportar tabla                             | `modules.cardcloudStock.actions.exportList`                                                                             | Frontend                                              |
+| Abrir detalle de stock                     | `modules.cardcloudStock.actions.openDetail` / `modules.cardcloudStock.actions.openDetailDialog`                         | Usa la fila ya cargada del listado                    |
+| Sincronizar stock                          | `modules.cardcloudStock.actions.openSync` / `modules.cardcloudStock.actions.sync`                                       | `POST /api/cardcloud-stock/sync`                      |
+| Abrir asignacion de subcompania            | `modules.cardcloudStock.actions.openAssignSubCompany` / `modules.cardcloudStock.actions.openAssignSubCompanyDialog`     | Modal frontend                                        |
+| Consultar subcompanias para el select      | `modules.cardcloudStock.actions.openSubCompanySelect`                                                                   | `GET /api/sub-companies`                              |
+| Asignar subcompania                        | `modules.cardcloudStock.actions.assignSubCompany`                                                                       | `PATCH /api/cardcloud-stock/:id/assign-sub-company`   |
+| Abrir confirmacion para quitar subcompania | `modules.cardcloudStock.actions.openUnassignSubCompany` / `modules.cardcloudStock.actions.openUnassignSubCompanyDialog` | Modal frontend                                        |
+| Quitar asignacion de subcompania           | `modules.cardcloudStock.actions.unassignSubCompany`                                                                     | `PATCH /api/cardcloud-stock/:id/unassign-sub-company` |
+
+El modal `Detalle de stock` no debe llamar a un endpoint `GET /api/cardcloud-stock/:id`; ese endpoint no existe. Renderiza `maskedPan`, `clientId`, `balance` y `providerStatus` desde la fila consultada en `GET /api/cardcloud-stock`.
+
+La accion `Sincronizar stock Cardcloud` debe ser un boton/accion tecnica de administracion global, no una pagina separada ni una accion por compania. Solo mostrarla cuando `modules.cardcloudStock.actions.sync` sea `true` y el usuario tenga acceso de sistema.
 
 Para asignar stock a una subcompania, usa `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde una accion del inventario/stock. En modo compania, envia `X-Company-Id`. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual.
 

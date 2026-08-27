@@ -119,6 +119,19 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Este modulo no debe aparecer en el menu principal. Usalo desde `Estaciones > Detalle/Editar > Combustibles disponibles`:
+
+- Consultar relaciones: `modules.stationFuels.actions.readList`.
+- Refrescar relaciones: `modules.stationFuels.actions.refreshList`.
+- Abrir detalle tecnico: `modules.stationFuels.actions.openDetail`.
+- Crear relacion estacion-combustible: `modules.stationFuels.actions.openCreate`, `modules.stationFuels.actions.openCreateDialog` y `modules.stationFuels.actions.create`.
+- Actualizar estado de la relacion: `modules.stationFuels.actions.openEdit`, `modules.stationFuels.actions.openEditDialog` y `modules.stationFuels.actions.update`.
+- Desactivar relacion: `modules.stationFuels.actions.openDeactivate`, `modules.stationFuels.actions.openDeactivateDialog` o `modules.stationFuels.actions.deactivate`.
+
+Para pintar la pestaña dentro de estaciones tambien puedes usar los aliases de `modules.stations.actions`: `openAvailableFuels`, `readAvailableFuels`, `openAddFuel`, `addFuel`, `updateAvailableFuel` y `removeAvailableFuel`.
+
 El front debe enviar `X-Company-Id`. `stationId` debe venir de estaciones activas visibles para la compania y alcance seleccionados; `fuelId` viene del catalogo global de combustibles activos.
 
 Este modulo normalmente se consume como seccion hija de una estacion: `Combustibles disponibles`. Para agregar un combustible a una estacion, crea la relacion con `stationId` y `fuelId`; para quitarlo de la vista operativa, desactiva o elimina la relacion segun la accion disponible en UI.
@@ -137,10 +150,10 @@ En tablas usa `station.name` y `fuel.name`; no muestres `stationId` ni `fuelId` 
 
 ## Errores comunes
 
-| Estado | Caso                                             |
-| ------ | ------------------------------------------------ |
+| Estado | Caso                                                  |
+| ------ | ----------------------------------------------------- |
 | `400`  | Datos relacionados no validos o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                |
-| `403`  | Usuario autenticado sin el permiso requerido.    |
-| `404`  | Relacion estacion-combustible no encontrada.     |
-| `409`  | Conflictos de unicidad segun constraints Prisma. |
+| `401`  | Request sin autenticacion valida.                     |
+| `403`  | Usuario autenticado sin el permiso requerido.         |
+| `404`  | Relacion estacion-combustible no encontrada.          |
+| `409`  | Conflictos de unicidad segun constraints Prisma.      |

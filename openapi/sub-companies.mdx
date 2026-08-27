@@ -159,6 +159,39 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Subcompanias`: `sidebar.subCompanies.canEnter`.
+- Pantalla `Subcompanias`: `modules.subCompanies.canEnter`.
+- Crear subcompania: `modules.subCompanies.actions.openCreate` y `modules.subCompanies.actions.create`.
+- Pestañas de crear `Formulario` y `Direccion`: `modules.subCompanies.actions.openCreateForm` y `modules.subCompanies.actions.openCreateAddress`.
+- Consultar listado: `modules.subCompanies.actions.readList`.
+- Refrescar listado: `modules.subCompanies.actions.refreshList`.
+- Configurar columnas: `modules.subCompanies.actions.configureColumns`.
+- Exportar listado desde el front: `modules.subCompanies.actions.exportList`.
+- Abrir detalle: `modules.subCompanies.actions.openDetail` u `modules.subCompanies.actions.openDetailDrawer`.
+- Pestañas de detalle `Formulario` y `Direccion`: `modules.subCompanies.actions.openDetailForm` y `modules.subCompanies.actions.openDetailAddress`.
+- Editar subcompania: `modules.subCompanies.actions.openEdit` u `modules.subCompanies.actions.openEditDrawer`.
+- Pestañas de editar `Formulario` y `Direccion`: `modules.subCompanies.actions.openEditForm` y `modules.subCompanies.actions.openEditAddress`.
+- Actualizar subcompania: `modules.subCompanies.actions.update`.
+- Desactivar subcompania: `modules.subCompanies.actions.openDeactivate`, `modules.subCompanies.actions.openDeactivateDialog` o `modules.subCompanies.actions.deactivate`.
+- Abrir drawer de datos relacionados: `modules.subCompanies.actions.openRelatedData`.
+- Pestaña `Conductores`: `modules.subCompanies.actions.openRelatedDrivers`.
+- Buscar conductores relacionados: `modules.subCompanies.actions.searchRelatedDrivers`.
+- Descargar conductores: `modules.subCompanies.actions.downloadDrivers`.
+- Pestaña `Vehiculos`: `modules.subCompanies.actions.openRelatedVehicles`.
+- Buscar vehiculos relacionados: `modules.subCompanies.actions.searchRelatedVehicles`.
+- Descargar vehiculos: `modules.subCompanies.actions.downloadVehicles`.
+- Pestaña `Tarjetas`: `modules.subCompanies.actions.openRelatedCards`.
+- Buscar tarjetas relacionadas: `modules.subCompanies.actions.searchRelatedCards`.
+- Descargar tarjetas: `modules.subCompanies.actions.downloadCards`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la subcompania, no borrado fisico. El drawer de datos relacionados solo tiene endpoints de descarga; si el front muestra busqueda/lista previa, debe alimentarla con datos ya cargados por el cliente o mantener estado vacio hasta implementar endpoints de consulta dedicados.
+
+Si la pantalla muestra `Fondeos` desde una subcompania, tratalo como accion contextual de Cardcloud Transfers. La subcompania solo aporta `subCompanyId`; la autorizacion sale de `modules.cardcloudTransfers.actions.transfer`, `modules.cardcloudTransfers.actions.transferBulk`, `modules.cardcloudTransfers.actions.downloadTemplate` y `modules.cardcloudTransfers.actions.uploadExcel`. No uses permisos `sub-companies.*` para habilitar acciones que mueven fondos.
+
 Este modulo siempre trabaja dentro de la compania seleccionada. El front debe enviar `X-Company-Id` y prellenar `companyId` con ese mismo valor; no lo muestres como campo editable cuando ya hay contexto.
 
 Campos recomendados para formularios:
@@ -178,11 +211,11 @@ Las acciones de descarga son botones secundarios de exportacion; no requieren pa
 
 ## Errores comunes
 
-| Estado | Caso                                             |
-| ------ | ------------------------------------------------ |
-| `400`  | Datos relacionados no validos o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                |
-| `403`  | Usuario autenticado sin el permiso requerido.    |
-| `404`  | Sub-compania no encontrada.                      |
-| `409`  | Conflictos de unicidad segun constraints Prisma. |
+| Estado | Caso                                                       |
+| ------ | ---------------------------------------------------------- |
+| `400`  | Datos relacionados no validos o parametros invalidos.      |
+| `401`  | Request sin autenticacion valida.                          |
+| `403`  | Usuario autenticado sin el permiso requerido.              |
+| `404`  | Sub-compania no encontrada.                                |
+| `409`  | Conflictos de unicidad segun constraints Prisma.           |
 | `502`  | No se pudo completar la operacion con el servicio externo. |

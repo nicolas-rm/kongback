@@ -15,13 +15,13 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 
 Los tiempos son configurables por ambiente. Estos son los defaults actuales del backend:
 
-| Concepto                         | Default | Configuracion                      | Uso                                                                                                  |
-| -------------------------------- | ------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Access token                     | `15m`   | `JWT_ACCESS_EXPIRES_IN`            | Vigencia del JWT usado en requests autenticados. Tambien aparece como `exp` en el payload.          |
-| Refresh token                    | `7d`    | `JWT_REFRESH_EXPIRES_IN`           | Vigencia maxima del JWT usado para renovar tokens. Se rota en cada `POST /api/authentication/refresh`. |
-| Inactividad de sesion            | `60m`   | `SESSION_IDLE_TIMEOUT_MINUTES`     | Ventana sin actividad permitida antes de invalidar la sesion. Se expone como `idleExpiresAt`.        |
-| Duracion total de sesion         | `7d`    | `SESSION_TOTAL_MINUTES`            | Limite absoluto de vida de la sesion aunque tenga actividad. Se expone como `expiresAt`.             |
-| Actualizacion de actividad       | `30s`   | `SESSION_TOUCH_INTERVAL_SECONDS`   | Intervalo minimo para refrescar `lastActivityAt` e `idleExpiresAt` durante requests autenticados.    |
+| Concepto                   | Default | Configuracion                    | Uso                                                                                                    |
+| -------------------------- | ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Access token               | `15m`   | `JWT_ACCESS_EXPIRES_IN`          | Vigencia del JWT usado en requests autenticados. Tambien aparece como `exp` en el payload.             |
+| Refresh token              | `7d`    | `JWT_REFRESH_EXPIRES_IN`         | Vigencia maxima del JWT usado para renovar tokens. Se rota en cada `POST /api/authentication/refresh`. |
+| Inactividad de sesion      | `60m`   | `SESSION_IDLE_TIMEOUT_MINUTES`   | Ventana sin actividad permitida antes de invalidar la sesion. Se expone como `idleExpiresAt`.          |
+| Duracion total de sesion   | `7d`    | `SESSION_TOTAL_MINUTES`          | Limite absoluto de vida de la sesion aunque tenga actividad. Se expone como `expiresAt`.               |
+| Actualizacion de actividad | `30s`   | `SESSION_TOUCH_INTERVAL_SECONDS` | Intervalo minimo para refrescar `lastActivityAt` e `idleExpiresAt` durante requests autenticados.      |
 
 Una sesion deja de ser valida si fue revocada, si vence `expiresAt`, si vence `idleExpiresAt`, si el refresh token expiro o si el refresh token fue reutilizado despues de rotarse. Cuando esto ocurre, los endpoints protegidos o `refresh` responden `401` y el frontend debe limpiar el estado local de autenticacion.
 
@@ -68,11 +68,11 @@ El `refreshToken` tambien es un JWT, pero solo incluye datos minimos de renovaci
 }
 ```
 
-| Campo       | Token            | Descripcion                                            |
-| ----------- | ---------------- | ------------------------------------------------------ |
-| `sub`       | Access y refresh | UUID v4 del usuario.                                   |
-| `username`  | Solo access      | Nombre de usuario al momento de emitir el token.       |
-| `sessionId` | Access y refresh | UUID v4 de la sesion asociada.                         |
+| Campo       | Token            | Descripcion                                             |
+| ----------- | ---------------- | ------------------------------------------------------- |
+| `sub`       | Access y refresh | UUID v4 del usuario.                                    |
+| `username`  | Solo access      | Nombre de usuario al momento de emitir el token.        |
+| `sessionId` | Access y refresh | UUID v4 de la sesion asociada.                          |
 | `iat`       | Access y refresh | Timestamp Unix en segundos en que fue emitido el token. |
 | `exp`       | Access y refresh | Timestamp Unix en segundos en que expira el token.      |
 
@@ -147,16 +147,16 @@ El payload del JWT no incluye permisos, roles, companias disponibles, email, nom
 }
 ```
 
-| Campo            | Tipo              | Descripcion                                                                 |
-| ---------------- | ----------------- | --------------------------------------------------------------------------- |
-| `id`             | `string`          | UUID v4 de la sesion.                                                       |
-| `deviceName`     | `string \| null`  | Nombre del dispositivo detectado o enviado con `X-Device-Name`.             |
-| `userAgent`      | `string \| null`  | User-Agent registrado al crear la sesion.                                   |
-| `ipAddress`      | `string \| null`  | IP registrada al crear la sesion.                                           |
-| `lastActivityAt` | `string`          | Fecha ISO UTC de la ultima actividad registrada.                            |
-| `idleExpiresAt`  | `string`          | Fecha ISO UTC en la que la sesion vence por inactividad si no hay actividad. |
-| `expiresAt`      | `string`          | Fecha ISO UTC de expiracion total de la sesion.                             |
-| `isCurrent`      | `boolean`         | Indica si corresponde a la sesion actual segun la cookie `refresh_token`.   |
+| Campo            | Tipo             | Descripcion                                                                  |
+| ---------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `id`             | `string`         | UUID v4 de la sesion.                                                        |
+| `deviceName`     | `string \| null` | Nombre del dispositivo detectado o enviado con `X-Device-Name`.              |
+| `userAgent`      | `string \| null` | User-Agent registrado al crear la sesion.                                    |
+| `ipAddress`      | `string \| null` | IP registrada al crear la sesion.                                            |
+| `lastActivityAt` | `string`         | Fecha ISO UTC de la ultima actividad registrada.                             |
+| `idleExpiresAt`  | `string`         | Fecha ISO UTC en la que la sesion vence por inactividad si no hay actividad. |
+| `expiresAt`      | `string`         | Fecha ISO UTC de expiracion total de la sesion.                              |
+| `isCurrent`      | `boolean`        | Indica si corresponde a la sesion actual segun la cookie `refresh_token`.    |
 
 ### CompanyAccess
 
@@ -169,7 +169,7 @@ El payload del JWT no incluye permisos, roles, companias disponibles, email, nom
     "roles": [
         {
             "id": "d32ec049-0f01-408c-b97d-c77a82d348c1",
-            "code": "demo-company-manager",
+            "code": "demo-operador-compania",
             "name": "Demo Operador de compania"
         }
     ]
@@ -394,9 +394,11 @@ Revoca todas las sesiones del usuario y limpia cookies.
 
 Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
+Header opcional: `X-Company-Id: <companyId>`. Si se envia, `capabilities` se calcula para esa compania seleccionada.
+
 ### Response `200`
 
-Devuelve `Profile`. Este response no incluye permisos; para decisiones de UI por compania, usa `GET /api/authentication/capabilities`.
+Devuelve `Profile` con `capabilities` calculadas para el contexto actual. Para refrescar permisos sin recargar el perfil completo, usa `GET /api/authentication/capabilities`.
 
 ## Listar companias
 
@@ -422,13 +424,60 @@ Este endpoint es el contrato recomendado para renderizar sidebar, modulos y acci
 
 Si los permisos vienen de un acceso con `scopeKey: "subCompanyId"`, los endpoints operativos aplican ese scope al consultar, crear, actualizar o eliminar datos. `capabilities` devuelve permisos; el filtrado fino de datos se aplica en cada endpoint.
 
-Para mostrar el modulo propio de tarjetahabiente, si el acceso vive en una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para obtener `cardholder.module`. Las rutas `/api/cardholder/*` siguen sin usar `X-Company-Id`; solo usan el usuario autenticado y su conductor vinculado.
+Para mostrar el modulo propio de tarjetahabiente, si el acceso vive en una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para obtener `cardholderCards`, `cardholderVehicles` y `cardholderWork`. Las rutas `/api/cardholder/*` siguen sin usar `X-Company-Id`; solo usan el usuario autenticado y su conductor vinculado.
 
 Los permisos de endpoints de sistema, como `companies.create`, `companies.update`, acciones globales de `users`, `roles.*`, `permissions.*` y mutaciones de `fuels`, solo se devuelven si el usuario los tiene en un acceso global (`companyId: null`).
 
 ### Response `200`
 
 Devuelve `Capabilities`.
+
+Ejemplo:
+
+```json
+{
+    "companyId": "company-id",
+    "isGlobalAdmin": false,
+    "permissions": ["users.module", "users.read-list", "users.create"],
+    "sidebar": {
+        "users": {
+            "canEnter": true,
+            "label": "Usuarios",
+            "path": "/administration/users",
+            "section": "administracion"
+        }
+    },
+    "modules": {
+        "users": {
+            "canEnter": true,
+            "permissions": ["users.module", "users.read-list", "users.create"],
+            "actions": {
+                "openCreate": true,
+                "create": true,
+                "readList": true,
+                "refreshList": true,
+                "configureColumns": true,
+                "exportList": true,
+                "openDetailDrawer": false,
+                "readOne": false,
+                "openEditModal": false,
+                "update": false,
+                "openAccessModal": false,
+                "assignAccess": false,
+                "replaceAccess": false,
+                "readAccess": false,
+                "openPermissionsTab": false,
+                "readPermissions": false,
+                "openChangePasswordModal": false,
+                "openResendCredentialsModal": false,
+                "openUnlinkTwoFactorModal": false
+            }
+        }
+    }
+}
+```
+
+`sidebar` solo debe usarse para pintar navegacion. `modules` debe usarse para botones, acciones, formularios, descargas y flujos internos.
 
 ## Heartbeat
 
@@ -818,32 +867,32 @@ Para seleccion de compania:
 - Muestra `name` y `key`; no muestres el UUID como etiqueta principal.
 - Despues de cambiar compania, vuelve a consultar `GET /api/authentication/capabilities` con el nuevo header.
 
-Para UI de permisos, usa `capabilities.permissions` como lista de acciones habilitadas. No infieras permisos por rol visible ni por nombre de usuario.
+Para UI de permisos, usa `capabilities.modules.<modulo>.actions` como contrato principal para acciones visibles. Mantén `capabilities.permissions` como lista plana de compatibilidad o diagnostico; no infieras permisos por rol visible ni por nombre de usuario.
 
 ## Errores comunes
 
-| Estado | Caso                                                                                                         |
-| ------ | ------------------------------------------------------------------------------------------------------------ |
-| `400`  | Body invalido, token de reset/verificacion invalido, codigo 2FA invalido o configuracion 2FA expirada.       |
+| Estado | Caso                                                                                                                           |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `400`  | Body invalido, token de reset/verificacion invalido, codigo 2FA invalido o configuracion 2FA expirada.                         |
 | `401`  | Login no valido, sesion no valida, sesion vencida, sesion vencida por inactividad o cierre preventivo de sesion por seguridad. |
-| `403`  | CSRF rechazado o usuario con `mustChangePassword` intentando usar endpoints bloqueados.                      |
-| `409`  | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global.                  |
-| `429`  | Rate limit excedido en endpoints protegidos con throttling.                                                  |
+| `403`  | CSRF rechazado o usuario con `mustChangePassword` intentando usar endpoints bloqueados.                                        |
+| `409`  | Conflictos de unicidad como `username` o `email` duplicados, segun el filtro Prisma global.                                    |
+| `429`  | Rate limit excedido en endpoints protegidos con throttling.                                                                    |
 
 ### Mensajes visibles para usuario
 
-| Mensaje | Caso principal |
-| ------- | -------------- |
-| `El usuario o la contrasena no son correctos.` | Login con usuario o contrasena incorrectos. |
-| `Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.` | Login bloqueado por intentos fallidos. |
-| `Verifica tu correo para iniciar sesion.` | Cuenta activa pero con correo pendiente de verificacion. |
-| `Tu sesion no es valida. Inicia sesion nuevamente.` | Token ausente, invalido, sesion revocada o sesion no reconocida. |
-| `Tu sesion expiro. Inicia sesion nuevamente.` | Access token, refresh token o duracion total de sesion vencida. |
-| `Tu sesion expiro por inactividad. Inicia sesion nuevamente.` | Sesion vencida por `idleExpiresAt`. |
-| `Por seguridad cerramos tu sesion. Inicia sesion nuevamente.` | Refresh token reutilizado despues de rotacion. |
-| `No tienes permisos suficientes para este contenido.` | Usuario autenticado sin permisos o roles requeridos. |
-| `No tienes acceso a esta compania.` | Usuario sin acceso a la compania seleccionada. |
-| `Selecciona una compania para continuar.` | Falta seleccionar compania en un endpoint que requiere contexto. |
-| `Selecciona una compania valida para continuar.` | El identificador de compania enviado no es valido. |
-| `Demasiados intentos. Intenta nuevamente mas tarde.` | Rate limit HTTP excedido. |
-| `Se enviaron demasiados correos. Intenta nuevamente mas tarde.` | Rate limit interno de envio de correos. |
+| Mensaje                                                         | Caso principal                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `El usuario o la contrasena no son correctos.`                  | Login con usuario o contrasena incorrectos.                      |
+| `Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.`    | Login bloqueado por intentos fallidos.                           |
+| `Verifica tu correo para iniciar sesion.`                       | Cuenta activa pero con correo pendiente de verificacion.         |
+| `Tu sesion no es valida. Inicia sesion nuevamente.`             | Token ausente, invalido, sesion revocada o sesion no reconocida. |
+| `Tu sesion expiro. Inicia sesion nuevamente.`                   | Access token, refresh token o duracion total de sesion vencida.  |
+| `Tu sesion expiro por inactividad. Inicia sesion nuevamente.`   | Sesion vencida por `idleExpiresAt`.                              |
+| `Por seguridad cerramos tu sesion. Inicia sesion nuevamente.`   | Refresh token reutilizado despues de rotacion.                   |
+| `No tienes permisos suficientes para este contenido.`           | Usuario autenticado sin permisos o roles requeridos.             |
+| `No tienes acceso a esta compania.`                             | Usuario sin acceso a la compania seleccionada.                   |
+| `Selecciona una compania para continuar.`                       | Falta seleccionar compania en un endpoint que requiere contexto. |
+| `Selecciona una compania valida para continuar.`                | El identificador de compania enviado no es valido.               |
+| `Demasiados intentos. Intenta nuevamente mas tarde.`            | Rate limit HTTP excedido.                                        |
+| `Se enviaron demasiados correos. Intenta nuevamente mas tarde.` | Rate limit interno de envio de correos.                          |

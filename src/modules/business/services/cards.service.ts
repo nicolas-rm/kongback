@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { CardAssignmentMode, Prisma, Status } from '@prisma/client';
+import { CardAssignmentMode, NotificationType, Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import {
     AssignCardsToSubCompanyDto,
     AssignCardVehicleDto,
@@ -38,6 +39,7 @@ export class CardsService {
         private readonly relations: BusinessRelationsRepository,
         private readonly vehicles: VehiclesRepository,
         private readonly cardcloud: CardcloudService,
+        private readonly notifications: NotificationsService,
         private readonly audit: AuditService
     ) {}
 
@@ -249,6 +251,10 @@ export class CardsService {
             scope
         );
         if (!card) throw notFound();
+        const vehicleTarget = await this.vehicles.findNotificationTarget(dto.vehicleId, scope);
+        if (vehicleTarget?.driver?.userId) {
+            await this.notifyUser(vehicleTarget.driver.userId, 'Tarjeta asignada', 'Se asigno una tarjeta a tu vehiculo.', this.cardReference(card, vehicleTarget), NotificationType.info);
+        }
         void this.audit.recordCard({
             action: 'card_vehicle_assigned',
             resourceType: 'Card',
@@ -283,6 +289,10 @@ export class CardsService {
             scope
         );
         if (!card) throw notFound();
+        const vehicleTarget = current.vehicleId ? await this.vehicles.findNotificationTarget(current.vehicleId, scope) : null;
+        if (vehicleTarget?.driver?.userId) {
+            await this.notifyUser(vehicleTarget.driver.userId, 'Tarjeta desasignada', 'Se quito una tarjeta de tu vehiculo.', this.cardReference(current, vehicleTarget), NotificationType.warning);
+        }
         void this.audit.recordCard({
             action: 'card_unassigned',
             resourceType: 'Card',
@@ -291,6 +301,17 @@ export class CardsService {
             after: { vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt },
         });
         return { id: card.id, vehicleId: card.vehicleId, assignmentMode: card.assignmentMode, assignedAt: card.assignedAt };
+    }
+
+    private async notifyUser(userId: string, title: string, message: string, detail: string, type: NotificationType): Promise<void> {
+        await this.notifications.createForUser(userId, { title, message, detail, type }).catch(() => null);
+    }
+
+    private cardReference(card: { externalId?: string | null; id: string }, vehicle?: { plates?: string | null; economicNumber?: string | null } | null): string {
+        const cardLabel = card.externalId ? `Tarjeta ${card.externalId}` : `Tarjeta ${card.id}`;
+        if (!vehicle) return cardLabel;
+        const vehicleLabel = vehicle.economicNumber ? `${vehicle.economicNumber} (${vehicle.plates ?? 'sin placas'})` : (vehicle.plates ?? 'vehiculo sin placas');
+        return `${cardLabel} - ${vehicleLabel}`;
     }
 
     private async resolveCardcloudTarget(subCompanyId: string, scope?: CompanyScope): Promise<{ id: string; cardcloudSubaccountId: string }> {

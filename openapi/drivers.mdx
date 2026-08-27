@@ -140,6 +140,34 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Conductores`: `sidebar.drivers.canEnter`.
+- Pantalla `Conductores`: `modules.drivers.canEnter`.
+- Crear conductor: `modules.drivers.actions.openCreate` y `modules.drivers.actions.create`.
+- Pestañas de crear `Formulario` y `Direccion`: `modules.drivers.actions.openCreateForm` y `modules.drivers.actions.openCreateAddress`.
+- Selector `Subcompania`: `modules.drivers.actions.openSubCompanySelect`.
+- Selector `Usuario vinculado`: `modules.drivers.actions.openLinkedUserSelect`.
+- Consultar listado: `modules.drivers.actions.readList`.
+- Refrescar listado: `modules.drivers.actions.refreshList`.
+- Configurar columnas: `modules.drivers.actions.configureColumns`.
+- Exportar listado desde el front: `modules.drivers.actions.exportList`.
+- Abrir detalle: `modules.drivers.actions.openDetail` u `modules.drivers.actions.openDetailDrawer`.
+- Consultar detalle: `modules.drivers.actions.readOne`.
+- Pestañas de detalle `Formulario` y `Direccion`: `modules.drivers.actions.openDetailForm` y `modules.drivers.actions.openDetailAddress`.
+- Editar conductor: `modules.drivers.actions.openEdit` u `modules.drivers.actions.openEditDrawer`.
+- Pestañas de editar `Formulario` y `Direccion`: `modules.drivers.actions.openEditForm` y `modules.drivers.actions.openEditAddress`.
+- Actualizar conductor: `modules.drivers.actions.update`.
+- Desactivar conductor: `modules.drivers.actions.openDeactivate`, `modules.drivers.actions.openDeactivateDialog` o `modules.drivers.actions.deactivate`.
+- Abrir drawer `Vehiculos del conductor`: `modules.drivers.actions.openVehicles` u `modules.drivers.actions.openVehiclesDrawer`.
+- Consultar vehiculos del conductor: `modules.drivers.actions.readVehicles`.
+- Buscar vehiculos del conductor: `modules.drivers.actions.searchVehicles`.
+- Exportar vehiculos desde el front: `modules.drivers.actions.exportVehicles`.
+
+`configureColumns`, `exportList` y `exportVehicles` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar los datos correspondientes. `delete` en este modulo significa desactivar el conductor, no borrado fisico. El selector de subcompania requiere permiso de lectura de subcompanias y el selector de usuario vinculado requiere permiso de lectura de usuarios.
+
 El front debe enviar `X-Company-Id` y poblar `subCompanyId` desde un select de subcompanias disponibles para la compania seleccionada. Si el usuario autenticado esta limitado a subcompanias, ese select solo debe contener las que devuelve el backend.
 
 Campos recomendados para formularios:
@@ -159,10 +187,10 @@ Para consultar vehiculos relacionados desde el detalle del conductor usa `GET /a
 
 ## Errores comunes
 
-| Estado | Caso                                             |
-| ------ | ------------------------------------------------ |
+| Estado | Caso                                                  |
+| ------ | ----------------------------------------------------- |
 | `400`  | Datos relacionados no validos o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                |
-| `403`  | Usuario autenticado sin el permiso requerido.    |
-| `404`  | Conductor no encontrado.                         |
-| `409`  | Conflictos de unicidad segun constraints Prisma. |
+| `401`  | Request sin autenticacion valida.                     |
+| `403`  | Usuario autenticado sin el permiso requerido.         |
+| `404`  | Conductor no encontrado.                              |
+| `409`  | Conflictos de unicidad segun constraints Prisma.      |

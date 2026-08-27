@@ -54,7 +54,13 @@ export class RefreshUseCase {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'user_inactive' } });
         }
         if (storedToken.session.revokedAt) {
-            void this.audit.recordSecurity({ action: 'refresh_token_invalid', result: 'denied', statusCode: 401, reason: 'session_revoked', metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId } });
+            void this.audit.recordSecurity({
+                action: 'refresh_token_invalid',
+                result: 'denied',
+                statusCode: 401,
+                reason: 'session_revoked',
+                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'session_revoked' } });
         }
 

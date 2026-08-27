@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Status } from '@prisma/client';
+import { NotificationType, Prisma, Status } from '@prisma/client';
 import { AuditService } from '@/modules/audit/audit.service';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
@@ -15,6 +16,7 @@ export class VehiclesService {
         private readonly repository: VehiclesRepository,
         private readonly relations: BusinessRelationsRepository,
         private readonly drivers: DriversRepository,
+        private readonly notifications: NotificationsService,
         private readonly audit: AuditService
     ) {}
 
@@ -111,9 +113,29 @@ export class VehiclesService {
 
         await assertActive([{ ids: [dto.driverId], count: (ids) => this.relations.countActiveDriversBySubCompany(ids, current.subCompanyId, scope) }]);
 
+        const currentNotificationTarget = current.driverId ? await this.repository.findNotificationTarget(id, scope) : null;
         const vehicle = await this.repository.update(id, { driverId: dto.driverId }, scope);
         if (!vehicle) throw notFound();
-        void this.audit.recordBusiness({ action: 'vehicle_driver_assigned', resourceType: 'Vehicle', resourceId: vehicle.id, before: { driverId: current.driverId }, after: { driverId: vehicle.driverId } });
+        const nextNotificationTarget = vehicle.driverId ? await this.repository.findNotificationTarget(id, scope) : null;
+        if (currentNotificationTarget?.driver?.userId && current.driverId !== vehicle.driverId) {
+            await this.notifyUser(
+                currentNotificationTarget.driver.userId,
+                'Vehiculo desasignado',
+                'Se quito tu asignacion a un vehiculo.',
+                this.vehicleReference(currentNotificationTarget),
+                NotificationType.warning
+            );
+        }
+        if (nextNotificationTarget?.driver?.userId && current.driverId !== vehicle.driverId) {
+            await this.notifyUser(nextNotificationTarget.driver.userId, 'Vehiculo asignado', 'Se te asigno un vehiculo.', this.vehicleReference(nextNotificationTarget), NotificationType.info);
+        }
+        void this.audit.recordBusiness({
+            action: 'vehicle_driver_assigned',
+            resourceType: 'Vehicle',
+            resourceId: vehicle.id,
+            before: { driverId: current.driverId },
+            after: { driverId: vehicle.driverId },
+        });
         return { id: vehicle.id, driverId: vehicle.driverId };
     }
 
@@ -122,5 +144,13 @@ export class VehiclesService {
         if (!vehicle) throw notFound();
         void this.audit.recordBusiness({ action: 'vehicle_deactivated', resourceType: 'Vehicle', resourceId: vehicle.id, after: { id: vehicle.id, status: vehicle.status } });
         return { id: vehicle.id, status: vehicle.status };
+    }
+
+    private async notifyUser(userId: string, title: string, message: string, detail: string, type: NotificationType): Promise<void> {
+        await this.notifications.createForUser(userId, { title, message, detail, type }).catch(() => null);
+    }
+
+    private vehicleReference(vehicle: { plates: string; economicNumber?: string | null }): string {
+        return vehicle.economicNumber ? `Vehiculo ${vehicle.economicNumber} (${vehicle.plates})` : `Vehiculo ${vehicle.plates}`;
     }
 }

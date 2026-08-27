@@ -37,15 +37,15 @@ Para que un tarjetahabiente vea tarjetas y pueda operar sobre ellas, debe existi
 User -> Driver.userId -> Driver.subCompanyId -> Vehicle.driverId -> Card.vehicleId
 ```
 
-| Entidad          | Requisito                                                             | Para que sirve                                                  |
-| ---------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `User`           | Usuario activo con rol/permisos `cardholder.*`.                       | Permite iniciar sesion y pasar guards de autenticacion/RBAC.    |
-| `UserAccess`     | Acceso activo, recomendado con `scopeKey: "subCompanyId"` y `scopeId`. | Limita el rol a la subcompania operativa del conductor.         |
-| `Driver`         | Conductor activo con `userId` igual al usuario autenticado.            | Define la identidad operativa del tarjetahabiente.              |
-| `SubCompany`     | Subcompania activa del conductor, con compania activa.                 | Define el contexto operativo que se muestra en el modulo.       |
-| `Vehicle`        | Vehiculo activo con `driverId` igual al conductor.                     | Define que vehiculos aparecen en `/vehicles`.                   |
+| Entidad          | Requisito                                                               | Para que sirve                                                   |
+| ---------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `User`           | Usuario activo con rol/permisos `cardholder.*`.                         | Permite iniciar sesion y pasar guards de autenticacion/RBAC.     |
+| `UserAccess`     | Acceso activo, recomendado con `scopeKey: "subCompanyId"` y `scopeId`.  | Limita el rol a la subcompania operativa del conductor.          |
+| `Driver`         | Conductor activo con `userId` igual al usuario autenticado.             | Define la identidad operativa del tarjetahabiente.               |
+| `SubCompany`     | Subcompania activa del conductor, con compania activa.                  | Define el contexto operativo que se muestra en el modulo.        |
+| `Vehicle`        | Vehiculo activo con `driverId` igual al conductor.                      | Define que vehiculos aparecen en `/vehicles`.                    |
 | `Card`           | Tarjeta activa, `assignmentMode: "vehicle"` y `vehicleId` del vehiculo. | Define que tarjetas puede consultar u operar el tarjetahabiente. |
-| `CardcloudStock` | Stock local asociado cuando exista `clientId`, `maskedPan` o `balance`. | Complementa datos visibles y validacion contra Cardcloud.       |
+| `CardcloudStock` | Stock local asociado cuando exista `clientId`, `maskedPan` o `balance`. | Complementa datos visibles y validacion contra Cardcloud.        |
 
 Crear un usuario con rol tarjetahabiente no crea automaticamente el conductor. Si no existe `Driver.userId`, los endpoints responden `403`.
 
@@ -62,19 +62,19 @@ Si el usuario tiene conductor pero no tiene vehiculos, `/api/cardholder/vehicles
 
 ## Endpoints
 
-| Metodo  | Ruta                                      | Permiso                                  | Alcance                         | Descripcion                                  |
-| ------- | ----------------------------------------- | ---------------------------------------- | ------------------------------- | -------------------------------------------- |
-| `GET`   | `/api/cardholder/me`                      | `cardholder.profile.read`                | Tarjetahabiente autenticado     | Consulta perfil propio y conductor asociado. |
-| `GET`   | `/api/cardholder/sub-company`             | `cardholder.sub-companies.read-one`      | Tarjetahabiente autenticado     | Consulta subcompania propia.                 |
-| `GET`   | `/api/cardholder/vehicles`                | `cardholder.vehicles.read-list`          | Tarjetahabiente autenticado     | Lista vehiculos asignados al conductor.      |
-| `GET`   | `/api/cardholder/cards`                   | `cardholder.cards.read-list`             | Tarjetahabiente autenticado     | Lista tarjetas disponibles para el conductor. |
-| `POST`  | `/api/cardholder/cards/validate`          | `cardholder.cards.validate`              | Tarjetahabiente autenticado     | Valida una tarjeta asignada al conductor.    |
-| `GET`   | `/api/cardholder/cards/:cardId`           | `cardholder.cards.read-one`              | Tarjetahabiente autenticado     | Consulta una tarjeta propia.                 |
-| `POST`  | `/api/cardholder/cards/:cardId/off`       | `cardholder.cards.power.off`             | Tarjetahabiente autenticado     | Bloquea una tarjeta propia en Cardcloud.     |
-| `POST`  | `/api/cardholder/cards/:cardId/on`        | `cardholder.cards.power.on`              | Tarjetahabiente autenticado     | Desbloquea una tarjeta propia en Cardcloud.  |
-| `GET`   | `/api/cardholder/cards/:cardId/movements` | `cardholder.cards.movements.read-list`   | Tarjetahabiente autenticado     | Lista movimientos de una tarjeta propia.     |
-| `GET`   | `/api/cardholder/cards/:cardId/sensitive` | `cardholder.cards.sensitive.read-one`    | Tarjetahabiente autenticado     | Consulta datos sensibles de tarjeta propia.  |
-| `PATCH` | `/api/cardholder/cards/:cardId/nip`       | `cardholder.cards.nip.update`            | Tarjetahabiente autenticado     | Actualiza NIP de una tarjeta propia.         |
+| Metodo  | Ruta                                      | Permiso                                | Alcance                     | Descripcion                                   |
+| ------- | ----------------------------------------- | -------------------------------------- | --------------------------- | --------------------------------------------- |
+| `GET`   | `/api/cardholder/me`                      | `cardholder.profile.read`              | Tarjetahabiente autenticado | Consulta perfil propio y conductor asociado.  |
+| `GET`   | `/api/cardholder/sub-company`             | `cardholder.sub-companies.read-one`    | Tarjetahabiente autenticado | Consulta subcompania propia.                  |
+| `GET`   | `/api/cardholder/vehicles`                | `cardholder.vehicles.read-list`        | Tarjetahabiente autenticado | Lista vehiculos asignados al conductor.       |
+| `GET`   | `/api/cardholder/cards`                   | `cardholder.cards.read-list`           | Tarjetahabiente autenticado | Lista tarjetas disponibles para el conductor. |
+| `POST`  | `/api/cardholder/cards/validate`          | `cardholder.cards.validate`            | Tarjetahabiente autenticado | Valida una tarjeta asignada al conductor.     |
+| `GET`   | `/api/cardholder/cards/:cardId`           | `cardholder.cards.read-one`            | Tarjetahabiente autenticado | Consulta una tarjeta propia.                  |
+| `POST`  | `/api/cardholder/cards/:cardId/off`       | `cardholder.cards.power.off`           | Tarjetahabiente autenticado | Bloquea una tarjeta propia en Cardcloud.      |
+| `POST`  | `/api/cardholder/cards/:cardId/on`        | `cardholder.cards.power.on`            | Tarjetahabiente autenticado | Desbloquea una tarjeta propia en Cardcloud.   |
+| `GET`   | `/api/cardholder/cards/:cardId/movements` | `cardholder.cards.movements.read-list` | Tarjetahabiente autenticado | Lista movimientos de una tarjeta propia.      |
+| `GET`   | `/api/cardholder/cards/:cardId/sensitive` | `cardholder.cards.sensitive.read-one`  | Tarjetahabiente autenticado | Consulta datos sensibles de tarjeta propia.   |
+| `PATCH` | `/api/cardholder/cards/:cardId/nip`       | `cardholder.cards.nip.update`          | Tarjetahabiente autenticado | Actualiza NIP de una tarjeta propia.          |
 
 ## Perfil
 
@@ -271,10 +271,10 @@ Consulta datos sensibles externos. Debe mostrarse en frontend solo por accion ex
 
 Body:
 
-| Campo     | Tipo     | Requerido | Descripcion      |
-| --------- | -------- | --------- | ---------------- |
-| `old_nip` | `string` | Si        | NIP actual.      |
-| `new_nip` | `string` | Si        | Nuevo NIP.       |
+| Campo     | Tipo     | Requerido | Descripcion |
+| --------- | -------- | --------- | ----------- |
+| `old_nip` | `string` | Si        | NIP actual. |
+| `new_nip` | `string` | Si        | Nuevo NIP.  |
 
 `new_nip` debe ser distinto de `old_nip`.
 
@@ -292,26 +292,49 @@ Body:
 
 ## Errores comunes
 
-| Estado | Caso                                                                            | Mensaje esperado                                                                         |
-| ------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `400`  | `vigencia`, `nip`, `old_nip` o `new_nip` no cumplen formato.                    | Mensajes de validacion del DTO.                                                          |
-| `400`  | `new_nip` es igual a `old_nip`.                                                 | `El nuevo NIP debe ser diferente al actual.`                                             |
-| `400`  | La tarjeta no tiene referencia externa local para Cardcloud.                    | `No fue posible consultar la tarjeta en este momento. Intenta nuevamente.`               |
+| Estado | Caso                                                                             | Mensaje esperado                                                                         |
+| ------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `400`  | `vigencia`, `nip`, `old_nip` o `new_nip` no cumplen formato.                     | Mensajes de validacion del DTO.                                                          |
+| `400`  | `new_nip` es igual a `old_nip`.                                                  | `El nuevo NIP debe ser diferente al actual.`                                             |
+| `400`  | La tarjeta no tiene referencia externa local para Cardcloud.                     | `No fue posible consultar la tarjeta en este momento. Intenta nuevamente.`               |
 | `400`  | Cardcloud no permite consultar, validar, bloquear, desbloquear o actualizar NIP. | Mensaje simple del proceso, por ejemplo `No fue posible validar la tarjeta...`.          |
-| `401`  | Request sin JWT valido o sesion expirada.                                       | Error estandar de autenticacion.                                                         |
-| `403`  | Usuario sin permiso `cardholder.*` requerido.                                   | Error estandar de permisos insuficientes.                                                |
-| `403`  | Usuario sin conductor activo vinculado.                                         | `Este apartado esta disponible solo para tarjetahabientes con conductor activo.`         |
-| `404`  | Tarjeta inexistente dentro de la cuenta del conductor.                          | `No encontramos la tarjeta solicitada en tu cuenta.`                                     |
-| `404`  | `clientId` no corresponde a una tarjeta asignada al conductor.                  | `Esta tarjeta no esta asignada a tu cuenta. Verifica los datos o contacta a tu empresa.` |
-| `409`  | El `clientId` coincide con mas de una tarjeta activa del conductor.             | `No pudimos identificar una sola tarjeta con esos datos. Contacta a tu empresa.`         |
+| `401`  | Request sin JWT valido o sesion expirada.                                        | Error estandar de autenticacion.                                                         |
+| `403`  | Usuario sin permiso `cardholder.*` requerido.                                    | Error estandar de permisos insuficientes.                                                |
+| `403`  | Usuario sin conductor activo vinculado.                                          | `Este apartado esta disponible solo para tarjetahabientes con conductor activo.`         |
+| `404`  | Tarjeta inexistente dentro de la cuenta del conductor.                           | `No encontramos la tarjeta solicitada en tu cuenta.`                                     |
+| `404`  | `clientId` no corresponde a una tarjeta asignada al conductor.                   | `Esta tarjeta no esta asignada a tu cuenta. Verifica los datos o contacta a tu empresa.` |
+| `409`  | El `clientId` coincide con mas de una tarjeta activa del conductor.              | `No pudimos identificar una sola tarjeta con esos datos. Contacta a tu empresa.`         |
 
 ## Notas para frontend
 
-La pantalla cardholder debe ser una experiencia propia del conductor, no un CRUD administrativo. No pedir seleccion de compania ni subcompania; el backend resuelve esa informacion.
+La experiencia cardholder debe ser propia del conductor, no un CRUD administrativo. En frontend se divide en tres entradas del mismo sidebar: `Tarjetas`, `Vehiculos` y `Trabajo`. No pedir seleccion de compania ni subcompania; el backend resuelve esa informacion.
 
-Usa `GET /api/authentication/capabilities` para mostrar la entrada del modulo si aparece `cardholder.module`. Si el acceso del tarjetahabiente esta dentro de una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para calcular permisos; despues no envies `X-Company-Id` en `/api/cardholder/*`.
+Usa `GET /api/authentication/capabilities` para mostrar cada entrada del sidebar segun el permiso efectivo de esa seccion. Si el acceso del tarjetahabiente esta dentro de una compania/subcompania, consulta `capabilities` con `X-Company-Id` de esa compania para calcular permisos; despues no envies `X-Company-Id` en `/api/cardholder/*`.
 
 Las acciones internas dependen de permisos granulares como `cardholder.cards.power.off`, `cardholder.cards.power.on`, `cardholder.cards.sensitive.read-one` o `cardholder.cards.nip.update`.
+
+### Capabilities para UI
+
+Usa el sidebar general de la aplicacion; no crees un sidebar separado para tarjetahabientes.
+
+| Control UI                       | Capability                                                                                                | Permiso base                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Entrada `Tarjetas`               | `capabilities.sidebar.cardholderCards.canEnter`                                                           | `cardholder.cards.read-list`           |
+| Pantalla `/cardholders/cards`    | `modules.cardholderCards.canEnter`                                                                        | `cardholder.cards.read-list`           |
+| Listar tarjetas                  | `modules.cardholderCards.actions.readList`                                                                | `cardholder.cards.read-list`           |
+| Validar tarjeta propia           | `modules.cardholderCards.actions.openValidateCard` o `modules.cardholderCards.actions.validateCard`       | `cardholder.cards.validate`            |
+| Ver detalle de tarjeta           | `modules.cardholderCards.actions.openDetail` o `modules.cardholderCards.actions.readOne`                  | `cardholder.cards.read-one`            |
+| Ver movimientos de tarjeta       | `modules.cardholderCards.actions.openMovements` o `modules.cardholderCards.actions.readMovements`         | `cardholder.cards.movements.read-list` |
+| Ver datos sensibles de tarjeta   | `modules.cardholderCards.actions.openSensitiveData` o `modules.cardholderCards.actions.readSensitiveData` | `cardholder.cards.sensitive.read-one`  |
+| Cambiar NIP                      | `modules.cardholderCards.actions.openChangeNip` o `modules.cardholderCards.actions.updateNip`             | `cardholder.cards.nip.update`          |
+| Bloquear tarjeta                 | `modules.cardholderCards.actions.openPowerOff` o `modules.cardholderCards.actions.powerOff`               | `cardholder.cards.power.off`           |
+| Desbloquear tarjeta              | `modules.cardholderCards.actions.openPowerOn` o `modules.cardholderCards.actions.powerOn`                 | `cardholder.cards.power.on`            |
+| Entrada `Vehiculos`              | `capabilities.sidebar.cardholderVehicles.canEnter`                                                        | `cardholder.vehicles.read-list`        |
+| Pantalla `/cardholders/vehicles` | `modules.cardholderVehicles.canEnter`                                                                     | `cardholder.vehicles.read-list`        |
+| Listar vehiculos                 | `modules.cardholderVehicles.actions.readList`                                                             | `cardholder.vehicles.read-list`        |
+| Entrada `Trabajo`                | `capabilities.sidebar.cardholderWork.canEnter`                                                            | `cardholder.sub-companies.read-one`    |
+| Pantalla `/cardholders/work`     | `modules.cardholderWork.canEnter`                                                                         | `cardholder.sub-companies.read-one`    |
+| Ver subcompania donde trabaja    | `modules.cardholderWork.actions.readOne`                                                                  | `cardholder.sub-companies.read-one`    |
 
 Mostrar tarjetas desde `GET /api/cardholder/cards`. Para movimientos, datos sensibles, bloquear/desbloquear, validar tarjeta y cambiar NIP, usar acciones desde el detalle de tarjeta.
 

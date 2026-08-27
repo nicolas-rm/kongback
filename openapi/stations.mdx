@@ -127,6 +127,34 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Estaciones`: `sidebar.stations.canEnter`.
+- Pantalla `Estaciones`: `modules.stations.canEnter`.
+- Crear estacion: `modules.stations.actions.openCreate` u `modules.stations.actions.openCreateDrawer`, y `modules.stations.actions.create`.
+- Pestañas de crear `Formulario` y `Direccion`: `modules.stations.actions.openCreateForm` y `modules.stations.actions.openCreateAddress`.
+- Selector `Subcompania`: `modules.stations.actions.openSubCompanySelect`.
+- Consultar listado: `modules.stations.actions.readList`.
+- Refrescar listado: `modules.stations.actions.refreshList`.
+- Configurar columnas: `modules.stations.actions.configureColumns`.
+- Exportar listado desde el front: `modules.stations.actions.exportList`.
+- Abrir detalle: `modules.stations.actions.openDetail` u `modules.stations.actions.openDetailDrawer`.
+- Consultar detalle: `modules.stations.actions.readOne`.
+- Pestañas de detalle `Formulario` y `Direccion`: `modules.stations.actions.openDetailForm` y `modules.stations.actions.openDetailAddress`.
+- Pestaña `Combustibles disponibles`: `modules.stations.actions.openAvailableFuels`.
+- Consultar combustibles disponibles: `modules.stations.actions.readAvailableFuels`.
+- Agregar combustible disponible: `modules.stations.actions.openAddFuel` y `modules.stations.actions.addFuel`.
+- Actualizar estado de combustible disponible: `modules.stations.actions.updateAvailableFuel`.
+- Quitar combustible disponible: `modules.stations.actions.removeAvailableFuel`.
+- Editar estacion: `modules.stations.actions.openEdit` u `modules.stations.actions.openEditDrawer`.
+- Pestañas de editar `Formulario` y `Direccion`: `modules.stations.actions.openEditForm` y `modules.stations.actions.openEditAddress`.
+- Actualizar estacion: `modules.stations.actions.update`.
+- Desactivar estacion: `modules.stations.actions.openDeactivate`, `modules.stations.actions.openDeactivateDialog` o `modules.stations.actions.deactivate`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. La pestaña `Combustibles disponibles` consume permisos y endpoints de `station-fuels`; no debe mostrarse si el usuario no puede consultar esa relacion. `delete` en este modulo significa desactivar la estacion, no borrado fisico.
+
 El front debe enviar `X-Company-Id`. `subCompanyId` debe venir de un select de subcompanias disponibles para la compania seleccionada y el alcance del usuario.
 
 Los combustibles disponibles de una estacion no se capturan en el formulario base de estacion. En el detalle o edicion de estacion, agrega una seccion `Combustibles disponibles` que consuma `GET /api/station-fuels?stationId=<id>` y use `POST`, `PATCH` o `DELETE /api/station-fuels` para administrar la relacion. No debe existir una pagina principal separada para `station-fuels` en el menu del frontend.
@@ -145,10 +173,10 @@ En tablas usa `subCompany.name`; conserva `subCompanyId` solo para filtros y pay
 
 ## Errores comunes
 
-| Estado | Caso                                                                  |
-| ------ | --------------------------------------------------------------------- |
+| Estado | Caso                                                                              |
+| ------ | --------------------------------------------------------------------------------- |
 | `400`  | Datos relacionados no validos, coordenadas fuera de rango o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                                     |
-| `403`  | Usuario autenticado sin el permiso requerido.                         |
-| `404`  | Estacion no encontrada.                                               |
-| `409`  | Conflictos de unicidad segun constraints Prisma.                      |
+| `401`  | Request sin autenticacion valida.                                                 |
+| `403`  | Usuario autenticado sin el permiso requerido.                                     |
+| `404`  | Estacion no encontrada.                                                           |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                                  |

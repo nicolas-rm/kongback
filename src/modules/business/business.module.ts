@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccessControlModule } from '@/modules/access-control/access-control.module';
 import { CardcloudModule } from '@/modules/cardcloud/cardcloud.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { CardsController } from '@/modules/business/cards.controller';
 import { CompaniesController } from '@/modules/business/companies.controller';
 import { DriversController } from '@/modules/business/drivers.controller';
@@ -29,7 +30,7 @@ import { SubCompaniesController } from '@/modules/business/sub-companies.control
 import { VehiclesController } from '@/modules/business/vehicles.controller';
 
 @Module({
-    imports: [AccessControlModule, CardcloudModule],
+    imports: [AccessControlModule, CardcloudModule, NotificationsModule],
     controllers: [CompaniesController, SubCompaniesController, DriversController, FuelsController, VehiclesController, CardsController, StationsController, StationFuelsController],
     providers: [
         BusinessAddressRepository,

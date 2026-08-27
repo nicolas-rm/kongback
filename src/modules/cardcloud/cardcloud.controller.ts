@@ -1,8 +1,9 @@
 import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query, Res, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
-import { CurrentCompanyScope, Permissions, RequestConfig, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import { CurrentCompanyScope, CurrentUser, Permissions, RequestConfig, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
+import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import {
     AssignCardcloudCardsBulkDto,
@@ -145,16 +146,16 @@ export class CardcloudController {
     @RequireSystemAccess()
     @Permissions('cardcloud.account.transfer')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    transferFunds(@Body() dto: TransferCardcloudFundsDto) {
-        return this.cardcloudService.transferFunds(dto);
+    transferFunds(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsDto) {
+        return this.cardcloudService.transferFunds(dto, user.id);
     }
 
     @Post('account/transfer-bulk')
     @RequireSystemAccess()
     @Permissions('cardcloud.account.transfer.bulk')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    transferFundsBulk(@Body() dto: TransferCardcloudFundsBulkDto) {
-        return this.cardcloudService.transferFundsBulk(dto);
+    transferFundsBulk(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsBulkDto) {
+        return this.cardcloudService.transferFundsBulk(dto, user.id);
     }
 
     @Get('account/transfer-bulk-excel')
@@ -174,8 +175,8 @@ export class CardcloudController {
     @Permissions('cardcloud.account.transfer.bulk')
     @RequestConfig({ statusCode: HttpStatus.OK })
     @UseInterceptors(FileInterceptor('file'))
-    transferFundsBulkExcel(@Body() dto: TransferCardcloudFundsBulkExcelDto, @UploadedFile() file?: AppUploadedFile) {
-        return this.cardcloudService.transferFundsBulkExcel(dto, file);
+    transferFundsBulkExcel(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsBulkExcelDto, @UploadedFile() file?: AppUploadedFile) {
+        return this.cardcloudService.transferFundsBulkExcel(dto, file, user.id);
     }
 
     @Get('account')

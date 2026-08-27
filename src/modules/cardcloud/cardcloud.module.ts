@@ -6,9 +6,10 @@ import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external
 import { CardcloudStockController } from '@/modules/cardcloud/cardcloud-stock.controller';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import { IntegrationsModule } from '@/modules/integrations/integrations.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 @Module({
-    imports: [AppConfigModule, CryptoModule, IntegrationsModule],
+    imports: [AppConfigModule, CryptoModule, IntegrationsModule, NotificationsModule],
     controllers: [CardcloudController, CardcloudStockController],
     providers: [CardcloudExternalService, CardcloudService],
     exports: [CardcloudExternalService, CardcloudService],

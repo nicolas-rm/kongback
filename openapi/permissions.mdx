@@ -180,6 +180,23 @@ Los permisos no se asignan directamente a usuarios. El flujo actual es:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar permiso`, confirmar eliminacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Permisos`: `sidebar.permissions.canEnter`.
+- Pantalla `Permisos`: `modules.permissions.canEnter`.
+- Crear permiso: `modules.permissions.actions.openCreate` y `modules.permissions.actions.create`.
+- Consultar listado: `modules.permissions.actions.readList`.
+- Refrescar listado: `modules.permissions.actions.refreshList`.
+- Configurar columnas: `modules.permissions.actions.configureColumns`.
+- Exportar listado desde el front: `modules.permissions.actions.exportList`.
+- Abrir detalle: `modules.permissions.actions.openDetail` u `openDetailDrawer`.
+- Editar permiso: `modules.permissions.actions.openEdit` u `openEditDrawer`.
+- Eliminar permiso: `modules.permissions.actions.openDelete` u `openDeleteDialog`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. Si el producto decide que el catalogo sea solo lectura, oculta crear, editar y eliminar aunque el backend conserve esos permisos para super administradores.
+
 Esta pantalla debe tratarse como administracion global y normalmente solo debe mostrarse a super administradores. No envies `X-Company-Id` en estos endpoints.
 
 Campos recomendados para formularios:

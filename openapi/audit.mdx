@@ -17,25 +17,25 @@ Si la peticion incluye `X-Company-Id`, el backend limita la consulta a eventos d
 
 ## Endpoints
 
-| Metodo | Ruta                         | Permiso           | Descripcion                                                       |
-| ------ | ---------------------------- | ----------------- | ----------------------------------------------------------------- |
-| `GET`  | `/api/audit/requests`        | `audit.read-list` | Lista logs tecnicos HTTP (`RequestLog`).                          |
-| `GET`  | `/api/audit/requests/:id`    | `audit.read-one`  | Detalle de un log tecnico HTTP.                                   |
-| `GET`  | `/api/audit/security`        | `audit.read-list` | Lista eventos de seguridad, auth, sesiones y permisos.            |
-| `GET`  | `/api/audit/security/:id`    | `audit.read-one`  | Detalle de un evento de seguridad.                                |
-| `GET`  | `/api/audit/access`          | `audit.read-list` | Lista eventos de usuarios, roles, permisos y accesos.             |
-| `GET`  | `/api/audit/access/:id`      | `audit.read-one`  | Detalle de un evento de acceso.                                   |
-| `GET`  | `/api/audit/business`        | `audit.read-list` | Lista eventos operativos de negocio.                              |
-| `GET`  | `/api/audit/business/:id`    | `audit.read-one`  | Detalle de un evento operativo.                                   |
-| `GET`  | `/api/audit/cards`           | `audit.read-list` | Lista eventos de tarjetas locales y portal tarjetahabiente.       |
-| `GET`  | `/api/audit/cards/:id`       | `audit.read-one`  | Detalle de un evento de tarjeta.                                  |
-| `GET`  | `/api/audit/cardcloud`       | `audit.read-list` | Lista eventos de Cardcloud, stock, subcuentas y llamadas externas. |
-| `GET`  | `/api/audit/cardcloud/:id`   | `audit.read-one`  | Detalle de un evento Cardcloud.                                   |
-| `GET`  | `/api/audit/transfers`       | `audit.read-list` | Lista historial auditado de transferencias Cardcloud.             |
-| `GET`  | `/api/audit/transfers/:id`   | `audit.read-one`  | Detalle de una transferencia auditada.                            |
-| `GET`  | `/api/audit/card-assignments` | `audit.read-list` | Lista historial auditado de asignaciones de tarjetas.             |
-| `GET`  | `/api/audit/card-assignments/cards/:id` | `audit.read-one` | Detalle de una asignacion auditada en tarjetas locales. |
-| `GET`  | `/api/audit/card-assignments/cardcloud/:id` | `audit.read-one` | Detalle de una asignacion auditada en Cardcloud. |
+| Metodo | Ruta                                        | Permiso           | Descripcion                                                        |
+| ------ | ------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
+| `GET`  | `/api/audit/requests`                       | `audit.read-list` | Lista logs tecnicos HTTP (`RequestLog`).                           |
+| `GET`  | `/api/audit/requests/:id`                   | `audit.read-one`  | Detalle de un log tecnico HTTP.                                    |
+| `GET`  | `/api/audit/security`                       | `audit.read-list` | Lista eventos de seguridad, auth, sesiones y permisos.             |
+| `GET`  | `/api/audit/security/:id`                   | `audit.read-one`  | Detalle de un evento de seguridad.                                 |
+| `GET`  | `/api/audit/access`                         | `audit.read-list` | Lista eventos de usuarios, roles, permisos y accesos.              |
+| `GET`  | `/api/audit/access/:id`                     | `audit.read-one`  | Detalle de un evento de acceso.                                    |
+| `GET`  | `/api/audit/business`                       | `audit.read-list` | Lista eventos operativos de negocio.                               |
+| `GET`  | `/api/audit/business/:id`                   | `audit.read-one`  | Detalle de un evento operativo.                                    |
+| `GET`  | `/api/audit/cards`                          | `audit.read-list` | Lista eventos de tarjetas locales y portal tarjetahabiente.        |
+| `GET`  | `/api/audit/cards/:id`                      | `audit.read-one`  | Detalle de un evento de tarjeta.                                   |
+| `GET`  | `/api/audit/cardcloud`                      | `audit.read-list` | Lista eventos de Cardcloud, stock, subcuentas y llamadas externas. |
+| `GET`  | `/api/audit/cardcloud/:id`                  | `audit.read-one`  | Detalle de un evento Cardcloud.                                    |
+| `GET`  | `/api/audit/transfers`                      | `audit.read-list` | Lista historial auditado de transferencias Cardcloud.              |
+| `GET`  | `/api/audit/transfers/:id`                  | `audit.read-one`  | Detalle de una transferencia auditada.                             |
+| `GET`  | `/api/audit/card-assignments`               | `audit.read-list` | Lista historial auditado de asignaciones de tarjetas.              |
+| `GET`  | `/api/audit/card-assignments/cards/:id`     | `audit.read-one`  | Detalle de una asignacion auditada en tarjetas locales.            |
+| `GET`  | `/api/audit/card-assignments/cardcloud/:id` | `audit.read-one`  | Detalle de una asignacion auditada en Cardcloud.                   |
 
 ## Query params comunes
 
@@ -199,5 +199,25 @@ Pantallas recomendadas:
 - Operacion: consumir `/api/audit/business`.
 - Tarjetas: consumir `/api/audit/cards` y `/api/audit/card-assignments`.
 - Cardcloud: consumir `/api/audit/cardcloud` y `/api/audit/transfers`.
+
+### Capabilities para UI
+
+No generes un item de sidebar propio por ahora. Cuando `Inicio` muestre auditoria, usa `modules.audit.canEnter` para habilitar el contenido y `modules.audit.actions` para decidir tabs, filtros, detalle y exportacion.
+
+| Control UI                     | Capability                                                                                   | Permiso base      |
+| ------------------------------ | -------------------------------------------------------------------------------------------- | ----------------- |
+| Mostrar contenido de auditoria | `modules.audit.canEnter`                                                                     | `audit.read-list` |
+| Tab `HTTP`                     | `modules.audit.actions.openRequestsTab` o `modules.audit.actions.readRequests`               | `audit.read-list` |
+| Tab `Seguridad`                | `modules.audit.actions.openSecurityTab` o `modules.audit.actions.readSecurity`               | `audit.read-list` |
+| Tab `Accesos`                  | `modules.audit.actions.openAccessTab` o `modules.audit.actions.readAccess`                   | `audit.read-list` |
+| Tab `Operacion`                | `modules.audit.actions.openBusinessTab` o `modules.audit.actions.readBusiness`               | `audit.read-list` |
+| Tab `Tarjetas`                 | `modules.audit.actions.openCardsTab` o `modules.audit.actions.readCards`                     | `audit.read-list` |
+| Tab `Cardcloud`                | `modules.audit.actions.openCardcloudTab` o `modules.audit.actions.readCardcloud`             | `audit.read-list` |
+| Tab `Transferencias`           | `modules.audit.actions.openTransfersTab` o `modules.audit.actions.readTransfers`             | `audit.read-list` |
+| Tab `Asignaciones de tarjetas` | `modules.audit.actions.openCardAssignmentsTab` o `modules.audit.actions.readCardAssignments` | `audit.read-list` |
+| Filtros de auditoria           | `modules.audit.actions.filterList`                                                           | `audit.read-list` |
+| Configurar columnas            | `modules.audit.actions.configureColumns`                                                     | `audit.read-list` |
+| Exportar listado local         | `modules.audit.actions.exportList`                                                           | `audit.read-list` |
+| Abrir detalle                  | `modules.audit.actions.openDetail` o `modules.audit.actions.readOne`                         | `audit.read-one`  |
 
 En los detalles, muestra `metadata`, `before`, `after`, `ipAddress`, `userAgent`, `path` y `externalPath` solo cuando existan. Oculta `body`, `cookies` y `query` de `RequestLog` salvo a perfiles auditores de alta confianza.

@@ -198,9 +198,7 @@ export class AuditService {
             if (seen.has(value)) return '[circular]';
             seen.add(value);
 
-            return Object.fromEntries(
-                Object.entries(value).map(([key, item]) => [key, SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : this.sanitize(item, seen)])
-            );
+            return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : this.sanitize(item, seen)]));
         }
 
         return this.truncate(String(value));

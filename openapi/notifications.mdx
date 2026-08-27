@@ -11,6 +11,18 @@ Todos los endpoints requieren autenticacion. Las notificaciones creadas por API 
 
 `POST /api/notifications` es una accion administrativa mixta. Sin `X-Company-Id`, requiere un acceso global con `notifications.create`; con `X-Company-Id`, crea notificaciones solo para usuarios visibles dentro de esa compania y alcance. Los endpoints `/api/me/notifications` son personales: operan solo sobre la bandeja del usuario autenticado y pueden autorizarse con permisos efectivos del usuario.
 
+## Creacion automatica
+
+Ademas de `POST /api/notifications`, el backend crea notificaciones internas cuando existe un usuario destino claro:
+
+- Tarjetahabiente: apagar tarjeta, encender tarjeta y consultar datos sensibles de tarjeta.
+- Usuarios: asignar, reemplazar o remover accesos; cambio de contrasena por administrador; desvincular 2FA; reenvio de credenciales.
+- Vehiculos: asignar o quitar conductor cuando el conductor esta vinculado a un usuario.
+- Tarjetas: asignar o quitar tarjeta de un vehiculo cuando el conductor del vehiculo esta vinculado a un usuario.
+- Cardcloud Transfers: fondeo directo, fondeo masivo y fondeo por Excel notifican al usuario que ejecuto la operacion.
+
+No se crean notificaciones automaticas para CRUD rutinario sin destinatario claro. Para avisos globales a administradores, primero debe definirse un resolver de destinatarios por compania, rol o permiso.
+
 ## Modelo
 
 ```json
@@ -105,7 +117,7 @@ Devuelve `Notification` actualizada.
 
 Este modulo no es CRUD tradicional para usuarios finales, pero aplica las reglas de `Frontend Guidelines` para acciones: crear notificaciones solo desde flujos administrativos, marcar leidas con endpoints dedicados y refrescar conteos/listados despues de cada mutacion.
 
-No generes una pantalla CRUD principal de `notifications` para usuarios finales. Usa estos endpoints para la campana, bandeja personal, contador de no leidas y acciones de lectura.
+No generes una pantalla CRUD principal de `notifications` para usuarios finales. Usa estos endpoints para la campana, bandeja personal embebida, contador de no leidas y acciones de lectura. Si producto habilita `/notifications`, tratala como bandeja dedicada del usuario autenticado, no como CRUD administrativo ni como item de sidebar.
 
 Los endpoints `/api/me/notifications` son personales. No requieren selector de usuario ni `X-Company-Id`.
 
@@ -115,6 +127,21 @@ Para la bandeja de notificaciones:
 - Usa `GET /api/me/notifications` para el listado paginado.
 - Usa `PATCH /api/me/notifications/:id/read` al abrir una notificacion.
 - Usa `PATCH /api/me/notifications/read-all` para la accion global de marcar todas.
+
+Capabilities recomendadas:
+
+| Capability                                         | Permiso requerido                 | Uso esperado                                   |
+| -------------------------------------------------- | --------------------------------- | ---------------------------------------------- |
+| `modules.notifications.actions.openBell`           | `notifications.unread-count.read` | Mostrar o habilitar la campana del topbar.     |
+| `modules.notifications.actions.showBadge`          | `notifications.unread-count.read` | Mostrar contador de no leidas.                 |
+| `modules.notifications.actions.refreshUnreadCount` | `notifications.unread-count.read` | Refrescar el contador despues de mutaciones.   |
+| `modules.notifications.actions.openInboxPopover`   | `notifications.read-list`         | Abrir bandeja embebida desde la campana.       |
+| `modules.notifications.actions.openInboxDrawer`    | `notifications.read-list`         | Abrir bandeja lateral si el front la usa.      |
+| `modules.notifications.actions.openNotification`   | `notifications.mark-read`         | Abrir una notificacion y marcarla como leida.  |
+| `modules.notifications.actions.openMarkAllRead`    | `notifications.mark-read-all`     | Mostrar accion de marcar todas como leidas.    |
+| `modules.notifications.actions.openAdminCreate`    | `notifications.create`            | Abrir flujo administrativo de creacion futura. |
+
+No muestres `notifications` en sidebar. Si existe `/notifications`, entra desde navbar/topbar y usa `modules.notifications.canEnter` como permiso de entrada a esa pantalla.
 
 No expongas `POST /api/notifications` como flujo normal de usuario final. Es una accion administrativa para crear notificaciones dirigidas a otro usuario. En administracion global no envies `X-Company-Id`; en administracion dentro de una compania, envialo para limitar los usuarios destino.
 

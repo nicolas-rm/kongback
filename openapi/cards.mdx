@@ -1,13 +1,15 @@
 ---
 title: Cards API
-description: Endpoints para gestionar tarjetas y sus asignaciones a vehiculos.
+description: Endpoints para gestionar el inventario operativo local de tarjetas y sus asignaciones a vehiculos.
 ---
 
 ## Base
 
 Base path: `/api/cards`
 
-Todos los endpoints requieren autenticacion y permisos `cards.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+Todos los endpoints requieren autenticacion. La mayoria usa permisos `cards.*`; las acciones que ubican stock Cardcloud usan permisos `cardcloud-stock.*`. El borrado desactiva el registro cambiando `status` a `inactive`.
+
+Este modulo representa tarjetas locales de operacion. No es el stock externo del proveedor; el stock sincronizado se administra desde `cardcloud-stock`.
 
 ## Alcance por compania
 
@@ -49,21 +51,21 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 
 ## Endpoints
 
-| Metodo   | Ruta                                      | Permiso                     | Descripcion                                |
-| -------- | ----------------------------------------- | --------------------------- | ------------------------------------------ |
-| `POST`   | `/api/cards`                              | `cards.create`              | Crea una tarjeta.                          |
-| `POST`   | `/api/cards/assign-sub-company`           | `cards.create`              | Asigna tarjetas Cardcloud a subcompania.   |
-| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                | Sincroniza tarjetas de una subcompania.    |
-| `POST`   | `/api/cards/validate`                     | `cards.validate`            | Valida una tarjeta local contra Cardcloud. |
-| `GET`    | `/api/cards`                              | `cards.read-list`           | Lista tarjetas.                            |
-| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`    | Lista tarjetas por combustible de diseno.  |
-| `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list` | Lista movimientos externos de la tarjeta.  |
-| `GET`    | `/api/cards/:id`                          | `cards.read-one`            | Obtiene una tarjeta.                       |
-| `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`   | Actualiza asignacion operativa parcial.    |
-| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`      | Asigna tarjeta a vehiculo.                 |
-| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`            | Quita asignacion de tarjeta.               |
-| `PATCH`  | `/api/cards/:id`                          | `cards.update`              | Actualiza una tarjeta.                     |
-| `DELETE` | `/api/cards/:id`                          | `cards.delete`              | Desactiva una tarjeta.                     |
+| Metodo   | Ruta                                      | Permiso                              | Descripcion                                |
+| -------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------ |
+| `POST`   | `/api/cards`                              | `cards.create`                       | Crea una tarjeta local manualmente.        |
+| `POST`   | `/api/cards/assign-sub-company`           | `cardcloud-stock.sub-company.assign` | Ubica tarjetas Cardcloud en subcompania.   |
+| `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                         | Sincroniza tarjetas de una subcompania.    |
+| `POST`   | `/api/cards/validate`                     | `cards.validate`                     | Valida una tarjeta local contra Cardcloud. |
+| `GET`    | `/api/cards`                              | `cards.read-list`                    | Lista tarjetas locales.                    |
+| `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`             | Lista tarjetas por combustible de diseno.  |
+| `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list`          | Lista movimientos externos de la tarjeta.  |
+| `GET`    | `/api/cards/:id`                          | `cards.read-one`                     | Obtiene una tarjeta.                       |
+| `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`            | Actualiza asignacion operativa parcial.    |
+| `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`               | Asigna tarjeta a vehiculo.                 |
+| `PATCH`  | `/api/cards/:id/unassign`                 | `cards.unassign`                     | Quita asignacion de tarjeta.               |
+| `PATCH`  | `/api/cards/:id`                          | `cards.update`                       | Actualiza una tarjeta.                     |
+| `DELETE` | `/api/cards/:id`                          | `cards.delete`                       | Desactiva una tarjeta.                     |
 
 ## Listado
 
@@ -105,6 +107,8 @@ Permiso: `cards.validate`.
 
 Requeridos: `clientId`, `nip`, `vigencia`.
 
+Esta accion es sensible porque recibe `nip` y `vigencia`. No debe mostrarse como boton principal del listado salvo que el flujo operativo lo requiera; nunca registres esos campos en logs del frontend.
+
 El backend busca una tarjeta local asignada al `clientId` dentro del alcance del usuario, obtiene datos sensibles desde Cardcloud y valida contra el proveedor. Si la validacion no corresponde al `externalId` local, responde error.
 
 Response `200`:
@@ -129,6 +133,8 @@ Response `200`:
 
 `POST /api/cards`
 
+Uso recomendado: excepcional/manual. En el flujo normal, primero sincroniza/ubica stock desde `cardcloud-stock` y despues administra la tarjeta local desde este modulo.
+
 ```json
 {
     "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
@@ -149,6 +155,10 @@ Response `201`: `Card`.
 ## Asignar tarjetas a subcompania
 
 `POST /api/cards/assign-sub-company`
+
+Permiso: `cardcloud-stock.sub-company.assign`.
+
+Esta accion existe para compatibilidad y para flujos contextuales. En UI principal debe vivir en `Stock Cardcloud`, no como accion primaria del modulo Tarjetas.
 
 ```json
 {
@@ -349,6 +359,33 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Para que sirve Tarjetas
+
+`Tarjetas` administra la tarjeta local operativa que ya pertenece a la compania/subcompania seleccionada. Sirve para consultar detalle, movimientos, estado local, combustible de diseno, vehiculo asignado y desactivar/asignar en la operacion diaria.
+
+No reemplaza `Stock Cardcloud`. `Stock Cardcloud` sincroniza tarjetas del proveedor y decide en que subcompania quedan ubicadas. Una vez ubicada, aparece como tarjeta local para operacion.
+
+### Acciones recomendadas
+
+| UI                      | Capability                                                                        | Permiso                              | Uso                                      |
+| ----------------------- | --------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| Entrar al modulo        | `modules.cards.canEnter`                                                          | `cards.module`                       | Mostrar menu Tarjetas.                   |
+| Buscar/refrescar/listar | `modules.cards.actions.readList` / `modules.cards.actions.refreshList`            | `cards.read-list`                    | Tabla principal.                         |
+| Configurar columnas     | `modules.cards.actions.configureColumns`                                          | `cards.read-list`                    | Preferencia visual del listado.          |
+| Descargar listado       | `modules.cards.actions.exportList`                                                | `cards.download`                     | Exportar tarjetas locales.               |
+| Ver detalle             | `modules.cards.actions.openDetail`                                                | `cards.read-one`                     | Drawer/modal de detalle.                 |
+| Ver movimientos         | `modules.cards.actions.openMovements`                                             | `cards.movements.read-list`          | Drawer/tab de movimientos.               |
+| Editar                  | `modules.cards.actions.openEdit` / `modules.cards.actions.update`                 | `cards.update`                       | Editar combustible, ID externo y estado. |
+| Asignar vehiculo        | `modules.cards.actions.openAssignVehicle` / `modules.cards.actions.assignVehicle` | `cards.vehicle.assign`               | Relacionar tarjeta con vehiculo activo.  |
+| Quitar asignacion       | `modules.cards.actions.openUnassign` / `modules.cards.actions.unassign`           | `cards.unassign`                     | Liberar tarjeta.                         |
+| Desactivar              | `modules.cards.actions.openDeactivate` / `modules.cards.actions.deactivate`       | `cards.delete`                       | Desactivar tarjeta local.                |
+| Crear manualmente       | `modules.cards.actions.openManualCreate` / `modules.cards.actions.create`         | `cards.create`                       | Accion secundaria/excepcional.           |
+| Validar tarjeta         | `modules.cards.actions.openValidate` / `modules.cards.actions.validate`           | `cards.validate`                     | Flujo sensible y controlado.             |
+| Sincronizar subcompania | `modules.cards.actions.openSyncSubCompany` / `modules.cards.actions.sync`         | `cards.sync`                         | Accion contextual por subcompania.       |
+| Asignar Cardcloud       | `modules.cards.actions.openAssignCardcloud`                                       | `cardcloud-stock.sub-company.assign` | Preferir mostrarla en Stock Cardcloud.   |
+
+Botones primarios recomendados en Tarjetas: buscar, refrescar, configurar columnas, exportar y acciones por fila. No muestres `Crear tarjeta`, `Sincronizar`, `Validar tarjeta` ni `Asignar Cardcloud` como toolbar principal salvo decision explicita de producto.
+
 El front debe enviar `X-Company-Id`. `subCompanyId`, `vehicleId` y `designFuelId` deben seleccionarse desde catalogos filtrados por la compania seleccionada y por el alcance del usuario.
 
 Campos recomendados para formularios:
@@ -366,16 +403,16 @@ Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcom
 
 Si el front quiere una sola accion compatible con el contrato anterior, puede usar `PATCH /api/cards/:id/assignment`; internamente solo soporta asignar a vehiculo o quitar asignacion.
 
-Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`.
+Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`. Como accion principal, usa preferentemente `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde Stock Cardcloud.
 
 Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignacion como accion posterior. Si se crea desde el detalle de un vehiculo, deriva `vehicleId`, `subCompanyId` y `assignedAt` desde ese contexto cuando aplique.
 
 ## Errores comunes
 
-| Estado | Caso                                                      |
-| ------ | --------------------------------------------------------- |
+| Estado | Caso                                                                  |
+| ------ | --------------------------------------------------------------------- |
 | `400`  | Datos relacionados no validos, fecha invalida o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                         |
-| `403`  | Usuario autenticado sin el permiso requerido.             |
-| `404`  | Tarjeta no encontrada.                                    |
-| `409`  | Conflictos de unicidad segun constraints Prisma.          |
+| `401`  | Request sin autenticacion valida.                                     |
+| `403`  | Usuario autenticado sin el permiso requerido.                         |
+| `404`  | Tarjeta no encontrada.                                                |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                      |

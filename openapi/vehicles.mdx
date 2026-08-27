@@ -164,6 +164,33 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Vehiculos`: `sidebar.vehicles.canEnter`.
+- Pantalla `Vehiculos`: `modules.vehicles.canEnter`.
+- Crear vehiculo: `modules.vehicles.actions.openCreate` y `modules.vehicles.actions.create`.
+- Selector `Subcompania`: `modules.vehicles.actions.openSubCompanySelect`.
+- Selector `Combustible`: `modules.vehicles.actions.openFuelSelect`.
+- Selector `Conductor`: `modules.vehicles.actions.openDriverSelect`.
+- Consultar listado: `modules.vehicles.actions.readList`.
+- Refrescar listado: `modules.vehicles.actions.refreshList`.
+- Configurar columnas: `modules.vehicles.actions.configureColumns`.
+- Exportar listado desde el front: `modules.vehicles.actions.exportList`.
+- Abrir detalle: `modules.vehicles.actions.openDetail` u `modules.vehicles.actions.openDetailDialog`.
+- Editar vehiculo: `modules.vehicles.actions.openEdit` u `modules.vehicles.actions.openEditDialog`.
+- Actualizar vehiculo: `modules.vehicles.actions.update`.
+- Abrir modal `Asignar conductor`: `modules.vehicles.actions.openAssignDriver` u `modules.vehicles.actions.openAssignDriverDialog`.
+- Guardar conductor asignado: `modules.vehicles.actions.assignDriver`.
+- Quitar conductor: `modules.vehicles.actions.unassignDriver`.
+- Abrir modal `Conductor actual`: `modules.vehicles.actions.openCurrentDriver` u `modules.vehicles.actions.openCurrentDriverDialog`.
+- Consultar conductor actual: `modules.vehicles.actions.readDrivers`.
+- Buscar conductores relacionados: `modules.vehicles.actions.searchDrivers`.
+- Desactivar vehiculo: `modules.vehicles.actions.openDeactivate`, `modules.vehicles.actions.openDeactivateDialog` o `modules.vehicles.actions.deactivate`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `download` existe como capability de compatibilidad para el permiso `vehicles.download`, pero este documento no define un endpoint `/api/vehicles/download`; si la pantalla descarga el listado general, debe exportar los datos cargados por el front o requerir un endpoint dedicado. `delete` en este modulo significa desactivar el vehiculo, no borrado fisico.
+
 El front debe enviar `X-Company-Id`. `subCompanyId`, `fuelId` y `driverId` deben venir de selects filtrados por la compania seleccionada y por el alcance del usuario.
 
 Campos recomendados para formularios:
@@ -187,10 +214,10 @@ Para consultar el conductor relacionado desde el detalle del vehiculo usa `GET /
 
 ## Errores comunes
 
-| Estado | Caso                                                           |
-| ------ | -------------------------------------------------------------- |
+| Estado | Caso                                                                       |
+| ------ | -------------------------------------------------------------------------- |
 | `400`  | Datos relacionados no validos, anio fuera de rango o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                              |
-| `403`  | Usuario autenticado sin el permiso requerido.                  |
-| `404`  | Vehiculo no encontrado.                                        |
-| `409`  | Conflictos de unicidad segun constraints Prisma.               |
+| `401`  | Request sin autenticacion valida.                                          |
+| `403`  | Usuario autenticado sin el permiso requerido.                              |
+| `404`  | Vehiculo no encontrado.                                                    |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                           |

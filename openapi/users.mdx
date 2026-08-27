@@ -505,6 +505,29 @@ La edicion de datos base del usuario no debe mezclar roles ni alcances. Usa `PAT
 
 Las acciones sensibles tambien deben ser acciones separadas: `PATCH /api/users/:id/password` para cambiar contrasena, `PATCH /api/users/:id/2fa/unlink` para desvincular 2FA y `POST /api/users/:id/resend-credentials` para reenviar credenciales.
 
+### Capabilities para UI
+
+Usa `capabilities.modules.users.actions` para mostrar u ocultar controles:
+
+| Control UI                       | Capability                                                           | Permiso base                 |
+| -------------------------------- | -------------------------------------------------------------------- | ---------------------------- |
+| Entrar al modulo                 | `capabilities.sidebar.users.canEnter`                                | `users.module`               |
+| Boton `Crear usuario`            | `users.actions.openCreate` o `users.actions.create`                  | `users.create`               |
+| Busqueda/listado/refrescar tabla | `users.actions.readList` o `users.actions.refreshList`               | `users.read-list`            |
+| Configurar columnas              | `users.actions.configureColumns`                                     | `users.read-list`            |
+| Exportar listado local           | `users.actions.exportList`                                           | `users.read-list`            |
+| Ver detalle                      | `users.actions.openDetailDrawer` o `users.actions.readOne`           | `users.read-one`             |
+| Editar datos base                | `users.actions.openEditModal` o `users.actions.update`               | `users.update`               |
+| Abrir/consultar accesos          | `users.actions.openAccessModal` o `users.actions.readAccess`         | `users.access.read` o assign |
+| Guardar/reemplazar accesos       | `users.actions.assignAccess` o `users.actions.replaceAccess`         | `users.access.assign`        |
+| Quitar acceso                    | `users.actions.removeAccess`                                         | `users.access.assign`        |
+| Ver permisos efectivos           | `users.actions.openPermissionsTab` o `users.actions.readPermissions` | `users.permissions.read`     |
+| Cambiar contrasena               | `users.actions.openChangePasswordModal`                              | `users.password.update`      |
+| Reenviar credenciales            | `users.actions.openResendCredentialsModal`                           | `users.credentials.resend`   |
+| Desvincular 2FA                  | `users.actions.openUnlinkTwoFactorModal`                             | `users.2fa.unlink`           |
+
+`configureColumns` y `exportList` representan acciones locales del listado; no implican endpoints adicionales mientras el front use los datos ya cargados por `GET /api/users`. El frontend actual no expone eliminacion de usuarios, aunque el backend conserve permisos internos para administracion avanzada.
+
 ## Errores comunes
 
 | Estado | Caso                                                                                        |

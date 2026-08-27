@@ -4,14 +4,14 @@ Este backend separa logs tecnicos y auditoria persistente por tablas. La idea es
 
 ## Tablas
 
-| Tabla | Uso |
-| --- | --- |
-| `RequestLog` | Registro tecnico de peticiones HTTP: metodo, ruta, status, duracion, requestId, origen, usuario, compania y payload redacted. |
-| `SecurityAuditLog` | Seguridad, autenticacion, sesiones, CSRF, tokens, bloqueos, permisos insuficientes y compania denegada. |
-| `AccessAuditLog` | Usuarios, roles, permisos y accesos. |
-| `BusinessAuditLog` | Operacion interna: companias, subcompanias, conductores, vehiculos, combustibles, estaciones, documentos y notificaciones. |
-| `CardAuditLog` | Tarjetas locales, portal tarjetahabiente, lecturas sensibles de tarjeta, NIP, bloqueo/desbloqueo y movimientos. |
-| `CardcloudAuditLog` | Llamadas y flujos contra Cardcloud, stock Cardcloud, subcuentas, movimientos, transferencias y errores externos. |
+| Tabla               | Uso                                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `RequestLog`        | Registro tecnico de peticiones HTTP: metodo, ruta, status, duracion, requestId, origen, usuario, compania y payload redacted. |
+| `SecurityAuditLog`  | Seguridad, autenticacion, sesiones, CSRF, tokens, bloqueos, permisos insuficientes y compania denegada.                       |
+| `AccessAuditLog`    | Usuarios, roles, permisos y accesos.                                                                                          |
+| `BusinessAuditLog`  | Operacion interna: companias, subcompanias, conductores, vehiculos, combustibles, estaciones, documentos y notificaciones.    |
+| `CardAuditLog`      | Tarjetas locales, portal tarjetahabiente, lecturas sensibles de tarjeta, NIP, bloqueo/desbloqueo y movimientos.               |
+| `CardcloudAuditLog` | Llamadas y flujos contra Cardcloud, stock Cardcloud, subcuentas, movimientos, transferencias y errores externos.              |
 
 ## Registro automatico
 

@@ -99,6 +99,25 @@ Response `200`:
 
 Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con campos visibles/derivados, editar solo campos documentados en `Actualizar`, confirmar desactivacion y refrescar el listado despues de cada mutacion.
 
+### Capabilities para UI
+
+Usa `GET /api/authentication/capabilities` para decidir entrada al menu y acciones visibles:
+
+- Menu `Combustibles`: `sidebar.fuels.canEnter`.
+- Pantalla `Combustibles`: `modules.fuels.canEnter`.
+- Crear combustible: `modules.fuels.actions.openCreate` u `modules.fuels.actions.openCreateDialog`, y `modules.fuels.actions.create`.
+- Consultar listado: `modules.fuels.actions.readList`.
+- Refrescar listado: `modules.fuels.actions.refreshList`.
+- Configurar columnas: `modules.fuels.actions.configureColumns`.
+- Exportar listado desde el front: `modules.fuels.actions.exportList`.
+- Abrir detalle: `modules.fuels.actions.openDetail` u `modules.fuels.actions.openDetailDialog`.
+- Consultar detalle: `modules.fuels.actions.readOne`.
+- Editar combustible: `modules.fuels.actions.openEdit` u `modules.fuels.actions.openEditDialog`.
+- Actualizar combustible: `modules.fuels.actions.update`.
+- Desactivar combustible: `modules.fuels.actions.openDeactivate`, `modules.fuels.actions.openDeactivateDialog` o `modules.fuels.actions.deactivate`.
+
+`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar el combustible, no borrado fisico.
+
 Este catalogo es global. No envies `X-Company-Id` para crear, actualizar o desactivar combustibles.
 
 La pantalla de combustibles es opcional segun permisos/producto. Si el usuario no administra catalogos globales, usa `GET /api/fuels` solo como fuente de selects para vehiculos, tarjetas y combustibles disponibles en estaciones.
