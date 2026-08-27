@@ -75,9 +75,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
                 idleExpiresAt = new Date(now + this.config.session.idleTimeoutMinutes * 60 * 1000);
                 await this.repository.touchSession(session.id, idleExpiresAt, new Date(now));
             }
-            this.logger.log(
-                `Sesion ${this.maskSessionId(session.id)} vence por inactividad en ${this.formatDuration(idleExpiresAt.getTime() - now)} idleExpiresAt=${idleExpiresAt.toISOString()}`
-            );
+            this.logger.log(`Sesion ${this.maskSessionId(session.id)} vence por inactividad en ${this.formatDuration(idleExpiresAt.getTime() - now)} idleExpiresAt=${idleExpiresAt.toISOString()}`);
         }
 
         const user = await this.repository.findActiveUserForRequest(payload.sub);
@@ -90,7 +88,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         let isGlobalAdmin = false;
 
         for (const access of user.accesses) {
-            if (access.role.code === 'admin' && !access.companyId) isGlobalAdmin = true;
+            if (['administrador-global', 'admin'].includes(access.role.code) && !access.companyId) isGlobalAdmin = true;
             if (access.companyId) companyIds.add(access.companyId);
         }
 
@@ -140,12 +138,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         );
     }
 
-    private rejectUnauthorized(
-        key: I18nKey,
-        message: string,
-        reason: string,
-        context: { sessionId?: string; userId?: string; expiresAt?: Date; idleExpiresAt?: Date }
-    ): never {
+    private rejectUnauthorized(key: I18nKey, message: string, reason: string, context: { sessionId?: string; userId?: string; expiresAt?: Date; idleExpiresAt?: Date }): never {
         this.logUnauthorized(reason, message, context);
         void this.audit.recordSecurity({
             action: reason,

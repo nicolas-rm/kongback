@@ -1,4 +1,5 @@
 import type { Status } from '@prisma/client';
+import type { CapabilitiesResponse } from '@/modules/authentication/responses/capabilities.response';
 
 type ProfileResponseData = {
     id: string;
@@ -14,6 +15,7 @@ type ProfileResponseData = {
     isGlobalAdmin?: boolean;
     companyIds?: string[];
     sessionId?: string | null;
+    capabilities?: CapabilitiesResponse;
 };
 
 export class ProfileResponse {
@@ -30,7 +32,8 @@ export class ProfileResponse {
         public mustChangePassword: boolean,
         public isGlobalAdmin: boolean,
         public companyIds: string[],
-        public sessionId: string | null
+        public sessionId: string | null,
+        public capabilities: CapabilitiesResponse | null
     ) {}
 
     static from(data: ProfileResponseData): ProfileResponse {
@@ -47,7 +50,8 @@ export class ProfileResponse {
             data.mustChangePassword ?? false,
             data.isGlobalAdmin ?? false,
             data.companyIds ?? [],
-            data.sessionId ?? null
+            data.sessionId ?? null,
+            data.capabilities ?? null
         );
     }
 }

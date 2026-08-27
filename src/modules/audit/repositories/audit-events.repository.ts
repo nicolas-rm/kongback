@@ -73,7 +73,9 @@ export class AuditEventsRepository {
             case 'access':
                 return (await this.prisma.accessAuditLog.findMany({ where: this.accessWhere(dto, scope), orderBy: { createdAt: 'desc' }, take })).map((event) => this.mapDomainEvent(source, event));
             case 'business':
-                return (await this.prisma.businessAuditLog.findMany({ where: this.businessWhere(dto, scope), orderBy: { createdAt: 'desc' }, take })).map((event) => this.mapDomainEvent(source, event));
+                return (await this.prisma.businessAuditLog.findMany({ where: this.businessWhere(dto, scope), orderBy: { createdAt: 'desc' }, take })).map((event) =>
+                    this.mapDomainEvent(source, event)
+                );
             case 'card':
                 return (await this.prisma.cardAuditLog.findMany({ where: this.cardWhere(dto, scope), orderBy: { createdAt: 'desc' }, take })).map((event) => this.mapDomainEvent(source, event));
             case 'cardcloud':

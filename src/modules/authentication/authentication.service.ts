@@ -76,8 +76,8 @@ export class AuthenticationService {
         return this.logoutUseCase.execute(userId, {});
     }
 
-    getProfile(user: RequestUser) {
-        return this.getProfileUseCase.execute(user);
+    getProfile(user: RequestUser, companyId?: string) {
+        return this.getProfileUseCase.execute(user, companyId);
     }
 
     updateProfile(user: RequestUser, dto: UpdateMyProfileDto, sessionContext?: SessionContext) {

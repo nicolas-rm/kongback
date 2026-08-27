@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AppMailerService } from '@/mailer/mailer.service';
 import { AuditService } from '@/modules/audit/audit.service';
+import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { PermissionResponse } from '@/modules/access-control/responses';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { generateSecurePassword } from '@/utilities/password/generate-password';
@@ -25,6 +26,7 @@ export class UsersService {
         private readonly repository: UsersRepository,
         private readonly cryptoService: CryptoService,
         private readonly mailerService: AppMailerService,
+        private readonly notifications: NotificationsService,
         private readonly audit: AuditService
     ) {}
 
@@ -129,6 +131,7 @@ export class UsersService {
             scopeKey: access.scopeKey,
             scopeId: access.scopeId,
         });
+        await this.notifyUser(userId, 'Acceso asignado', 'Se asigno un nuevo acceso a tu usuario.', 'Revisa tus permisos y alcance dentro del sistema.', NotificationType.info);
         void this.audit.recordAccess({ action: 'user_access_assigned', resourceType: 'User', resourceId: userId, metadata: access });
         return this.listAccess(userId, contextScope);
     }
@@ -150,6 +153,7 @@ export class UsersService {
             })),
             contextScope
         );
+        await this.notifyUser(userId, 'Accesos actualizados', 'Tus accesos fueron actualizados.', 'Los cambios pueden afectar los modulos y acciones disponibles.', NotificationType.info);
         void this.audit.recordAccess({ action: 'user_access_replaced', resourceType: 'User', resourceId: userId, metadata: { accessCount: accessInputs.length, accesses: accessInputs } });
         return accesses.map((access) => UserAccessResponse.from(access));
     }
@@ -165,6 +169,7 @@ export class UsersService {
         const result = await this.repository.removeAccess(userId, accessId, scope);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.prisma.recordNotFound, 'No encontramos el registro solicitado.');
 
+        await this.notifyUser(userId, 'Acceso removido', 'Se removio uno de tus accesos.', 'Los cambios pueden afectar los modulos y acciones disponibles.', NotificationType.warning);
         void this.audit.recordAccess({ action: 'user_access_removed', resourceType: 'UserAccess', resourceId: accessId, metadata: { userId } });
         return { id: accessId, deleted: true };
     }
@@ -179,6 +184,13 @@ export class UsersService {
         const result = await this.repository.updatePassword(userId, await this.cryptoService.hashPassword(dto.password), dto.mustChangePassword ?? false);
         if (result.count === 0) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        await this.notifyUser(
+            userId,
+            'Contrasena actualizada',
+            'Un administrador actualizo tu contrasena.',
+            dto.mustChangePassword ? 'Deberas cambiarla en tu proximo inicio de sesion.' : 'Si no reconoces este cambio, contacta a soporte.',
+            NotificationType.warning
+        );
         void this.audit.recordSecurity({ action: 'user_password_changed_by_admin', resourceType: 'User', resourceId: userId, metadata: { mustChangePassword: dto.mustChangePassword ?? false } });
         return { passwordChanged: true };
     }
@@ -187,6 +199,7 @@ export class UsersService {
         const result = await this.repository.resetTwoFactor(userId);
         if (!result) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
+        await this.notifyUser(userId, 'Autenticacion de dos factores desvinculada', 'Un administrador desvinculo tu 2FA.', 'Vuelve a configurarlo si tu acceso lo requiere.', NotificationType.warning);
         void this.audit.recordSecurity({ action: 'user_2fa_unlinked_by_admin', resourceType: 'User', resourceId: userId });
         return { twoFactorUnlinked: true };
     }
@@ -204,8 +217,13 @@ export class UsersService {
 
         await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, mailContext, dispatchId);
 
+        await this.notifyUser(user.id, 'Credenciales reenviadas', 'Se reenviaron tus credenciales de acceso.', 'Revisa tu correo y cambia tu contrasena al iniciar sesion.', NotificationType.warning);
         void this.audit.recordSecurity({ action: 'user_credentials_resent', resourceType: 'User', resourceId: user.id, metadata: { triggeredByUserId } });
         return { credentialsSent: true };
+    }
+
+    private async notifyUser(userId: string, title: string, message: string, detail: string, type: NotificationType): Promise<void> {
+        await this.notifications.createForUser(userId, { title, message, detail, type }).catch(() => null);
     }
 
     private async assertUserActive(userId: string, scope?: CompanyScope): Promise<void> {
@@ -279,7 +297,7 @@ export class UsersService {
 
             return {
                 id: role.id,
-                isCardholderRole: role.code === 'cardholder' || hasCardholderPermissions,
+                isCardholderRole: ['tarjetahabiente', 'cardholder'].includes(role.code) || hasCardholderPermissions,
                 hasAdministrativePermissions,
             };
         });

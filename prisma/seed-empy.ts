@@ -31,9 +31,10 @@ const prisma = new PrismaClient({
 // Admin
 // =============================================================================
 
-const ADMIN_ROLE_CODE = 'admin';
+const ADMIN_ROLE_CODE = 'administrador-global';
 const ADMIN_ROLE_NAME = 'Administrador global';
-const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso completo a todos los permisos del sistema.';
+const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso a los permisos administrativos del sistema.';
+const ADMIN_EXCLUDED_PERMISSION_PREFIXES = ['cardholder.'] as const;
 
 // =============================================================================
 // Default company
@@ -87,60 +88,59 @@ type RoleDefinition = {
 
 const ROLE_DEFINITIONS = [
     {
-        code: 'user-administrator',
+        code: 'usuarios-administrador',
         name: 'Administrador de usuarios',
         description: 'Administra usuarios, accesos y consulta roles/permisos disponibles.',
         prefixes: ['users.'],
         extraPermissionCodes: ['roles.read-list', 'roles.read-one', 'permissions.read-list', 'permissions.read-one'],
     },
     {
-        code: 'rbac-administrator',
+        code: 'roles-permisos-administrador',
         name: 'Administrador de roles y permisos',
         description: 'Administra el catálogo de roles, permisos y asignaciones de permisos por rol.',
         prefixes: ['roles.', 'permissions.'],
     },
     {
-        code: 'company-manager',
+        code: 'operador-compania',
         name: 'Operador de compañía',
-        description: 'Administra los módulos operativos principales dentro de una compañía.',
-        prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'users.'],
+        description: 'Administra la operación diaria de una compañía sin permisos globales de seguridad.',
+        prefixes: ['sub-companies.', 'drivers.', 'vehicles.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'cardholders.'],
         extraPermissionCodes: [
+            'companies.module',
+            'companies.read-list',
+            'companies.read-one',
             'fuels.read-list',
             'fuels.read-one',
+            'users.read-list',
+            'users.read-one',
             'cardcloud-stock.module',
             'cardcloud-stock.read-list',
             'cardcloud-stock.sub-company.assign',
             'cardcloud-stock.sub-company.unassign',
+            'notifications.module',
             'notifications.read-list',
             'notifications.unread-count.read',
             'notifications.mark-read',
             'notifications.mark-read-all',
         ],
-        excludePermissionCodes: ['companies.create', 'companies.update', 'companies.delete'],
     },
     {
-        code: 'company-viewer',
+        code: 'consulta-compania',
         name: 'Consulta de compañía',
         description: 'Consulta los módulos operativos principales dentro de una compañía sin permisos de escritura.',
-        prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'notifications.', 'users.'],
+        prefixes: ['companies.', 'sub-companies.', 'drivers.', 'vehicles.', 'fuels.', 'stations.', 'station-fuels.', 'cards.', 'documents.', 'cardholders.', 'cardcloud-stock.', 'notifications.'],
+        extraPermissionCodes: ['users.read-list', 'users.read-one', 'notifications.mark-read', 'notifications.mark-read-all'],
         readOnly: true,
     },
     {
-        code: 'driver-administrator',
-        name: 'Administrador de choferes',
-        description: 'Administra choferes y consulta subcompañías necesarias para asignarlos correctamente.',
-        prefixes: ['drivers.'],
-        extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
+        code: 'flota-administrador',
+        name: 'Administrador de flota',
+        description: 'Administra conductores, vehículos y asignaciones de chofer dentro de una compañía.',
+        prefixes: ['drivers.', 'vehicles.'],
+        extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one', 'users.read-list', 'users.read-one'],
     },
     {
-        code: 'vehicle-administrator',
-        name: 'Administrador de vehículos',
-        description: 'Administra vehículos, asignación de choferes y catálogos necesarios para la flota.',
-        prefixes: ['vehicles.'],
-        extraPermissionCodes: ['drivers.read-list', 'drivers.read-one', 'fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
-    },
-    {
-        code: 'card-administrator',
+        code: 'tarjetas-administrador',
         name: 'Administrador de tarjetas',
         description: 'Administra tarjetas, asignaciones a vehículos y stock Cardcloud.',
         prefixes: ['cards.'],
@@ -158,35 +158,57 @@ const ROLE_DEFINITIONS = [
         ],
     },
     {
-        code: 'cardholder',
+        code: 'cardcloud-administrador',
+        name: 'Administrador Cardcloud',
+        description: 'Administra cuenta, subcuentas, tarjetas externas, transferencias y stock Cardcloud.',
+        prefixes: ['cardcloud.', 'cardcloud-stock.'],
+        extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one', 'cards.read-list', 'cards.read-one'],
+    },
+    {
+        code: 'tarjetahabientes-administrador',
+        name: 'Administrador de tarjetahabientes',
+        description: 'Consulta usuarios con perfil tarjetahabiente y su contexto operativo.',
+        prefixes: ['cardholders.'],
+        extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
+    },
+    {
+        code: 'tarjetahabiente',
         name: 'Tarjetahabiente',
         description: 'Acceso propio para usuarios conductores que consultan y operan sus tarjetas asignadas.',
         prefixes: ['cardholder.'],
     },
     {
-        code: 'fuel-administrator',
+        code: 'combustibles-administrador',
         name: 'Administrador de combustibles',
         description: 'Administra el catálogo de combustibles.',
         prefixes: ['fuels.'],
     },
     {
-        code: 'station-administrator',
+        code: 'estaciones-administrador',
         name: 'Administrador de estaciones',
         description: 'Administra estaciones y combustibles disponibles por estación.',
         prefixes: ['stations.', 'station-fuels.'],
         extraPermissionCodes: ['fuels.read-list', 'fuels.read-one', 'sub-companies.read-list', 'sub-companies.read-one'],
     },
     {
-        code: 'document-administrator',
+        code: 'documentos-administrador',
         name: 'Administrador de documentos',
         description: 'Administra documentos de la compañía seleccionada.',
         prefixes: ['documents.'],
+        extraPermissionCodes: ['sub-companies.read-list', 'sub-companies.read-one'],
     },
     {
-        code: 'notification-administrator',
+        code: 'notificaciones-administrador',
         name: 'Administrador de notificaciones',
         description: 'Administra notificaciones y consulta la bandeja del usuario.',
         prefixes: ['notifications.'],
+    },
+    {
+        code: 'consulta-auditoria',
+        name: 'Consulta de auditoría',
+        description: 'Consulta eventos de auditoría del sistema sin permisos de escritura.',
+        prefixes: ['audit.'],
+        readOnly: true,
     },
 ] as const satisfies readonly RoleDefinition[];
 
@@ -284,7 +306,7 @@ async function seedRoles(): Promise<RoleSeed[]> {
 }
 
 async function syncAdminRolePermissions(roleId: string): Promise<void> {
-    await syncRolePermissions(roleId, [...ALL_PERMISSION_CODES]);
+    await syncRolePermissions(roleId, resolveAdminPermissionCodes());
 }
 
 async function syncRolePermissions(roleId: string, codes: PermissionCode[]): Promise<void> {
@@ -323,6 +345,10 @@ async function syncRolePermissions(roleId: string, codes: PermissionCode[]): Pro
             skipDuplicates: true,
         });
     });
+}
+
+function resolveAdminPermissionCodes(): PermissionCode[] {
+    return ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix)));
 }
 
 function resolveRolePermissionCodes(definition: RoleDefinition): PermissionCode[] {
