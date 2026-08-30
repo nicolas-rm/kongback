@@ -9,6 +9,13 @@ Base path: `/api/cardcloud`
 
 Este modulo concentra endpoints proxy hacia la API externa de Cardcloud. Las rutas de espejo local, sincronizacion y asignacion local de stock viven en `cardcloud-stock`.
 
+Convenciones de contrato:
+
+- Las respuestas marcadas como "respuesta cruda de Cardcloud" se tratan como `unknown`: el backend las reenvia desde el proveedor sin tipado estable propio.
+- Las respuestas de fondeo masivo y fondeo por Excel si son contratos internos tipados por el backend.
+- Los endpoints con alcance `Sistema/compania` son mixtos: sin `X-Company-Id` requieren acceso global; con `X-Company-Id` validan compania, permisos y, si aplica, subcompanias visibles.
+- `sourceType` y `destinationType` aceptan solo `account`, `subaccount` o `card`.
+
 ## Endpoints
 
 | Metodo  | Ruta                                         | Permiso                                     | Alcance          | Descripcion                         |
@@ -40,7 +47,7 @@ Este modulo concentra endpoints proxy hacia la API externa de Cardcloud. Las rut
 
 `GET /api/cardcloud/account`
 
-Requiere `RequireSystemAccess`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.account.read-one`.
 
 Response `200`: respuesta cruda de Cardcloud para `/v1/account`.
 
@@ -48,7 +55,7 @@ Uso frontend: alimenta la pestana `Cuenta` de `/cardcloud/account` y el boton `R
 
 `GET /api/cardcloud/account/movements`
 
-Requiere `RequireSystemAccess`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.account.movements.read-list`.
 
 Query params opcionales:
 
@@ -65,26 +72,26 @@ Uso frontend: alimenta la pestana `Movimientos` de `/cardcloud/account`. El boto
 
 `POST /api/cardcloud/account/transfer`
 
-Requiere `RequireSystemAccess`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.account.transfer`.
 
 Body:
 
-| Campo             | Tipo                            | Requerido | Descripcion         |
-| ----------------- | ------------------------------- | --------- | ------------------- |
-| `sourceType`      | `account \| subaccount \| card` | Si        | Origen.             |
-| `source`          | `string`                        | Si        | ID externo origen.  |
-| `destinationType` | `account \| subaccount \| card` | Si        | Destino.            |
-| `destination`     | `string`                        | Si        | ID externo destino. |
-| `amount`          | `number`                        | Si        | Monto.              |
-| `description`     | `string`                        | Si        | Descripcion.        |
+| Campo             | Tipo                            | Requerido | Descripcion                          |
+| ----------------- | ------------------------------- | --------- | ------------------------------------ |
+| `sourceType`      | `account \| subaccount \| card` | Si        | Origen.                              |
+| `source`          | `string`                        | Si        | ID externo origen.                   |
+| `destinationType` | `account \| subaccount \| card` | Si        | Destino.                             |
+| `destination`     | `string`                        | Si        | ID externo destino.                  |
+| `amount`          | `number`                        | Si        | Monto; valor absoluto minimo `0.01`. |
+| `description`     | `string`                        | Si        | Descripcion.                         |
 
-Si `amount` es negativo, backend invierte origen/destino y envia el monto absoluto a Cardcloud, igual que BackendGas.
+Si `amount` es negativo, backend invierte origen/destino y envia el monto absoluto a Cardcloud, igual que BackendGas. Cuando la operacion se procesa desde un usuario autenticado, se crea una notificacion propia de exito.
 
 Response `200`: respuesta cruda de Cardcloud para `/v1/transfer`.
 
 `POST /api/cardcloud/account/transfer-bulk`
 
-Requiere `RequireSystemAccess`.
+Requiere `RequireSystemAccess` y permiso `cardcloud.account.transfer.bulk`.
 
 Body:
 
@@ -102,6 +109,13 @@ Body:
     ]
 }
 ```
+
+Reglas:
+
+- `transfers` requiere de `1` a `50` elementos.
+- Cada elemento usa el mismo contrato de `POST /api/cardcloud/account/transfer`.
+- El backend continua procesando los demas elementos aunque una transferencia falle.
+- Al terminar, se crea una notificacion propia de exito o advertencia para el usuario que ejecuto la accion.
 
 Response `200`:
 
@@ -122,6 +136,16 @@ Response `200`:
 }
 ```
 
+| Campo               | Tipo      | Descripcion                                      |
+| ------------------- | --------- | ------------------------------------------------ |
+| `results[].index`   | `number`  | Posicion original dentro de `transfers`.         |
+| `results[].success` | `boolean` | Indica si esa transferencia se ejecuto.          |
+| `results[].data`    | `unknown` | Respuesta cruda de Cardcloud cuando fue exitosa. |
+| `results[].error`   | `string`  | Mensaje de error cuando fallo.                   |
+| `summary.total`     | `number`  | Total de transferencias solicitadas.             |
+| `summary.succeeded` | `number`  | Transferencias exitosas.                         |
+| `summary.failed`    | `number`  | Transferencias fallidas.                         |
+
 `GET /api/cardcloud/account/transfer-bulk-excel`
 
 Requiere `RequireSystemAccess` y permiso `cardcloud.account.transfer.bulk`.
@@ -132,7 +156,7 @@ Query params:
 | -------------- | -------- | --------- | --------------------------------------------------------------------------------- |
 | `subCompanyId` | `string` | No        | Si se envia, precarga la plantilla con `clientId` de tarjetas de esa subcompania. |
 
-Response `200`: archivo `.xlsx` con hoja `Fondeo` y columnas `clientId`, `monto`, `description`.
+Response `200`: archivo `.xlsx` con hoja `Fondeo` y columnas `clientId`, `monto`, `description`, mas una hoja `Instrucciones`.
 
 `POST /api/cardcloud/account/transfer-bulk-excel`
 
@@ -142,17 +166,21 @@ Content-Type: `multipart/form-data`.
 
 Campos:
 
-| Campo          | Tipo     | Requerido | Descripcion                                                      |
-| -------------- | -------- | --------- | ---------------------------------------------------------------- |
-| `subCompanyId` | `string` | Si        | Subcompania local origen del fondeo.                             |
-| `file`         | `file`   | Si        | Archivo `.xlsx` con columnas `clientId`, `monto`, `description`. |
+| Campo          | Tipo     | Requerido | Descripcion                                                  |
+| -------------- | -------- | --------- | ------------------------------------------------------------ |
+| `subCompanyId` | `string` | Si        | Subcompania local origen del fondeo.                         |
+| `file`         | `file`   | Si        | Archivo `.xlsx`; columnas obligatorias `clientId` y `monto`. |
 
 Reglas:
 
 - El backend resuelve `source = subCompany.cardcloudSubaccountId`.
-- Cada `clientId` debe corresponder a una tarjeta activa de esa subcompania.
+- `description` es columna opcional. Si falta o viene vacia, el backend genera una descripcion default por fila.
+- Tambien se aceptan encabezados equivalentes: `client_id`, `client id`, `clienteId`, `importe`, `descripcion`, `concepto` y `detalle`.
+- Cada fila procesable debe tener `clientId` y `monto`. Las filas vacias o incompletas se omiten con estado `omitted`.
+- Cada `clientId` procesable debe corresponder a una tarjeta activa de esa subcompania.
 - `monto` acepta valores positivos y negativos. Si es negativo, el backend invierte origen/destino antes de llamar Cardcloud.
 - Se procesan lotes de hasta 50 transferencias y se devuelve resultado por fila.
+- Al terminar, se crea una notificacion propia de exito o advertencia para el usuario que ejecuto la accion.
 
 Response `200`:
 
@@ -180,13 +208,42 @@ Response `200`:
 }
 ```
 
+| Campo                   | Tipo                             | Descripcion                                      |
+| ----------------------- | -------------------------------- | ------------------------------------------------ |
+| `subCompanyId`          | `string`                         | UUID local de la subcompania procesada.          |
+| `results[].row`         | `number`                         | Numero de fila en el Excel.                      |
+| `results[].clientId`    | `string \| null`                 | Client ID leido de la fila.                      |
+| `results[].amount`      | `number \| null`                 | Monto parseado de la fila.                       |
+| `results[].description` | `string \| null`                 | Descripcion leida del Excel; puede ser `null`.   |
+| `results[].status`      | `succeeded \| failed \| omitted` | Resultado por fila.                              |
+| `results[].newBalance`  | `string \| null`                 | Nuevo balance si Cardcloud lo devuelve.          |
+| `results[].message`     | `string`                         | Mensaje operativo para mostrar al usuario.       |
+| `summary.totalRows`     | `number`                         | Filas leidas del archivo despues del encabezado. |
+| `summary.prepared`      | `number`                         | Filas validas enviadas a Cardcloud.              |
+| `summary.succeeded`     | `number`                         | Filas procesadas correctamente.                  |
+| `summary.failed`        | `number`                         | Filas fallidas.                                  |
+| `summary.omitted`       | `number`                         | Filas omitidas por estar vacias o incompletas.   |
+
+Errores `400` frecuentes:
+
+- Falta `file`.
+- Archivo vacio.
+- Extension distinta de `.xlsx`.
+- MIME distinto de Excel permitido.
+- Excel ilegible, sin hojas, sin columna `clientId` o sin columna `monto`.
+- Monto con valor absoluto menor a `0.01`.
+
 ## Tarjetas
 
 `GET /api/cardcloud/cards/:uuid`
 
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.read-one`.
+
 Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid`.
 
 `GET /api/cardcloud/cards/:uuid/movements`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.movements.read-list`.
 
 Query params opcionales: `from`, `to`.
 
@@ -194,17 +251,25 @@ Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/movements`.
 
 `GET /api/cardcloud/cards/movement/:uuid`
 
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.movements.read-one`.
+
 Response `200`: respuesta cruda de Cardcloud para `/v1/card/movement/:uuid`.
 
 `GET /api/cardcloud/cards/:uuid/sensitive`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.sensitive.read-one`.
 
 Response `200`: datos sensibles devueltos por Cardcloud.
 
 `GET /api/cardcloud/cards/:uuid/cvv`
 
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.cvv.read`.
+
 Response `200`: CVV temporal devuelto por Cardcloud.
 
 `PATCH /api/cardcloud/cards/:uuid/nip`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.nip.update`.
 
 Body:
 
@@ -216,6 +281,8 @@ Body:
 Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/update_nip`.
 
 `POST /api/cardcloud/cards/validate`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.validate`.
 
 Body:
 
@@ -229,9 +296,13 @@ Response `200`: respuesta cruda de Cardcloud para `/card/validate`.
 
 `POST /api/cardcloud/cards/:uuid/block`
 
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.block`.
+
 Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/block`.
 
 `POST /api/cardcloud/cards/:uuid/unblock`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.unblock`.
 
 Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/unblock`.
 
@@ -240,6 +311,8 @@ Response `200`: respuesta cruda de Cardcloud para `/v1/card/:uuid/unblock`.
 Estos endpoints son proxy tecnico a Cardcloud y reciben `subaccount_id` externo. Para el flujo normal de asignar tarjetas a una subcompania local, usa `POST /api/cards/assign-sub-company`; ese endpoint resuelve `subaccount_id` desde `subCompany.cardcloudSubaccountId`.
 
 `POST /api/cardcloud/account/cards/assign`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.assign`.
 
 Body:
 
@@ -252,6 +325,8 @@ Body:
 Response `200`: respuesta cruda de Cardcloud para `/v1/account/cards/assign`.
 
 `POST /api/cardcloud/account/cards/assign-bulk`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.assign.bulk`.
 
 Body:
 
@@ -268,7 +343,7 @@ Response `200`: respuesta cruda de Cardcloud para `/v1/account/cards/assign_bulk
 
 Sin `X-Company-Id`, requiere acceso sistema y responde como proxy global de Cardcloud.
 
-Con `X-Company-Id`, devuelve solo las subcuentas externas que estan vinculadas a subcompanias locales activas de esa compania mediante `SubCompany.cardcloudSubaccountId`. En ese modo cada subcuenta encontrada se enriquece con `localSubCompany`.
+Con `X-Company-Id`, devuelve solo las subcuentas externas que estan vinculadas a subcompanias locales activas de esa compania mediante `SubCompany.cardcloudSubaccountId`. Si el usuario esta limitado a subcompanias, tambien se restringe a esas subcompanias. En ese modo cada subcuenta encontrada se enriquece con `localSubCompany`.
 
 Response `200`: respuesta de Cardcloud para `/v1/subaccounts`; con contexto de compania se filtra por subcuentas vinculadas localmente.
 
@@ -292,13 +367,13 @@ Ejemplo con `X-Company-Id`:
 
 `GET /api/cardcloud/subaccounts/:uuid`
 
-Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, solo permite consultar `uuid` si existe una subcompania local activa de esa compania con `cardcloudSubaccountId = uuid`; si no existe relacion local, responde `404`.
+Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, solo permite consultar `uuid` si existe una subcompania local activa y visible para el usuario con `cardcloudSubaccountId = uuid`; si no existe relacion local, responde `404`.
 
 Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid`.
 
 `GET /api/cardcloud/subaccounts/:uuid/cards`
 
-Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa de esa compania.
+Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa y visible para el usuario.
 
 Query params opcionales:
 
@@ -309,6 +384,8 @@ Query params opcionales:
 Response `200`: respuesta cruda de Cardcloud para `/v1/subaccounts/:uuid/cards`.
 
 `POST /api/cardcloud/subaccounts`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.subaccounts.create`.
 
 Body:
 
@@ -321,7 +398,7 @@ Response `201`: respuesta cruda de Cardcloud para `/v1/subaccounts`.
 
 `GET /api/cardcloud/subaccounts/:uuid/movements`
 
-Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa de esa compania.
+Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa y visible para el usuario.
 
 Query params opcionales: `from`, `to`.
 
@@ -394,3 +471,26 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 Para asignar tarjetas Cardcloud a una subcompania operativa, usa `POST /api/cards/assign-sub-company` en lugar del proxy crudo `POST /api/cardcloud/account/cards/assign-bulk`.
 
 Para mostrar o administrar el stock local sincronizado, usa la pagina `cardcloud-stock`.
+
+### Capabilities para UI: Tarjetas Cardcloud externas
+
+`cardcloudCards` no debe agregarse como entrada de sidebar por defecto. Sus endpoints operan tarjetas externas del proveedor y deben exponerse como acciones contextuales dentro de Cardcloud:
+
+- En `cardcloudSubaccounts`, dentro del tab `Tarjetas`, porque la pantalla ya consulta `/api/cardcloud/subaccounts/:uuid/cards`.
+- En `cardcloudStock`, solo cuando el registro local tenga UUID externo suficiente para operar contra Cardcloud.
+
+Acciones esperadas:
+
+| Accion externa         | Capability                                     | Permiso                               |
+| ---------------------- | ---------------------------------------------- | ------------------------------------- |
+| Detalle de tarjeta     | `modules.cardcloudCards.actions.readOne`       | `cardcloud.cards.read-one`            |
+| Movimientos de tarjeta | `modules.cardcloudCards.actions.readMovements` | `cardcloud.cards.movements.read-list` |
+| Detalle de movimiento  | `modules.cardcloudCards.actions.readMovement`  | `cardcloud.cards.movements.read-one`  |
+| Datos sensibles        | `modules.cardcloudCards.actions.readSensitive` | `cardcloud.cards.sensitive.read-one`  |
+| CVV temporal           | `modules.cardcloudCards.actions.readCvv`       | `cardcloud.cards.cvv.read`            |
+| Cambiar NIP            | `modules.cardcloudCards.actions.updateNip`     | `cardcloud.cards.nip.update`          |
+| Validar tarjeta        | `modules.cardcloudCards.actions.validate`      | `cardcloud.cards.validate`            |
+| Bloquear tarjeta       | `modules.cardcloudCards.actions.block`         | `cardcloud.cards.block`               |
+| Desbloquear tarjeta    | `modules.cardcloudCards.actions.unblock`       | `cardcloud.cards.unblock`             |
+
+No reutilices `modules.cards` ni `modules.cardholderCards`: `cards` pertenece a tarjeta local operativa y `cardholderCards` al portal del tarjetahabiente.

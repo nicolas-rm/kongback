@@ -36,7 +36,10 @@
         "notFound": "We could not find the requested notification."
     },
     "users": {
-        "notFound": "We could not find the requested user."
+        "notFound": "We could not find the requested user.",
+        "cardholderAdministrativePermissions": "The cardholder profile cannot be mixed with administrative permissions.",
+        "cardholderAdministrativeRoleConflict": "You cannot combine the cardholder profile with administrative roles.",
+        "cardholderSubCompanyScopeRequired": "The cardholder profile must be assigned to a subcompany."
     },
     "business": {
         "companyReferenceExists": "The company reference already exists.",

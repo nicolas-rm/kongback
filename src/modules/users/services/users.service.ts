@@ -304,13 +304,20 @@ export class UsersService {
 
         const hybridRole = profiles.some((role) => role.isCardholderRole && role.hasAdministrativePermissions);
         if (hybridRole) {
-            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'El perfil de tarjetahabiente no puede mezclarse con permisos administrativos.');
+            throw new I18nBadRequestException(I18N_KEYS.errors.users.cardholderAdministrativePermissions, 'El perfil de tarjetahabiente no puede mezclarse con permisos administrativos.');
         }
 
         const hasCardholderRole = profiles.some((role) => role.isCardholderRole);
         const hasAdministrativeRole = profiles.some((role) => !role.isCardholderRole);
         if (hasCardholderRole && hasAdministrativeRole) {
-            throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'No puedes combinar el perfil de tarjetahabiente con roles administrativos.');
+            throw new I18nBadRequestException(I18N_KEYS.errors.users.cardholderAdministrativeRoleConflict, 'No puedes combinar el perfil de tarjetahabiente con roles administrativos.');
+        }
+
+        const cardholderRoleIds = new Set(profiles.filter((role) => role.isCardholderRole).map((role) => role.id));
+        const hasInvalidCardholderScope = newAccesses.some((access) => cardholderRoleIds.has(access.roleId) && (!access.companyId || access.scopeKey !== SUB_COMPANY_SCOPE_KEY || !access.scopeId));
+
+        if (hasInvalidCardholderScope) {
+            throw new I18nBadRequestException(I18N_KEYS.errors.users.cardholderSubCompanyScopeRequired, 'El perfil de tarjetahabiente debe asignarse a una subcompania.');
         }
     }
 }

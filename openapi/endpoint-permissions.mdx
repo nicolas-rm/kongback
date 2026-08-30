@@ -32,25 +32,25 @@ Cuando un endpoint tiene `@Permissions(...)` pero no declara `@RequireSystemAcce
 
 Estos permisos no protegen endpoints por si solos. Sirven para que el frontend decida si un usuario puede ver y entrar a un modulo. Las acciones internas deben seguir usando permisos granulares como `users.create`, `users.access.assign`, `cards.update` o `documents.download`.
 
-| Permiso                  | Modulo                   | Alcance recomendado | Uso esperado                                                 |
-| ------------------------ | ------------------------ | ------------------- | ------------------------------------------------------------ |
-| `companies.module`       | Empresas                 | Sistema/compania    | Mostrar entrada al modulo de empresas.                       |
-| `sub-companies.module`   | Subempresas              | Compania            | Mostrar entrada al modulo de subempresas.                    |
-| `drivers.module`         | Conductores              | Compania            | Mostrar entrada al modulo de conductores.                    |
-| `fuels.module`           | Combustibles             | Sistema/compania    | Mostrar entrada al modulo de combustibles.                   |
-| `vehicles.module`        | Vehiculos                | Compania            | Mostrar entrada al modulo de vehiculos.                      |
-| `cards.module`           | Tarjetas                 | Compania            | Mostrar entrada al modulo de tarjetas.                       |
-| `stations.module`        | Estaciones               | Compania            | Mostrar entrada al modulo de estaciones.                     |
-| `station-fuels.module`   | Combustibles de estacion | Compania            | Mostrar entrada a la gestion de combustibles de estacion.    |
-| `cardcloud-stock.module` | Stock Cardcloud          | Sistema/compania    | Mostrar entrada al modulo de stock local Cardcloud.          |
-| `cardcloud.module`       | Cardcloud                | Sistema             | Mostrar entrada al modulo de operaciones externas Cardcloud. |
-| `cardholders.module`     | Tarjetahabientes         | Compania            | Legacy/reservado; no conectarlo al sidebar actual.           |
-| `cardholder.module`      | Tarjetahabiente          | Usuario conductor   | Legacy; el UI actual usa Tarjetas, Vehiculos y Trabajo.      |
-| `users.module`           | Usuarios                 | Sistema/compania    | Mostrar entrada al modulo de usuarios.                       |
-| `roles.module`           | Roles                    | Sistema             | Mostrar entrada al modulo de roles.                          |
-| `permissions.module`     | Permisos                 | Sistema             | Mostrar entrada al modulo de permisos.                       |
-| `documents.module`       | Documentos               | Compania            | Mostrar entrada al modulo de documentos.                     |
-| `notifications.module`   | Notificaciones           | Sistema/compania    | Habilitar campana y bandeja embebida de notificaciones.      |
+| Permiso                  | Modulo                   | Alcance recomendado | Uso esperado                                                                                     |
+| ------------------------ | ------------------------ | ------------------- | ------------------------------------------------------------------------------------------------ |
+| `companies.module`       | Empresas                 | Sistema/compania    | Mostrar entrada al modulo de empresas.                                                           |
+| `sub-companies.module`   | Subempresas              | Compania            | Mostrar entrada al modulo de subempresas.                                                        |
+| `drivers.module`         | Conductores              | Compania            | Mostrar entrada al modulo de conductores.                                                        |
+| `fuels.module`           | Combustibles             | Sistema/compania    | Mostrar entrada al modulo de combustibles.                                                       |
+| `vehicles.module`        | Vehiculos                | Compania            | Mostrar entrada al modulo de vehiculos.                                                          |
+| `cards.module`           | Tarjetas                 | Compania            | Mostrar entrada al modulo de tarjetas.                                                           |
+| `stations.module`        | Estaciones               | Compania            | Mostrar entrada al modulo de estaciones.                                                         |
+| `station-fuels.module`   | Combustibles de estacion | Compania            | Mostrar entrada a la gestion de combustibles de estacion.                                        |
+| `cardcloud-stock.module` | Stock Cardcloud          | Sistema/compania    | Mostrar entrada al modulo de stock local Cardcloud.                                              |
+| `cardcloud.module`       | Cardcloud                | Sistema             | Mostrar entrada al modulo de operaciones externas Cardcloud.                                     |
+| `cardholders.module`     | Tarjetahabientes         | Compania            | Habilitar la vista operativa plural; no conectarlo al sidebar actual salvo decision de producto. |
+| `cardholder.module`      | Tarjetahabiente          | Usuario conductor   | Legacy; el UI actual usa Tarjetas, Vehiculos y Trabajo.                                          |
+| `users.module`           | Usuarios                 | Sistema/compania    | Mostrar entrada al modulo de usuarios.                                                           |
+| `roles.module`           | Roles                    | Sistema             | Mostrar entrada al modulo de roles.                                                              |
+| `permissions.module`     | Permisos                 | Sistema             | Mostrar entrada al modulo de permisos.                                                           |
+| `documents.module`       | Documentos               | Compania            | Mostrar entrada al modulo de documentos.                                                         |
+| `notifications.module`   | Notificaciones           | Sistema/compania    | Habilitar campana y bandeja embebida de notificaciones.                                          |
 
 Para el sidebar actual de tarjetahabiente, el backend debe exponer `sidebar.cardholderCards`, `sidebar.cardholderVehicles`, `sidebar.cardholderWork` y sus equivalentes en `modules`. Esas capabilities se derivan de `cardholder.cards.read-list`, `cardholder.vehicles.read-list` y `cardholder.sub-companies.read-one`.
 

@@ -195,3 +195,5 @@ La accion `Sincronizar stock Cardcloud` debe ser un boton/accion tecnica de admi
 Para asignar stock a una subcompania, usa `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde una accion del inventario/stock. En modo compania, envia `X-Company-Id`. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual.
 
 No crees una pantalla CRUD manual para modificar datos sincronizados como `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra enmascarado con `X` y solo los ultimos 4 digitos visibles. Usa `id` para identificar el stock local; no dependas de ids externos en la UI.
+
+Si producto habilita operaciones externas desde Stock, el backend debe devolver un identificador externo explicito (`cardUuid` o `externalId`) para mostrar acciones de `modules.cardcloudCards.actions.*`. No uses el `id` local de stock como UUID de Cardcloud.

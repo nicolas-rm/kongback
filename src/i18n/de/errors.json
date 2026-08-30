@@ -36,7 +36,10 @@
         "notFound": "Wir konnten die angeforderte Benachrichtigung nicht finden."
     },
     "users": {
-        "notFound": "Wir konnten den angeforderten Benutzer nicht finden."
+        "notFound": "Wir konnten den angeforderten Benutzer nicht finden.",
+        "cardholderAdministrativePermissions": "Das Karteninhaberprofil darf nicht mit administrativen Berechtigungen kombiniert werden.",
+        "cardholderAdministrativeRoleConflict": "Du kannst das Karteninhaberprofil nicht mit administrativen Rollen kombinieren.",
+        "cardholderSubCompanyScopeRequired": "Das Karteninhaberprofil muss einer Untergesellschaft zugewiesen werden."
     },
     "business": {
         "companyReferenceExists": "Die Unternehmensreferenz existiert bereits.",

@@ -124,7 +124,21 @@ Response `200`:
 
 No conectes este endpoint a una entrada de sidebar por defecto. El sidebar actual del tarjetahabiente se divide en `Tarjetas`, `Vehiculos` y `Trabajo`; esas rutas consumen `/api/cardholder/*` y se controlan con `cardholderCards`, `cardholderVehicles` y `cardholderWork`.
 
-Usa `/api/cardholders` solo si producto pide una vista operativa para revisar altas incompletas de usuarios con perfil tarjetahabiente. En ese caso, define primero una capability nueva y explicita para esa pantalla; no reutilices las capabilities del portal propio del tarjetahabiente.
+Usa `/api/cardholders` solo si producto pide una vista operativa para revisar altas incompletas de usuarios con perfil tarjetahabiente. En ese caso, la entrada de ruta debe usar `modules.cardholders.canEnter` y sus acciones internas deben salir de `modules.cardholders.actions`; no reutilices las capabilities del portal propio del tarjetahabiente.
+
+Capabilities esperadas:
+
+| Elemento frontend      | Capability                                         | Permiso base              |
+| ---------------------- | -------------------------------------------------- | ------------------------- |
+| Ruta operativa         | `modules.cardholders.canEnter`                     | `cardholders.module`      |
+| Listado                | `modules.cardholders.actions.readList`             | `cardholders.read-list`   |
+| Recargar listado       | `modules.cardholders.actions.refreshList`          | `cardholders.read-list`   |
+| Configurar columnas    | `modules.cardholders.actions.configureColumns`     | `cardholders.read-list`   |
+| Exportar listado       | `modules.cardholders.actions.exportList`           | `cardholders.read-list`   |
+| Filtro por subcompania | `modules.cardholders.actions.openSubCompanyFilter` | `sub-companies.read-list` |
+| Filtro de pendientes   | `modules.cardholders.actions.filterPendingSetup`   | `cardholders.read-list`   |
+| Detalle                | `modules.cardholders.actions.openDetail`           | `cardholders.read-list`   |
+| Drawer de detalle      | `modules.cardholders.actions.openDetailDrawer`     | `cardholders.read-list`   |
 
 Campos visibles recomendados:
 

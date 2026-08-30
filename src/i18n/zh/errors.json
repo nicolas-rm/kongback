@@ -36,7 +36,10 @@
         "notFound": "未找到请求的通知"
     },
     "users": {
-        "notFound": "未找到请求的用户"
+        "notFound": "未找到请求的用户",
+        "cardholderAdministrativePermissions": "持卡人档案不能与管理权限混用",
+        "cardholderAdministrativeRoleConflict": "不能将持卡人档案与管理角色组合使用",
+        "cardholderSubCompanyScopeRequired": "持卡人档案必须分配到子公司"
     },
     "business": {
         "companyReferenceExists": "公司参考已存在",
