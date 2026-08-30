@@ -391,6 +391,7 @@ export const MODULE_CAPABILITIES = {
             openDetailForm: { all: ['stations.read-one'] },
             openDetailAddress: { all: ['stations.read-one'] },
             openAvailableFuels: { all: ['station-fuels.read-list'] },
+            openAvailableFuelsDrawer: { all: ['station-fuels.read-list'] },
             readOne: { all: ['stations.read-one'] },
             readAvailableFuels: { all: ['station-fuels.read-list'] },
             openAddFuel: { all: ['station-fuels.create'] },

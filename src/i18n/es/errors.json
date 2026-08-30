@@ -36,7 +36,10 @@
         "notFound": "No encontramos la notificacion solicitada."
     },
     "users": {
-        "notFound": "No encontramos el usuario solicitado."
+        "notFound": "No encontramos el usuario solicitado.",
+        "cardholderAdministrativePermissions": "El perfil de tarjetahabiente no puede mezclarse con permisos administrativos.",
+        "cardholderAdministrativeRoleConflict": "No puedes combinar el perfil de tarjetahabiente con roles administrativos.",
+        "cardholderSubCompanyScopeRequired": "El perfil de tarjetahabiente debe asignarse a una subcompania."
     },
     "business": {
         "companyReferenceExists": "La referencia de la empresa ya existe.",

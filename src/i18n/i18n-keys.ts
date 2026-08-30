@@ -38,6 +38,9 @@ export const I18N_KEYS = {
         },
         users: {
             notFound: 'errors.users.notFound',
+            cardholderAdministrativePermissions: 'errors.users.cardholderAdministrativePermissions',
+            cardholderAdministrativeRoleConflict: 'errors.users.cardholderAdministrativeRoleConflict',
+            cardholderSubCompanyScopeRequired: 'errors.users.cardholderSubCompanyScopeRequired',
         },
         business: {
             companyReferenceExists: 'errors.business.companyReferenceExists',
