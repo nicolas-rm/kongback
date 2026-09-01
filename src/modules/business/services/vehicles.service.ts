@@ -4,7 +4,7 @@ import { AuditService } from '@/modules/audit/audit.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
-import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
+import { assertActive, invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CreateVehicleDto, FindStatusRecordsDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { DriversRepository } from '@/modules/business/repositories/drivers.repository';
@@ -50,7 +50,7 @@ export class VehiclesService {
             fuelId: dto.fuelId,
             driverId: dto.driverId,
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.VehicleWhereInput>(dto.search, ['plates', 'economicNumber', 'model']) } : {}),
+            ...(dto.search ? { OR: this.vehicleSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -71,7 +71,7 @@ export class VehiclesService {
             id: vehicle.driverId,
             subCompany: subCompanyScopeWhere(scope),
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.DriverWhereInput>(dto.search, ['name', 'externalReference']) } : {}),
+            ...(dto.search ? { OR: this.driverSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.drivers.findMany(where, dto.skip, dto.actualLimit), this.drivers.count(where)]);
         return paginate(data, total, dto);
@@ -152,5 +152,33 @@ export class VehiclesService {
 
     private vehicleReference(vehicle: { plates: string; economicNumber?: string | null }): string {
         return vehicle.economicNumber ? `Vehiculo ${vehicle.economicNumber} (${vehicle.plates})` : `Vehiculo ${vehicle.plates}`;
+    }
+
+    private vehicleSearch(search: string): Prisma.VehicleWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [
+            { plates: contains },
+            { economicNumber: contains },
+            { model: contains },
+            { subCompany: { key: contains } },
+            { subCompany: { name: contains } },
+            { fuel: { code: contains } },
+            { fuel: { name: contains } },
+            { driver: { is: { name: contains } } },
+        ];
+    }
+
+    private driverSearch(search: string): Prisma.DriverWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [
+            { name: contains },
+            { externalReference: contains },
+            { subCompany: { key: contains } },
+            { subCompany: { name: contains } },
+            { user: { is: { username: contains } } },
+            { user: { is: { fullName: contains } } },
+        ];
     }
 }

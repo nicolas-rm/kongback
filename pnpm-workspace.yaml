@@ -1,10 +1,11 @@
 allowBuilds:
-    '@nestjs/core': true
-    '@prisma/engines': true
-    '@scarf/scarf': true
-    argon2: true
-    esbuild: true
-    prisma: true
-    unrs-resolver: true
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': true
+  argon2: true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
 minimumReleaseAgeExclude:
-    - prettier@3.8.5
+  - '@eslint/eslintrc@3.3.7'
+  - globals@17.12.0

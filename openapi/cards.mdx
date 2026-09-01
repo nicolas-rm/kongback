@@ -41,11 +41,21 @@ Requiere header `X-Company-Id: <companyId>`. Todas las operaciones quedan limita
         "id": "e9ef8b38-c983-4b9c-a51c-7d39ff7b1c84",
         "code": "DIESEL",
         "name": "Diesel"
+    },
+    "stock": {
+        "id": "stock-id",
+        "externalId": "cardcloud-card-id",
+        "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+        "assignedCardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+        "maskedPan": "XXXXXXXXXXXX1001",
+        "clientId": "CLIENT-001",
+        "balance": "1000.00",
+        "providerStatus": "NORMAL"
     }
 }
 ```
 
-Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` y `designFuel`.
+Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle`, `designFuel` y `stock`. `stock` puede ser `null` si la tarjeta local no esta enlazada al espejo Cardcloud.
 
 `assignmentMode`: `unassigned`, `vehicle`.
 
@@ -73,9 +83,9 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle` 
 
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `vehicleId`, `designFuelId`, `assignmentMode`.
 
-`search` busca por `externalId`.
+`search` busca por `externalId`, `stock.externalId`, `stock.maskedPan`, `stock.clientId`, `stock.providerStatus`, `subCompany.key`, `subCompany.name`, `vehicle.plates`, `vehicle.economicNumber`, `designFuel.code` y `designFuel.name`.
 
-Para columnas visibles, usa `vehicle.plates`, `vehicle.economicNumber`, `designFuel.name` y `subCompany.name`.
+Para columnas visibles, usa `stock.maskedPan`, `stock.clientId`, `stock.balance`, `stock.providerStatus`, `vehicle.plates`, `vehicle.economicNumber`, `designFuel.name` y `subCompany.name`.
 
 Response `200`: resultado paginado de `Card`.
 
@@ -87,7 +97,7 @@ Path params: `designFuelId` UUID del combustible.
 
 Query params: `page`, `limit`, `search`, `all`, `status`.
 
-Valida que el combustible exista y este activo. `search` busca por `externalId`.
+Valida que el combustible exista y este activo. `search` usa los mismos campos del listado general.
 
 Response `200`: resultado paginado de `Card` filtrado por `designFuelId`.
 
@@ -361,9 +371,11 @@ Este modulo tambien aplica las reglas CRUD de `Frontend Guidelines`: crear con c
 
 ### Para que sirve Tarjetas
 
-`Tarjetas` administra la tarjeta local operativa que ya pertenece a la compania/subcompania seleccionada. Sirve para consultar detalle, movimientos, estado local, combustible de diseno, vehiculo asignado y desactivar/asignar en la operacion diaria.
+`Tarjetas` administra la tarjeta local operativa que ya pertenece a la compania/subcompania seleccionada. Sirve para consultar detalle, datos del espejo Cardcloud, movimientos, estado local, combustible de diseno, vehiculo asignado y desactivar/asignar en la operacion diaria.
 
 No reemplaza `Stock Cardcloud`. `Stock Cardcloud` sincroniza tarjetas del proveedor y decide en que subcompania quedan ubicadas. Una vez ubicada, aparece como tarjeta local para operacion.
+
+El bloque `stock` viene del espejo local `cardcloud-stock`; no llama a Cardcloud externo durante `GET /api/cards`. El `balance` se devuelve descifrado como string decimal. No permitas editar `stock.externalId`, `stock.maskedPan`, `stock.clientId`, `stock.balance` ni `stock.providerStatus` desde Tarjetas.
 
 ### Acciones recomendadas
 

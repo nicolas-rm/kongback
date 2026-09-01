@@ -838,6 +838,26 @@ Resetea secretos 2FA y recovery codes del usuario actual.
 
 Para construir formularios desde esta documentacion, aplica tambien las reglas de `Frontend Guidelines`: no todos los campos del contrato deben mostrarse como controles visibles; algunos se omiten por default, se derivan del contexto o se traducen a nombres de UI.
 
+## Flujo recomendado para app movil con biometria
+
+En app movil, usa los tokens devueltos en `TokenResponse` y autentica requests con `Authorization: Bearer <accessToken>`. Las cookies HttpOnly existen para web; en movil no son el mecanismo recomendado porque obligan a manejar cookie jar y persistencia de cookies.
+
+La biometria del dispositivo no debe enviarse al backend como reemplazo directo de 2FA. El backend no debe confiar en un flag como `biometricPassed: true`, porque eso solo prueba una validacion local de UI. Para que la biometria sea verificable por backend haria falta un flujo criptografico como passkeys/WebAuthn.
+
+Flujo recomendado:
+
+1. En el primer login del dispositivo, llamar `POST /api/authentication/login` con usuario y contrasena.
+2. Si el usuario tiene 2FA activo, completar una vez `POST /api/authentication/2fa/verify-login` con `challengeToken` y codigo TOTP o recovery code.
+3. Cuando el backend devuelva `TokenResponse`, guardar el `refreshToken` en storage seguro protegido por biometria del sistema operativo.
+4. Mantener el `accessToken` en memoria o en storage seguro segun la politica de la app.
+5. En siguientes aperturas, pedir Face ID, Touch ID o huella para desbloquear el `refreshToken` local.
+6. Con ese `refreshToken`, llamar `POST /api/authentication/refresh` y reemplazar tokens por los nuevos.
+7. Usar `Authorization: Bearer <accessToken>` para endpoints autenticados.
+
+El usuario debe volver a pasar por 2FA cuando sea un dispositivo nuevo, cuando cierre sesion, cuando se revoque la sesion, cuando expire el refresh token, cuando venza la sesion total o por inactividad, o despues de cambios sensibles como cambio de contrasena.
+
+El `challengeToken` de 2FA no representa una sesion movil. Debe vivir solo en memoria durante la pantalla de verificacion y descartarse si vence, falla por intentos maximos o el usuario cancela el flujo.
+
 ## Notas para frontend
 
 Este modulo no es CRUD de catalogo, pero aplica las reglas de `Frontend Guidelines` para formularios y acciones: renderiza solo campos necesarios, no persistas secretos, confirma acciones sensibles y refresca estado de sesion, companias o capacidades despues de mutaciones.
@@ -845,6 +865,8 @@ Este modulo no es CRUD de catalogo, pero aplica las reglas de `Frontend Guidelin
 No generes una pagina de menu llamada `authentication`. Estos endpoints deben alimentar pantallas o componentes concretos: login, perfil, seguridad, sesiones, recuperacion de contrasena, selector de compania y carga de capacidades.
 
 Para aplicaciones web, prefiere cookies HttpOnly con requests usando credenciales incluidas. Si usas cookies, no necesitas guardar tokens en storage del navegador.
+
+Para aplicaciones moviles, prefiere `Authorization: Bearer` con tokens del body. Guarda el `refreshToken` en storage seguro del sistema operativo y, si la app usa biometria, usala para desbloquear ese storage local, no para omitir validaciones del backend.
 
 Para timers y expiracion de sesion:
 

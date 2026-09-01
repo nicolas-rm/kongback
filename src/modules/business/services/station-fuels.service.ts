@@ -37,6 +37,7 @@ export class StationFuelsService {
             station: { subCompany: subCompanyScopeWhere(scope) },
             fuelId: dto.fuelId,
             status: dto.status,
+            ...(dto.search ? { OR: this.stationFuelSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -66,5 +67,11 @@ export class StationFuelsService {
         if (!stationFuel) throw notFound();
         void this.audit.recordBusiness({ action: 'station_fuel_deactivated', resourceType: 'StationFuel', resourceId: stationFuel.id, after: { id: stationFuel.id, status: stationFuel.status } });
         return { id: stationFuel.id, status: stationFuel.status };
+    }
+
+    private stationFuelSearch(search: string): Prisma.StationFuelWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [{ station: { stationNumber: contains } }, { station: { name: contains } }, { fuel: { code: contains } }, { fuel: { name: contains } }];
     }
 }

@@ -7,7 +7,7 @@ export type CapabilityRequirement = {
 export type SidebarCapabilityDefinition = CapabilityRequirement & {
     label: string;
     path: string;
-    section: 'inicio' | 'administracion' | 'operacion' | 'cardcloud' | 'tarjetahabiente' | 'documentos' | 'auditoria';
+    section: 'inicio' | 'administracion' | 'operacion' | 'cardcloud' | 'tarjetahabiente' | 'documentos';
 };
 
 export type ModuleCapabilityDefinition = {
@@ -21,30 +21,31 @@ export const SIDEBAR_CAPABILITIES = {
     users: { label: 'Usuarios', path: '/administration/users', section: 'administracion', all: ['users.module'] },
     roles: { label: 'Roles', path: '/administration/roles', section: 'administracion', all: ['roles.module'] },
     permissions: { label: 'Permisos', path: '/administration/permissions', section: 'administracion', all: ['permissions.module'] },
-    companies: { label: 'Companias', path: '/administration/companies', section: 'administracion', all: ['companies.module'] },
-    subCompanies: { label: 'Subcompanias', path: '/administration/sub-companies', section: 'administracion', all: ['sub-companies.module'] },
+    companies: { label: 'Compañías', path: '/administration/companies', section: 'administracion', all: ['companies.module'] },
+    subCompanies: { label: 'Subcompañías', path: '/administration/sub-companies', section: 'administracion', all: ['sub-companies.module'] },
     drivers: { label: 'Conductores', path: '/operation/drivers', section: 'operacion', all: ['drivers.module'] },
-    vehicles: { label: 'Vehiculos', path: '/operation/vehicles', section: 'operacion', all: ['vehicles.module'] },
+    vehicles: { label: 'Vehículos', path: '/operation/vehicles', section: 'operacion', all: ['vehicles.module'] },
     cards: { label: 'Tarjetas', path: '/operation/cards', section: 'operacion', all: ['cards.module'] },
     fuels: { label: 'Combustibles', path: '/operation/fuels', section: 'operacion', all: ['fuels.module'] },
     stations: { label: 'Estaciones', path: '/operation/stations', section: 'operacion', all: ['stations.module'] },
     cardcloudAccount: { label: 'Cuenta', path: '/cardcloud/account', section: 'cardcloud', all: ['cardcloud.account.read-one'] },
     cardcloudStock: { label: 'Stock', path: '/cardcloud/stock', section: 'cardcloud', all: ['cardcloud-stock.module'] },
-    cardcloudTransfers: { label: 'Transferencias', path: '/cardcloud/transfers', section: 'cardcloud', any: ['cardcloud.account.transfer', 'cardcloud.account.transfer.bulk'] },
     cardcloudSubaccounts: { label: 'Subcuentas', path: '/cardcloud/subaccounts', section: 'cardcloud', all: ['cardcloud.subaccounts.read-list'] },
     cardholderCards: { label: 'Tarjetas', path: '/cardholders/cards', section: 'tarjetahabiente', all: ['cardholder.cards.read-list'] },
-    cardholderVehicles: { label: 'Vehiculos', path: '/cardholders/vehicles', section: 'tarjetahabiente', all: ['cardholder.vehicles.read-list'] },
+    cardholderVehicles: { label: 'Vehículos', path: '/cardholders/vehicles', section: 'tarjetahabiente', all: ['cardholder.vehicles.read-list'] },
     cardholderWork: { label: 'Trabajo', path: '/cardholders/work', section: 'tarjetahabiente', all: ['cardholder.sub-companies.read-one'] },
     documents: { label: 'Documentos', path: '/documents', section: 'documentos', all: ['documents.module'] },
-    audit: { label: 'Auditoria', path: '/audit', section: 'auditoria', all: ['audit.module'] },
 } as const satisfies Record<string, SidebarCapabilityDefinition>;
 
 export const MODULE_CAPABILITIES = {
     dashboard: {
         canEnter: { authenticated: true },
         permissions: [],
-        actions: { read: { authenticated: true } },
+        actions: {
+            read: { authenticated: true },
+        },
     },
+
     users: {
         canEnter: { all: ['users.module'] },
         permissions: [
@@ -66,21 +67,20 @@ export const MODULE_CAPABILITIES = {
             create: { all: ['users.create'] },
             refreshList: { all: ['users.read-list'] },
             readList: { all: ['users.read-list'] },
+            configureColumns: { all: ['users.read-list'] },
+            exportList: { all: ['users.read-list'] },
             openDetail: { all: ['users.read-one'] },
             openDetailDrawer: { all: ['users.read-one'] },
             readOne: { all: ['users.read-one'] },
             openEdit: { all: ['users.update'] },
             openEditModal: { all: ['users.update'] },
             update: { all: ['users.update'] },
-            delete: { all: ['users.delete'] },
-            configureColumns: { all: ['users.read-list'] },
-            exportList: { all: ['users.read-list'] },
             openAccess: { any: ['users.access.read', 'users.access.assign'] },
             openAccessModal: { any: ['users.access.read', 'users.access.assign'] },
+            readAccess: { all: ['users.access.read'] },
             assignAccess: { all: ['users.access.assign'] },
             replaceAccess: { all: ['users.access.assign'] },
             removeAccess: { all: ['users.access.assign'] },
-            readAccess: { all: ['users.access.read'] },
             openPermissions: { all: ['users.permissions.read'] },
             openPermissionsTab: { all: ['users.permissions.read'] },
             readPermissions: { all: ['users.permissions.read'] },
@@ -95,6 +95,7 @@ export const MODULE_CAPABILITIES = {
             resendCredentials: { all: ['users.credentials.resend'] },
         },
     },
+
     roles: {
         canEnter: { all: ['roles.module'] },
         permissions: ['roles.module', 'roles.create', 'roles.read-list', 'roles.read-one', 'roles.update', 'roles.delete', 'roles.permissions.assign', 'roles.permissions.read'],
@@ -116,32 +117,25 @@ export const MODULE_CAPABILITIES = {
             delete: { all: ['roles.delete'] },
             openPermissions: { any: ['roles.permissions.read', 'roles.permissions.assign'] },
             openPermissionsTab: { any: ['roles.permissions.read', 'roles.permissions.assign'] },
+            readPermissions: { all: ['roles.permissions.read'] },
             assignPermissions: { all: ['roles.permissions.assign'] },
             replacePermissions: { all: ['roles.permissions.assign'] },
-            readPermissions: { all: ['roles.permissions.read'] },
         },
     },
+
     permissions: {
         canEnter: { all: ['permissions.module'] },
         permissions: ['permissions.module', 'permissions.create', 'permissions.read-list', 'permissions.read-one', 'permissions.update', 'permissions.delete'],
         actions: {
-            openCreate: { all: ['permissions.create'] },
-            create: { all: ['permissions.create'] },
             refreshList: { all: ['permissions.read-list'] },
             readList: { all: ['permissions.read-list'] },
             configureColumns: { all: ['permissions.read-list'] },
             exportList: { all: ['permissions.read-list'] },
             openDetail: { all: ['permissions.read-one'] },
-            openDetailDrawer: { all: ['permissions.read-one'] },
             readOne: { all: ['permissions.read-one'] },
-            openEdit: { all: ['permissions.update'] },
-            openEditDrawer: { all: ['permissions.update'] },
-            update: { all: ['permissions.update'] },
-            openDelete: { all: ['permissions.delete'] },
-            openDeleteDialog: { all: ['permissions.delete'] },
-            delete: { all: ['permissions.delete'] },
         },
     },
+
     companies: {
         canEnter: { all: ['companies.module'] },
         permissions: ['companies.module', 'companies.create', 'companies.read-list', 'companies.read-one', 'companies.update', 'companies.delete'],
@@ -166,13 +160,24 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['companies.update'] },
             openDeactivate: { all: ['companies.delete'] },
             openDeactivateDialog: { all: ['companies.delete'] },
-            delete: { all: ['companies.delete'] },
             deactivate: { all: ['companies.delete'] },
+            delete: { all: ['companies.delete'] },
         },
     },
+
     subCompanies: {
         canEnter: { all: ['sub-companies.module'] },
-        permissions: ['sub-companies.module', 'sub-companies.create', 'sub-companies.read-list', 'sub-companies.read-one', 'sub-companies.update', 'sub-companies.delete'],
+        permissions: [
+            'sub-companies.module',
+            'sub-companies.create',
+            'sub-companies.read-list',
+            'sub-companies.read-one',
+            'sub-companies.update',
+            'sub-companies.delete',
+            'drivers.download',
+            'vehicles.download',
+            'cards.download',
+        ],
         actions: {
             openCreate: { all: ['sub-companies.create'] },
             openCreateForm: { all: ['sub-companies.create'] },
@@ -194,8 +199,8 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['sub-companies.update'] },
             openDeactivate: { all: ['sub-companies.delete'] },
             openDeactivateDialog: { all: ['sub-companies.delete'] },
-            delete: { all: ['sub-companies.delete'] },
             deactivate: { all: ['sub-companies.delete'] },
+            delete: { all: ['sub-companies.delete'] },
             openRelatedData: { any: ['drivers.download', 'vehicles.download', 'cards.download'] },
             openRelatedDrivers: { all: ['drivers.download'] },
             openRelatedVehicles: { all: ['vehicles.download'] },
@@ -208,9 +213,21 @@ export const MODULE_CAPABILITIES = {
             downloadCards: { all: ['cards.download'] },
         },
     },
+
     drivers: {
         canEnter: { all: ['drivers.module'] },
-        permissions: ['drivers.module', 'drivers.create', 'drivers.read-list', 'drivers.read-one', 'drivers.vehicles.read-list', 'drivers.download', 'drivers.update', 'drivers.delete'],
+        permissions: [
+            'drivers.module',
+            'drivers.create',
+            'drivers.read-list',
+            'drivers.read-one',
+            'drivers.vehicles.read-list',
+            'drivers.download',
+            'drivers.update',
+            'drivers.delete',
+            'sub-companies.read-list',
+            'users.read-list',
+        ],
         actions: {
             openCreate: { all: ['drivers.create'] },
             openCreateForm: { all: ['drivers.create'] },
@@ -240,10 +257,11 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['drivers.update'] },
             openDeactivate: { all: ['drivers.delete'] },
             openDeactivateDialog: { all: ['drivers.delete'] },
-            delete: { all: ['drivers.delete'] },
             deactivate: { all: ['drivers.delete'] },
+            delete: { all: ['drivers.delete'] },
         },
     },
+
     vehicles: {
         canEnter: { all: ['vehicles.module'] },
         permissions: [
@@ -256,6 +274,9 @@ export const MODULE_CAPABILITIES = {
             'vehicles.update',
             'vehicles.driver.assign',
             'vehicles.delete',
+            'sub-companies.read-list',
+            'fuels.read-list',
+            'drivers.read-list',
         ],
         actions: {
             openCreate: { all: ['vehicles.create'] },
@@ -284,10 +305,11 @@ export const MODULE_CAPABILITIES = {
             unassignDriver: { all: ['vehicles.driver.assign'] },
             openDeactivate: { all: ['vehicles.delete'] },
             openDeactivateDialog: { all: ['vehicles.delete'] },
-            delete: { all: ['vehicles.delete'] },
             deactivate: { all: ['vehicles.delete'] },
+            delete: { all: ['vehicles.delete'] },
         },
     },
+
     cards: {
         canEnter: { all: ['cards.module'] },
         permissions: [
@@ -305,6 +327,10 @@ export const MODULE_CAPABILITIES = {
             'cards.vehicle.assign',
             'cards.unassign',
             'cards.delete',
+            'vehicles.read-list',
+            'sub-companies.read-list',
+            'fuels.read-list',
+            'cardcloud-stock.sub-company.assign',
         ],
         actions: {
             refreshList: { all: ['cards.read-list'] },
@@ -333,8 +359,8 @@ export const MODULE_CAPABILITIES = {
             updateAssignment: { all: ['cards.assignment.update'] },
             openDeactivate: { all: ['cards.delete'] },
             openDeactivateDialog: { all: ['cards.delete'] },
-            delete: { all: ['cards.delete'] },
             deactivate: { all: ['cards.delete'] },
+            delete: { all: ['cards.delete'] },
             openSubCompanySelect: { all: ['sub-companies.read-list'] },
             openFuelSelect: { all: ['fuels.read-list'] },
             readByDesignFuel: { all: ['cards.design-fuel.read'] },
@@ -349,6 +375,7 @@ export const MODULE_CAPABILITIES = {
             assignCardcloud: { all: ['cardcloud-stock.sub-company.assign'] },
         },
     },
+
     fuels: {
         canEnter: { all: ['fuels.module'] },
         permissions: ['fuels.module', 'fuels.create', 'fuels.read-list', 'fuels.read-one', 'fuels.update', 'fuels.delete'],
@@ -368,13 +395,26 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['fuels.update'] },
             openDeactivate: { all: ['fuels.delete'] },
             openDeactivateDialog: { all: ['fuels.delete'] },
-            delete: { all: ['fuels.delete'] },
             deactivate: { all: ['fuels.delete'] },
+            delete: { all: ['fuels.delete'] },
         },
     },
+
     stations: {
         canEnter: { all: ['stations.module'] },
-        permissions: ['stations.module', 'stations.create', 'stations.read-list', 'stations.read-one', 'stations.update', 'stations.delete'],
+        permissions: [
+            'stations.module',
+            'stations.create',
+            'stations.read-list',
+            'stations.read-one',
+            'stations.update',
+            'stations.delete',
+            'sub-companies.read-list',
+            'station-fuels.read-list',
+            'station-fuels.create',
+            'station-fuels.update',
+            'station-fuels.delete',
+        ],
         actions: {
             openCreate: { all: ['stations.create'] },
             openCreateDrawer: { all: ['stations.create'] },
@@ -390,9 +430,9 @@ export const MODULE_CAPABILITIES = {
             openDetailDrawer: { all: ['stations.read-one'] },
             openDetailForm: { all: ['stations.read-one'] },
             openDetailAddress: { all: ['stations.read-one'] },
+            readOne: { all: ['stations.read-one'] },
             openAvailableFuels: { all: ['station-fuels.read-list'] },
             openAvailableFuelsDrawer: { all: ['station-fuels.read-list'] },
-            readOne: { all: ['stations.read-one'] },
             readAvailableFuels: { all: ['station-fuels.read-list'] },
             openAddFuel: { all: ['station-fuels.create'] },
             addFuel: { all: ['station-fuels.create'] },
@@ -405,10 +445,11 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['stations.update'] },
             openDeactivate: { all: ['stations.delete'] },
             openDeactivateDialog: { all: ['stations.delete'] },
-            delete: { all: ['stations.delete'] },
             deactivate: { all: ['stations.delete'] },
+            delete: { all: ['stations.delete'] },
         },
     },
+
     stationFuels: {
         canEnter: { all: ['station-fuels.module'] },
         permissions: ['station-fuels.module', 'station-fuels.create', 'station-fuels.read-list', 'station-fuels.read-one', 'station-fuels.update', 'station-fuels.delete'],
@@ -425,10 +466,11 @@ export const MODULE_CAPABILITIES = {
             update: { all: ['station-fuels.update'] },
             openDeactivate: { all: ['station-fuels.delete'] },
             openDeactivateDialog: { all: ['station-fuels.delete'] },
-            delete: { all: ['station-fuels.delete'] },
             deactivate: { all: ['station-fuels.delete'] },
+            delete: { all: ['station-fuels.delete'] },
         },
     },
+
     cardcloudAccount: {
         canEnter: { all: ['cardcloud.account.read-one'] },
         permissions: ['cardcloud.module', 'cardcloud.account.read-one', 'cardcloud.account.movements.read-list'],
@@ -441,11 +483,20 @@ export const MODULE_CAPABILITIES = {
             filterMovements: { all: ['cardcloud.account.movements.read-list'] },
             clearMovementFilters: { all: ['cardcloud.account.movements.read-list'] },
             consultMovements: { all: ['cardcloud.account.movements.read-list'] },
+            exportMovements: { all: ['cardcloud.account.movements.read-list'] },
         },
     },
+
     cardcloudStock: {
         canEnter: { all: ['cardcloud-stock.module'] },
-        permissions: ['cardcloud-stock.module', 'cardcloud-stock.read-list', 'cardcloud-stock.sync', 'cardcloud-stock.sub-company.assign', 'cardcloud-stock.sub-company.unassign'],
+        permissions: [
+            'cardcloud-stock.module',
+            'cardcloud-stock.read-list',
+            'cardcloud-stock.sync',
+            'cardcloud-stock.sub-company.assign',
+            'cardcloud-stock.sub-company.unassign',
+            'sub-companies.read-list',
+        ],
         actions: {
             refreshList: { all: ['cardcloud-stock.read-list'] },
             readList: { all: ['cardcloud-stock.read-list'] },
@@ -453,7 +504,6 @@ export const MODULE_CAPABILITIES = {
             exportList: { all: ['cardcloud-stock.read-list'] },
             openDetail: { all: ['cardcloud-stock.read-list'] },
             openDetailDialog: { all: ['cardcloud-stock.read-list'] },
-            readOne: { all: ['cardcloud-stock.read-list'] },
             openSync: { all: ['cardcloud-stock.sync'] },
             sync: { all: ['cardcloud-stock.sync'] },
             openAssignSubCompany: { all: ['cardcloud-stock.sub-company.assign'] },
@@ -465,9 +515,10 @@ export const MODULE_CAPABILITIES = {
             unassignSubCompany: { all: ['cardcloud-stock.sub-company.unassign'] },
         },
     },
+
     cardcloudTransfers: {
         canEnter: { any: ['cardcloud.account.transfer', 'cardcloud.account.transfer.bulk'] },
-        permissions: ['cardcloud.account.transfer', 'cardcloud.account.transfer.bulk'],
+        permissions: ['cardcloud.module', 'cardcloud.account.transfer', 'cardcloud.account.transfer.bulk'],
         actions: {
             transfer: { all: ['cardcloud.account.transfer'] },
             transferBulk: { all: ['cardcloud.account.transfer.bulk'] },
@@ -475,16 +526,16 @@ export const MODULE_CAPABILITIES = {
             uploadExcel: { all: ['cardcloud.account.transfer.bulk'] },
         },
     },
+
     cardcloudSubaccounts: {
         canEnter: { all: ['cardcloud.subaccounts.read-list'] },
         permissions: [
+            'cardcloud.module',
             'cardcloud.subaccounts.read-list',
             'cardcloud.subaccounts.read-one',
             'cardcloud.subaccounts.cards.read-list',
             'cardcloud.subaccounts.create',
             'cardcloud.subaccounts.movements.read-list',
-            'cardcloud.cards.assign',
-            'cardcloud.cards.assign.bulk',
         ],
         actions: {
             refreshList: { all: ['cardcloud.subaccounts.read-list'] },
@@ -506,13 +557,13 @@ export const MODULE_CAPABILITIES = {
             filterMovements: { all: ['cardcloud.subaccounts.movements.read-list'] },
             clearMovementFilters: { all: ['cardcloud.subaccounts.movements.read-list'] },
             exportMovements: { all: ['cardcloud.subaccounts.movements.read-list'] },
-            assignCards: { all: ['cardcloud.cards.assign'] },
-            assignCardsBulk: { all: ['cardcloud.cards.assign.bulk'] },
         },
     },
+
     cardcloudCards: {
-        canEnter: { any: ['cardcloud.cards.read-one', 'cardcloud.cards.movements.read-list'] },
+        canEnter: { all: ['cardcloud.cards.read-one'] },
         permissions: [
+            'cardcloud.module',
             'cardcloud.cards.read-one',
             'cardcloud.cards.movements.read-list',
             'cardcloud.cards.movements.read-one',
@@ -524,8 +575,15 @@ export const MODULE_CAPABILITIES = {
             'cardcloud.cards.unblock',
         ],
         actions: {
+            openDetail: { all: ['cardcloud.cards.read-one'] },
+            openDetailRoute: { all: ['cardcloud.cards.read-one'] },
             readOne: { all: ['cardcloud.cards.read-one'] },
+            openMovementsSection: { all: ['cardcloud.cards.movements.read-list'] },
             readMovements: { all: ['cardcloud.cards.movements.read-list'] },
+            filterMovements: { all: ['cardcloud.cards.movements.read-list'] },
+            clearMovementFilters: { all: ['cardcloud.cards.movements.read-list'] },
+            exportMovements: { all: ['cardcloud.cards.movements.read-list'] },
+            openMovementDetail: { all: ['cardcloud.cards.movements.read-one'] },
             readMovement: { all: ['cardcloud.cards.movements.read-one'] },
             readSensitive: { all: ['cardcloud.cards.sensitive.read-one'] },
             readCvv: { all: ['cardcloud.cards.cvv.read'] },
@@ -535,6 +593,7 @@ export const MODULE_CAPABILITIES = {
             unblock: { all: ['cardcloud.cards.unblock'] },
         },
     },
+
     cardholder: {
         canEnter: { all: ['cardholder.module'] },
         permissions: [
@@ -579,6 +638,7 @@ export const MODULE_CAPABILITIES = {
             validate: { all: ['cardholder.cards.validate'] },
         },
     },
+
     cardholderCards: {
         canEnter: { all: ['cardholder.cards.read-list'] },
         permissions: [
@@ -609,6 +669,7 @@ export const MODULE_CAPABILITIES = {
             powerOn: { all: ['cardholder.cards.power.on'] },
         },
     },
+
     cardholderVehicles: {
         canEnter: { all: ['cardholder.vehicles.read-list'] },
         permissions: ['cardholder.vehicles.read-list'],
@@ -616,6 +677,7 @@ export const MODULE_CAPABILITIES = {
             readList: { all: ['cardholder.vehicles.read-list'] },
         },
     },
+
     cardholderWork: {
         canEnter: { all: ['cardholder.sub-companies.read-one'] },
         permissions: ['cardholder.sub-companies.read-one'],
@@ -623,9 +685,10 @@ export const MODULE_CAPABILITIES = {
             readOne: { all: ['cardholder.sub-companies.read-one'] },
         },
     },
+
     cardholders: {
         canEnter: { all: ['cardholders.module'] },
-        permissions: ['cardholders.module', 'cardholders.read-list'],
+        permissions: ['cardholders.module', 'cardholders.read-list', 'sub-companies.read-list'],
         actions: {
             refreshList: { all: ['cardholders.read-list'] },
             readList: { all: ['cardholders.read-list'] },
@@ -637,9 +700,10 @@ export const MODULE_CAPABILITIES = {
             openDetailDrawer: { all: ['cardholders.read-list'] },
         },
     },
+
     documents: {
         canEnter: { all: ['documents.module'] },
-        permissions: ['documents.module', 'documents.create', 'documents.read-list', 'documents.read-one', 'documents.download', 'documents.update', 'documents.delete'],
+        permissions: ['documents.module', 'documents.create', 'documents.read-list', 'documents.read-one', 'documents.download', 'documents.update', 'documents.delete', 'sub-companies.read-list'],
         actions: {
             openCreate: { all: ['documents.create'] },
             create: { all: ['documents.create'] },
@@ -660,6 +724,7 @@ export const MODULE_CAPABILITIES = {
             delete: { all: ['documents.delete'] },
         },
     },
+
     notifications: {
         canEnter: { all: ['notifications.module'] },
         permissions: ['notifications.module', 'notifications.create', 'notifications.read-list', 'notifications.unread-count.read', 'notifications.mark-read', 'notifications.mark-read-all'],
@@ -679,6 +744,7 @@ export const MODULE_CAPABILITIES = {
             openAdminCreate: { all: ['notifications.create'] },
         },
     },
+
     audit: {
         canEnter: { all: ['audit.module'] },
         permissions: ['audit.module', 'audit.read-list', 'audit.read-one'],

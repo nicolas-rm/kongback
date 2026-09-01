@@ -1,6 +1,6 @@
 ---
 title: Cardcloud Stock
-description: Endpoints del espejo local de stock Cardcloud y su asignacion a subcompanias.
+description: Endpoints del espejo local de stock Cardcloud y su asignacion a subcompanias/subcuentas.
 ---
 
 # Cardcloud Stock
@@ -11,12 +11,12 @@ Este modulo administra el espejo local de stock Cardcloud. La tabla local se man
 
 ## Endpoints
 
-| Metodo  | Ruta                                            | Permiso                                | Alcance          | Descripcion                       |
-| ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | --------------------------------- |
-| `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock.      |
-| `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local de stock. |
-| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock a una subcompania.   |
-| `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita stock de una subcompania.   |
+| Metodo  | Ruta                                            | Permiso                                | Alcance          | Descripcion                           |
+| ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | ------------------------------------- |
+| `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock.          |
+| `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local de stock.     |
+| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock a subcompania/subcuenta. |
+| `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita stock de una subcompania.       |
 
 ## Listar stock local
 
@@ -32,13 +32,13 @@ Con `X-Company-Id`, opera dentro de la compania seleccionada: devuelve stock sin
 
 Query params:
 
-| Campo            | Tipo     | Requerido | Descripcion                                                                    |
-| ---------------- | -------- | --------- | ------------------------------------------------------------------------------ |
-| `page`           | `number` | No        | Pagina. Default `1`.                                                           |
-| `limit`          | `number` | No        | Registros por pagina. Maximo `100`.                                            |
-| `search`         | `string` | No        | Busca en id sincronizado del proveedor, `maskedPan`, `clientId` y subcompania. |
-| `providerStatus` | `string` | No        | Filtra por el status crudo recibido de Cardcloud.                              |
-| `subCompanyId`   | `string` | No        | Filtra por subcompania asignada.                                               |
+| Campo            | Tipo     | Requerido | Descripcion                                                                                      |
+| ---------------- | -------- | --------- | ------------------------------------------------------------------------------------------------ |
+| `page`           | `number` | No        | Pagina. Default `1`.                                                                             |
+| `limit`          | `number` | No        | Registros por pagina. Maximo `100`.                                                              |
+| `search`         | `string` | No        | Busca en id sincronizado del proveedor, `maskedPan`, `clientId`, `providerStatus` y subcompania. |
+| `providerStatus` | `string` | No        | Filtra por el status crudo recibido de Cardcloud.                                                |
+| `subCompanyId`   | `string` | No        | Filtra por subcompania asignada.                                                                 |
 
 Response `200`:
 
@@ -47,6 +47,7 @@ Response `200`:
     "data": [
         {
             "id": "stock-id",
+            "externalId": "cardcloud-card-id",
             "subCompanyId": null,
             "assignedCardId": null,
             "maskedPan": "XXXXXXXXXXXX1001",
@@ -104,12 +105,12 @@ Reglas:
 - `externalId` se toma solo de `card_id`; el campo externo `card_external_id` no se usa para crear o actualizar el espejo.
 - `skipped` cuenta tarjetas sin `card_id` util o duplicadas.
 - Las tarjetas que ya no vengan en Cardcloud se marcan como `inactive` en el espejo local.
-- El sync actualiza datos del proveedor (`externalId`, `maskedPan`, `clientId`, `balance`, `providerStatus`) sin cambiar la asignacion local a subcompania. `externalId` se conserva solo para sincronizacion interna y no se devuelve en las respuestas del stock local.
+- El sync actualiza datos del proveedor (`externalId`, `maskedPan`, `clientId`, `balance`, `providerStatus`) sin cambiar la asignacion local a subcompania. `externalId` se devuelve en el stock local como identificador externo de la tarjeta Cardcloud, pero no es editable desde UI.
 - `balance` se guarda cifrado en base de datos y se devuelve descifrado como string decimal.
 
 ## Asignacion local de stock
 
-Estas acciones no llaman a la API externa. Solo administran a que subcompania pertenece una tarjeta dentro del espejo local.
+Estas acciones administran a que subcompania pertenece una tarjeta dentro del espejo local. Al asignar/cambiar subcompania, el backend mueve primero la tarjeta a la subcuenta Cardcloud de la subcompania destino y solo actualiza el estado local si Cardcloud responde correctamente.
 
 `PATCH /api/cardcloud-stock/:id/assign-sub-company`
 
@@ -117,15 +118,16 @@ Requiere `RequireSystemOrCompanyAccess` y permiso `cardcloud-stock.sub-company.a
 
 Body:
 
-| Campo          | Tipo     | Requerido | Descripcion                          |
-| -------------- | -------- | --------- | ------------------------------------ |
-| `subCompanyId` | `string` | Si        | Subcompania destino del stock local. |
+| Campo          | Tipo     | Requerido | Descripcion                                                        |
+| -------------- | -------- | --------- | ------------------------------------------------------------------ |
+| `subCompanyId` | `string` | Si        | Subcompania destino. El backend deriva su `cardcloudSubaccountId`. |
 
 Response `200`:
 
 ```json
 {
     "id": "stock-id",
+    "externalId": "cardcloud-card-id",
     "subCompanyId": "sub-company-id",
     "assignedCardId": null,
     "maskedPan": "XXXXXXXXXXXX1001",
@@ -145,6 +147,12 @@ Response `200`:
 Reglas:
 
 - `subCompanyId` debe existir, estar activo y ser visible dentro del alcance del usuario.
+- La subcompania destino debe tener `cardcloudSubaccountId`; si no lo tiene, devuelve `400`.
+- Antes de guardar el cambio local, llama a Cardcloud `/v1/account/cards/assign_bulk` con `subaccount_id = SubCompany.cardcloudSubaccountId` y `cards = [Cardcloud.externalId]`.
+- Si el stock ya pertenece a esa misma subcompania, no llama a Cardcloud y devuelve el estado actual.
+- Si Cardcloud rechaza la asignacion, devuelve `400` con `reason: cardcloud_assignment_rejected` y no cambia `Cardcloud.subCompanyId` ni la tarjeta local enlazada.
+- Si Cardcloud responde error tecnico o no disponible, devuelve `502` y no cambia datos locales.
+- Si el stock tiene una `Card` local enlazada y esta pertenece a otra subcompania, tambien mueve esa `Card` local a la subcompania destino y limpia `vehicleId`, `assignmentMode` y `assignedAt`.
 - Sin `X-Company-Id`, requiere acceso global y la subcompania determina a que compania queda asociado el stock.
 - Con `X-Company-Id`, `subCompanyId` debe pertenecer a esa compania y respetar el alcance por subcompania del usuario.
 - Con `X-Company-Id`, solo puede asignar stock sin subcompania o stock ya asignado a una subcompania visible para ese usuario.
@@ -192,8 +200,8 @@ El modal `Detalle de stock` no debe llamar a un endpoint `GET /api/cardcloud-sto
 
 La accion `Sincronizar stock Cardcloud` debe ser un boton/accion tecnica de administracion global, no una pagina separada ni una accion por compania. Solo mostrarla cuando `modules.cardcloudStock.actions.sync` sea `true` y el usuario tenga acceso de sistema.
 
-Para asignar stock a una subcompania, usa `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde una accion del inventario/stock. En modo compania, envia `X-Company-Id`. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual.
+Para asignar o cambiar stock a una subcompania, usa `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde una accion del inventario/stock. En modo compania, envia `X-Company-Id`. El usuario no debe escribir `subCompanyId`; debe seleccionarlo desde un select filtrado por la compania actual. Esta accion mueve primero la tarjeta a la subcuenta Cardcloud relacionada y despues actualiza el espejo local.
 
-No crees una pantalla CRUD manual para modificar datos sincronizados como `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra enmascarado con `X` y solo los ultimos 4 digitos visibles. Usa `id` para identificar el stock local; no dependas de ids externos en la UI.
+No crees una pantalla CRUD manual para modificar datos sincronizados como `externalId`, `maskedPan`, `clientId`, `balance` o `providerStatus`. Esos campos vienen de Cardcloud y se refrescan con `sync`; `maskedPan` se muestra enmascarado con `X` y solo los ultimos 4 digitos visibles. Usa `id` para acciones propias de `/api/cardcloud-stock`. Usa `externalId` solo cuando una accion externa de Cardcloud requiera el UUID/id de tarjeta del proveedor.
 
-Si producto habilita operaciones externas desde Stock, el backend debe devolver un identificador externo explicito (`cardUuid` o `externalId`) para mostrar acciones de `modules.cardcloudCards.actions.*`. No uses el `id` local de stock como UUID de Cardcloud.
+El listado ya devuelve `externalId` como identificador externo explicito. No uses el `id` local de stock como UUID de Cardcloud.

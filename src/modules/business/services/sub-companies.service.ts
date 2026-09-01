@@ -6,7 +6,7 @@ import { I18N_KEYS, I18nHttpException } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { hasCompanyWideScope, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
-import { invalidRelation, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
+import { invalidRelation, notFound, toAddressData } from '@/modules/business/business.helpers';
 import { CreateSubCompanyDto, FindSubCompaniesDto, UpdateSubCompanyDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { SubCompaniesRepository } from '@/modules/business/repositories/sub-companies.repository';
@@ -77,10 +77,16 @@ export class SubCompaniesService {
         return `${companyKey}__${subCompanyKey}`;
     }
 
+    private subCompanySearch(search: string): Prisma.SubCompanyWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [{ key: contains }, { cardcloudSubaccountId: contains }, { name: contains }, { company: { key: contains } }, { company: { name: contains } }];
+    }
+
     async findAll(dto: FindSubCompaniesDto, scope?: CompanyScope) {
         const where: Prisma.SubCompanyWhereInput = {
             AND: [{ ...(dto.companyId ? { companyId: dto.companyId } : {}) }, subCompanyScopeWhere(scope), { ...(dto.status ? { status: dto.status } : {}) }],
-            ...(dto.search ? { OR: textSearch<Prisma.SubCompanyWhereInput>(dto.search, ['key', 'cardcloudSubaccountId', 'name']) } : {}),
+            ...(dto.search ? { OR: this.subCompanySearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);

@@ -25,16 +25,16 @@ Requiere header `X-Company-Id: <companyId>`. El listado queda limitado a usuario
 
 Query params:
 
-| Campo          | Tipo      | Requerido | Descripcion                                                              |
-| -------------- | --------- | --------- | ------------------------------------------------------------------------ |
-| `page`         | `number`  | No        | Pagina. Default `1`.                                                     |
-| `limit`        | `number`  | No        | Registros por pagina. Maximo `100`.                                      |
-| `search`       | `string`  | No        | Busca por usuario, correo, nombre, conductor o subcompania.              |
-| `all`          | `boolean` | No        | Devuelve hasta `100` registros.                                          |
-| `status`       | `Status`  | No        | Filtra por estatus del usuario.                                          |
-| `subCompanyId` | `uuid`    | No        | Filtra tarjetahabientes con acceso a una subcompania especifica.         |
-| `hasDriver`    | `boolean` | No        | `true` solo vinculados a conductor; `false` solo sin conductor visible.  |
-| `hasCards`     | `boolean` | No        | `true` solo con tarjetas vinculadas; `false` solo sin tarjetas visibles. |
+| Campo          | Tipo      | Requerido | Descripcion                                                                           |
+| -------------- | --------- | --------- | ------------------------------------------------------------------------------------- |
+| `page`         | `number`  | No        | Pagina. Default `1`.                                                                  |
+| `limit`        | `number`  | No        | Registros por pagina. Maximo `100`.                                                   |
+| `search`       | `string`  | No        | Busca por usuario, correo, nombre, conductor, subcompania, vehiculo, tarjeta o stock. |
+| `all`          | `boolean` | No        | Devuelve hasta `100` registros.                                                       |
+| `status`       | `Status`  | No        | Filtra por estatus del usuario.                                                       |
+| `subCompanyId` | `uuid`    | No        | Filtra tarjetahabientes con acceso a una subcompania especifica.                      |
+| `hasDriver`    | `boolean` | No        | `true` solo vinculados a conductor; `false` solo sin conductor visible.               |
+| `hasCards`     | `boolean` | No        | `true` solo con tarjetas vinculadas; `false` solo sin tarjetas visibles.              |
 
 Response `200`:
 

@@ -257,7 +257,7 @@ Base path: `/api/cardcloud-stock`
 | ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock Cardcloud.          | Expone inventario financiero/operativo sincronizado sin llamar al proveedor en cada consulta. |
 | `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local global desde Cardcloud. | Accion tecnica global sobre inventario del proveedor.                                         |
-| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock local a subcompania.               | Ubica tarjeta de proveedor en una operacion local.                                            |
+| `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock a subcompania/subcuenta.           | Mueve la tarjeta a la subcuenta Cardcloud destino antes de actualizar el espejo local.        |
 | `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita subcompania del stock local.              | Libera stock local sin llamar al proveedor externo.                                           |
 
 ## CardcloudController

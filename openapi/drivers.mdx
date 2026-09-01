@@ -67,7 +67,7 @@ En listados, `subCompany` y `user` se devuelven como summaries y `address` no se
 
 Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `userId`.
 
-`search` busca por `name` y `externalReference`.
+`search` busca por `name`, `externalReference`, `subCompany.key`, `subCompany.name`, `user.username` y `user.fullName`.
 
 Para columnas relacionadas, usa `subCompany.name` y `user.fullName`; conserva `subCompanyId` y `userId` para acciones y formularios.
 
@@ -109,7 +109,7 @@ Permiso: `drivers.vehicles.read-list`.
 
 Query params: `page`, `limit`, `search`, `all`, `status`.
 
-`search` busca por `plates`, `economicNumber` y `model`.
+`search` busca por `plates`, `economicNumber`, `model`, `subCompany.key`, `subCompany.name`, `fuel.code`, `fuel.name` y `driver.name`.
 
 Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driver` summaries.
 

@@ -68,7 +68,15 @@ export class AccessControlService {
 
     async findRoles(dto: FindAccessControlDto) {
         const where: Prisma.RoleWhereInput = {
-            ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
+            ...(dto.search
+                ? {
+                      OR: [
+                          { code: { contains: dto.search, mode: 'insensitive' } },
+                          { name: { contains: dto.search, mode: 'insensitive' } },
+                          { description: { contains: dto.search, mode: 'insensitive' } },
+                      ],
+                  }
+                : {}),
         };
         const [data, total] = await Promise.all([this.repository.findRoles(where, dto.skip, dto.actualLimit), this.repository.countRoles(where)]);
         return paginate(
@@ -125,7 +133,15 @@ export class AccessControlService {
 
     async findPermissions(dto: FindAccessControlDto) {
         const where: Prisma.PermissionWhereInput = {
-            ...(dto.search ? { OR: [{ code: { contains: dto.search, mode: 'insensitive' } }, { name: { contains: dto.search, mode: 'insensitive' } }] } : {}),
+            ...(dto.search
+                ? {
+                      OR: [
+                          { code: { contains: dto.search, mode: 'insensitive' } },
+                          { name: { contains: dto.search, mode: 'insensitive' } },
+                          { description: { contains: dto.search, mode: 'insensitive' } },
+                      ],
+                  }
+                : {}),
         };
         const [data, total] = await Promise.all([this.repository.findPermissions(where, dto.skip, dto.actualLimit), this.repository.countPermissions(where)]);
         return paginate(
