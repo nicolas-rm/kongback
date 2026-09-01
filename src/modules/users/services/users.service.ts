@@ -191,7 +191,16 @@ export class UsersService {
             dto.mustChangePassword ? 'Deberas cambiarla en tu proximo inicio de sesion.' : 'Si no reconoces este cambio, contacta a soporte.',
             NotificationType.warning
         );
-        void this.audit.recordSecurity({ action: 'user_password_changed_by_admin', resourceType: 'User', resourceId: userId, metadata: { mustChangePassword: dto.mustChangePassword ?? false } });
+        void this.audit.recordSecurity({
+            action: 'user_password_changed_by_admin',
+            resourceType: 'User',
+            resourceId: userId,
+            metadata: {
+                mustChangePassword: dto.mustChangePassword ?? false,
+                revokedSessions: result.revokedSessions,
+                revokedTrustedDevices: result.revokedTrustedDevices,
+            },
+        });
         return { passwordChanged: true };
     }
 
@@ -200,7 +209,12 @@ export class UsersService {
         if (!result) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         await this.notifyUser(userId, 'Autenticacion de dos factores desvinculada', 'Un administrador desvinculo tu 2FA.', 'Vuelve a configurarlo si tu acceso lo requiere.', NotificationType.warning);
-        void this.audit.recordSecurity({ action: 'user_2fa_unlinked_by_admin', resourceType: 'User', resourceId: userId });
+        void this.audit.recordSecurity({
+            action: 'user_2fa_unlinked_by_admin',
+            resourceType: 'User',
+            resourceId: userId,
+            metadata: { deletedRecoveryCodes: result.deletedRecoveryCodes, revokedTrustedDevices: result.revokedTrustedDevices },
+        });
         return { twoFactorUnlinked: true };
     }
 
@@ -218,7 +232,16 @@ export class UsersService {
         await this.mailerService.sendWelcomeCredentials(user.email, user.username, password, mailContext, dispatchId);
 
         await this.notifyUser(user.id, 'Credenciales reenviadas', 'Se reenviaron tus credenciales de acceso.', 'Revisa tu correo y cambia tu contrasena al iniciar sesion.', NotificationType.warning);
-        void this.audit.recordSecurity({ action: 'user_credentials_resent', resourceType: 'User', resourceId: user.id, metadata: { triggeredByUserId } });
+        void this.audit.recordSecurity({
+            action: 'user_credentials_resent',
+            resourceType: 'User',
+            resourceId: user.id,
+            metadata: {
+                triggeredByUserId,
+                revokedSessions: result.revokedSessions,
+                revokedTrustedDevices: result.revokedTrustedDevices,
+            },
+        });
         return { credentialsSent: true };
     }
 

@@ -10,6 +10,8 @@ import { AuthenticationTokensService } from '@/modules/authentication/services/a
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
 import { normalizeRecoveryCode, verifyTotpCode } from '@/utilities/authentication/totp.util';
 
+const TRUSTED_DEVICE_TOKEN_BYTES = 32;
+
 @Injectable()
 export class LoginUseCase {
     constructor(
@@ -47,6 +49,25 @@ export class LoginUseCase {
         }
 
         if (user.twoFactorEnabled) {
+            const trustedDevice = await this.validateTrustedDevice(user.id, dto.trustedDeviceToken);
+            if (trustedDevice) {
+                void this.audit.recordSecurity({
+                    action: 'login_trusted_device_success',
+                    result: 'success',
+                    resourceType: 'TrustedDevice',
+                    resourceId: trustedDevice.id,
+                    metadata: { userId: user.id, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
+                });
+                return this.authenticationTokensService.issueTokens(
+                    { id: user.id, username: user.username },
+                    {
+                        userAgent: sessionContext.userAgent,
+                        ipAddress: sessionContext.ipAddress,
+                        deviceName: sessionContext.deviceName,
+                    }
+                );
+            }
+
             const challengeToken = randomBytes(32).toString('hex');
             const expiresInSeconds = this.config.twoFactor.loginChallengeTtlMinutes * 60;
             const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
@@ -102,7 +123,7 @@ export class LoginUseCase {
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);
         void this.audit.recordSecurity({ action: 'two_factor_login_success', result: 'success', metadata: { userId: challenge.user.id } });
-        return this.authenticationTokensService.issueTokens(
+        const tokens = await this.authenticationTokensService.issueTokens(
             { id: challenge.user.id, username: challenge.user.username },
             {
                 userAgent: sessionContext.userAgent,
@@ -110,6 +131,53 @@ export class LoginUseCase {
                 deviceName: sessionContext.deviceName,
             }
         );
+        if (!dto.trustDevice) return tokens;
+
+        const trustedDevice = await this.createTrustedDevice(challenge.user.id, sessionContext);
+        void this.audit.recordSecurity({
+            action: 'trusted_device_created',
+            result: 'success',
+            resourceType: 'TrustedDevice',
+            resourceId: trustedDevice.id,
+            metadata: { userId: challenge.user.id, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
+        });
+
+        return {
+            ...tokens,
+            trustedDevice: {
+                token: trustedDevice.token,
+                expiresAt: trustedDevice.expiresAt,
+            },
+        };
+    }
+
+    private async validateTrustedDevice(userId: string, trustedDeviceToken: string | undefined): Promise<{ id: string; expiresAt: Date } | null> {
+        if (!trustedDeviceToken) return null;
+
+        const trustedDevice = await this.repository.findActiveTrustedDevice(userId, this.cryptoService.hashToken(trustedDeviceToken));
+        if (!trustedDevice) {
+            void this.audit.recordSecurity({ action: 'trusted_device_login_failed', result: 'denied', reason: 'invalid_or_expired_trusted_device', metadata: { userId } });
+            return null;
+        }
+
+        await this.repository.markTrustedDeviceUsed(trustedDevice.id);
+        return { id: trustedDevice.id, expiresAt: trustedDevice.expiresAt };
+    }
+
+    private async createTrustedDevice(userId: string, sessionContext: SessionContext): Promise<{ id: string; token: string; expiresAt: Date }> {
+        const token = randomBytes(TRUSTED_DEVICE_TOKEN_BYTES).toString('hex');
+        const expiresAt = new Date(Date.now() + this.config.twoFactor.trustedDeviceTtlDays * 24 * 60 * 60 * 1000);
+        const trustedDevice = await this.repository.createTrustedDevice({
+            userId,
+            tokenHash: this.cryptoService.hashToken(token),
+            expiresAt,
+            deviceName: sessionContext.deviceName,
+            platform: sessionContext.devicePlatform,
+            userAgent: sessionContext.userAgent,
+            ipAddress: sessionContext.ipAddress,
+        });
+
+        return { id: trustedDevice.id, token, expiresAt: trustedDevice.expiresAt };
     }
 
     private async verifySecondFactor(userId: string, encryptedSecret: string, dto: VerifyTwoFactorLoginDto): Promise<boolean> {

@@ -21,6 +21,7 @@ export const APP_DEFAULTS = {
         setupQrRotateSeconds: 120,
         loginChallengeTtlMinutes: 10,
         loginChallengeMaxAttempts: 5,
+        trustedDeviceTtlDays: 30,
         recoveryCodesCount: 8,
         totpDigits: 6,
         totpPeriodSeconds: 30,

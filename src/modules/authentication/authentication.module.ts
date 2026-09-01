@@ -37,6 +37,7 @@ import * as useCases from '@/modules/authentication/use-cases';
         useCases.ResetPasswordUseCase,
         useCases.VerifyEmailUseCase,
         useCases.TwoFactorUseCase,
+        useCases.TrustedDevicesUseCase,
     ],
     exports: [AuthenticationRepository, AuthenticationCookiesService, AuthenticationTokensService, AuthenticationService],
 })

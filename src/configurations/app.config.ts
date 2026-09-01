@@ -34,6 +34,7 @@ export default registerAs('app', () => ({
         setupQrRotateSeconds: parseEnvInt('TWO_FACTOR_SETUP_QR_ROTATE_SECONDS', APP_DEFAULTS.twoFactor.setupQrRotateSeconds),
         loginChallengeTtlMinutes: parseEnvInt('TWO_FACTOR_LOGIN_CHALLENGE_TTL_MINUTES', APP_DEFAULTS.twoFactor.loginChallengeTtlMinutes),
         loginChallengeMaxAttempts: parseEnvInt('TWO_FACTOR_LOGIN_CHALLENGE_MAX_ATTEMPTS', APP_DEFAULTS.twoFactor.loginChallengeMaxAttempts),
+        trustedDeviceTtlDays: parseEnvInt('TWO_FACTOR_TRUSTED_DEVICE_TTL_DAYS', APP_DEFAULTS.twoFactor.trustedDeviceTtlDays),
         recoveryCodesCount: parseEnvInt('TWO_FACTOR_RECOVERY_CODES_COUNT', APP_DEFAULTS.twoFactor.recoveryCodesCount),
         totpDigits: parseEnvInt('TWO_FACTOR_TOTP_DIGITS', APP_DEFAULTS.twoFactor.totpDigits),
         totpPeriodSeconds: parseEnvInt('TWO_FACTOR_TOTP_PERIOD_SECONDS', APP_DEFAULTS.twoFactor.totpPeriodSeconds),

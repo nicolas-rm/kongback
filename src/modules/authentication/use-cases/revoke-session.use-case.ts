@@ -18,6 +18,8 @@ export class RevokeSessionUseCase {
         void this.audit.recordSecurity({
             action: 'session_revoked',
             result: result.count > 0 ? 'success' : 'failure',
+            resourceType: 'Session',
+            resourceId: sessionId,
             metadata: { userId, sessionId, revokedCurrent: sessionId === currentSessionId },
         });
 
