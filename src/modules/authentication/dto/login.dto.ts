@@ -6,4 +6,7 @@ export class LoginDto {
 
     @ValidatorString()
     password!: string;
+
+    @ValidatorString({ optional: true, maxLength: 256 })
+    trustedDeviceToken?: string;
 }

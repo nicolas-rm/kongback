@@ -76,6 +76,7 @@ model User {
   sessions                  Session[]
   settingsCreated           Setting[]                 @relation("SettingCreatedByUser")
   settingsUpdated           Setting[]                 @relation("SettingUpdatedByUser")
+  trustedDevices            TrustedDevice[]
   twoFactorLoginChallenges  TwoFactorLoginChallenge[]
   twoFactorRecoveryCodes    TwoFactorRecoveryCode[]
   rolesCreated              Role[]                    @relation("RoleCreatedByUser")
@@ -161,6 +162,28 @@ model Session {
   @@index([expiresAt])
   @@index([idleExpiresAt])
   @@map("sessions")
+}
+
+model TrustedDevice {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  deviceName String?
+  platform   String?
+  userAgent  String?
+  ipAddress  String?
+  lastUsedAt DateTime?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@index([lastUsedAt])
+  @@map("trusted_devices")
 }
 
 model PasswordResetToken {
@@ -661,6 +684,8 @@ model SecurityAuditLog {
   scopeKey      String?
   scopeId       String?
   action        String
+  resourceType  String?
+  resourceId    String?
   result        String
   statusCode    Int?
   ipAddress     String?
@@ -673,6 +698,7 @@ model SecurityAuditLog {
   @@index([actorUserId])
   @@index([companyId])
   @@index([action])
+  @@index([resourceType, resourceId])
   @@index([result])
   @@index([createdAt])
   @@map("security_audit_logs")

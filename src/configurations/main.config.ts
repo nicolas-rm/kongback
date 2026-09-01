@@ -38,7 +38,7 @@ export function configureApp(app: INestApplication): void {
         origin: allowedOrigins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Company-Id', 'Accept-Language'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Company-Id', 'X-Device-Name', 'X-Device-Platform', 'Accept-Language'],
         exposedHeaders: ['X-Request-Id'],
     });
     app.setGlobalPrefix('api');

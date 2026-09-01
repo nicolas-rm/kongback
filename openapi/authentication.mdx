@@ -15,13 +15,14 @@ Para frontend web con cookies, usa requests con credenciales incluidas. Las muta
 
 Los tiempos son configurables por ambiente. Estos son los defaults actuales del backend:
 
-| Concepto                   | Default | Configuracion                    | Uso                                                                                                    |
-| -------------------------- | ------- | -------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Access token               | `15m`   | `JWT_ACCESS_EXPIRES_IN`          | Vigencia del JWT usado en requests autenticados. Tambien aparece como `exp` en el payload.             |
-| Refresh token              | `7d`    | `JWT_REFRESH_EXPIRES_IN`         | Vigencia maxima del JWT usado para renovar tokens. Se rota en cada `POST /api/authentication/refresh`. |
-| Inactividad de sesion      | `60m`   | `SESSION_IDLE_TIMEOUT_MINUTES`   | Ventana sin actividad permitida antes de invalidar la sesion. Se expone como `idleExpiresAt`.          |
-| Duracion total de sesion   | `7d`    | `SESSION_TOTAL_MINUTES`          | Limite absoluto de vida de la sesion aunque tenga actividad. Se expone como `expiresAt`.               |
-| Actualizacion de actividad | `30s`   | `SESSION_TOUCH_INTERVAL_SECONDS` | Intervalo minimo para refrescar `lastActivityAt` e `idleExpiresAt` durante requests autenticados.      |
+| Concepto                   | Default | Configuracion                        | Uso                                                                                                    |
+| -------------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Access token               | `15m`   | `JWT_ACCESS_EXPIRES_IN`              | Vigencia del JWT usado en requests autenticados. Tambien aparece como `exp` en el payload.             |
+| Refresh token              | `7d`    | `JWT_REFRESH_EXPIRES_IN`             | Vigencia maxima del JWT usado para renovar tokens. Se rota en cada `POST /api/authentication/refresh`. |
+| Inactividad de sesion      | `60m`   | `SESSION_IDLE_TIMEOUT_MINUTES`       | Ventana sin actividad permitida antes de invalidar la sesion. Se expone como `idleExpiresAt`.          |
+| Duracion total de sesion   | `7d`    | `SESSION_TOTAL_MINUTES`              | Limite absoluto de vida de la sesion aunque tenga actividad. Se expone como `expiresAt`.               |
+| Actualizacion de actividad | `30s`   | `SESSION_TOUCH_INTERVAL_SECONDS`     | Intervalo minimo para refrescar `lastActivityAt` e `idleExpiresAt` durante requests autenticados.      |
+| Dispositivo confiable      | `30d`   | `TWO_FACTOR_TRUSTED_DEVICE_TTL_DAYS` | Vigencia de un token de dispositivo confiable emitido despues de validar 2FA.                          |
 
 Una sesion deja de ser valida si fue revocada, si vence `expiresAt`, si vence `idleExpiresAt`, si el refresh token expiro o si el refresh token fue reutilizado despues de rotarse. Cuando esto ocurre, los endpoints protegidos o `refresh` responden `401` y el frontend debe limpiar el estado local de autenticacion.
 
@@ -33,15 +34,20 @@ Una sesion deja de ser valida si fue revocada, si vence `expiresAt`, si vence `i
 {
     "accessToken": "eyJhbGciOiJIUzI1NiIs...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
-    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086"
+    "sessionId": "79b84132-20cc-4bf9-a4f0-3de3be656086",
+    "trustedDevice": {
+        "token": "7f5e3c0c2a4f9b...",
+        "expiresAt": "2026-10-01T12:00:00.000Z"
+    }
 }
 ```
 
-| Campo          | Tipo     | Descripcion                                                                     |
-| -------------- | -------- | ------------------------------------------------------------------------------- |
-| `accessToken`  | `string` | JWT usado para autenticar requests. Tambien se guarda en cookie `access_token`. |
-| `refreshToken` | `string` | JWT usado para renovar sesion. Tambien se guarda en cookie `refresh_token`.     |
-| `sessionId`    | `string` | UUID v4 de la sesion activa.                                                    |
+| Campo           | Tipo      | Descripcion                                                                                                                                                                    |
+| --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `accessToken`   | `string`  | JWT usado para autenticar requests. Tambien se guarda en cookie `access_token`.                                                                                                |
+| `refreshToken`  | `string`  | JWT usado para renovar sesion. Tambien se guarda en cookie `refresh_token`.                                                                                                    |
+| `sessionId`     | `string`  | UUID v4 de la sesion activa.                                                                                                                                                   |
+| `trustedDevice` | `object?` | Solo aparece cuando `/2fa/verify-login` recibe `trustDevice: true` y el 2FA es correcto. Contiene el token opaco que la app movil debe guardar una sola vez en storage seguro. |
 
 ### JWT payload
 
@@ -158,6 +164,34 @@ El payload del JWT no incluye permisos, roles, companias disponibles, email, nom
 | `expiresAt`      | `string`         | Fecha ISO UTC de expiracion total de la sesion.                              |
 | `isCurrent`      | `boolean`        | Indica si corresponde a la sesion actual segun la cookie `refresh_token`.    |
 
+### TrustedDevice
+
+```json
+{
+    "id": "7c41d43b-13a4-4988-9a76-bb85ffb8a3f7",
+    "deviceName": "iPhone de Nicolas",
+    "platform": "ios",
+    "userAgent": "ProxVale/1.0 iOS",
+    "ipAddress": "127.0.0.1",
+    "lastUsedAt": "2026-09-01T12:00:00.000Z",
+    "expiresAt": "2026-10-01T12:00:00.000Z",
+    "createdAt": "2026-09-01T12:00:00.000Z"
+}
+```
+
+| Campo        | Tipo             | Descripcion                                                                |
+| ------------ | ---------------- | -------------------------------------------------------------------------- |
+| `id`         | `string`         | UUID v4 del dispositivo confiable.                                         |
+| `deviceName` | `string \| null` | Nombre enviado con `X-Device-Name` al registrarlo.                         |
+| `platform`   | `string \| null` | Plataforma enviada con `X-Device-Platform`, por ejemplo `ios` o `android`. |
+| `userAgent`  | `string \| null` | User-Agent registrado al crear el dispositivo confiable.                   |
+| `ipAddress`  | `string \| null` | IP registrada al crear el dispositivo confiable.                           |
+| `lastUsedAt` | `string \| null` | Fecha ISO UTC de la ultima vez que se uso para omitir el challenge 2FA.    |
+| `expiresAt`  | `string`         | Fecha ISO UTC en la que expira el dispositivo confiable.                   |
+| `createdAt`  | `string`         | Fecha ISO UTC de creacion.                                                 |
+
+La respuesta de listado nunca devuelve el token plano del dispositivo confiable. El token solo se entrega una vez dentro de `TokenResponse.trustedDevice.token`.
+
 ### CompanyAccess
 
 ```json
@@ -200,37 +234,40 @@ El payload del JWT no incluye permisos, roles, companias disponibles, email, nom
 | `X-Company-Id`                        | UUID de la compania seleccionada. Requerido por endpoints operativos; opcional en endpoints mixtos como usuarios y capabilities. |
 | `Accept-Language`                     | Idioma para validaciones, errores y correos cuando aplica.                                                                       |
 | `X-Device-Name`                       | Nombre del dispositivo guardado al crear sesion con login o login 2FA.                                                           |
+| `X-Device-Platform`                   | Plataforma opcional del dispositivo, por ejemplo `ios`, `android` o `web`; se usa como metadata en dispositivos confiables.      |
 | `X-Forwarded-For`                     | IP de cliente usada para contexto de sesion si existe.                                                                           |
 | `X-Request-Id`                        | ID de request opcional; el backend lo devuelve como response header.                                                             |
 
 ## Endpoints
 
-| Metodo   | Ruta                                                | Acceso      | Descripcion                                                                                    |
-| -------- | --------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/authentication/login`                         | Publico     | Inicia sesion.                                                                                 |
-| `POST`   | `/api/authentication/2fa/verify-login`              | Publico     | Completa login cuando el usuario tiene 2FA activo.                                             |
-| `POST`   | `/api/authentication/register`                      | Publico     | Registra usuario y envia verificacion de email.                                                |
-| `POST`   | `/api/authentication/refresh`                       | Publico     | Rota refresh token y emite nuevos tokens.                                                      |
-| `POST`   | `/api/authentication/logout`                        | Autenticado | Cierra la sesion actual si hay refresh cookie; sin refresh cookie revoca sesiones del usuario. |
-| `POST`   | `/api/authentication/logout-all`                    | Autenticado | Revoca todas las sesiones del usuario.                                                         |
-| `GET`    | `/api/authentication/me`                            | Autenticado | Obtiene perfil actual.                                                                         |
-| `GET`    | `/api/authentication/companies`                     | Autenticado | Lista companias disponibles para el usuario actual.                                            |
-| `GET`    | `/api/authentication/capabilities`                  | Autenticado | Lista permisos efectivos del usuario para la compania seleccionada, si se envia header.        |
-| `POST`   | `/api/authentication/heartbeat`                     | Autenticado | Confirma que la sesion autenticada sigue activa.                                               |
-| `PATCH`  | `/api/authentication/me`                            | Autenticado | Actualiza perfil actual.                                                                       |
-| `GET`    | `/api/authentication/sessions`                      | Autenticado | Lista sesiones activas.                                                                        |
-| `DELETE` | `/api/authentication/sessions/:sessionId`           | Autenticado | Revoca una sesion.                                                                             |
-| `PATCH`  | `/api/authentication/password`                      | Autenticado | Cambia la contrasena propia y revoca sesiones.                                                 |
-| `POST`   | `/api/authentication/password/reset/request`        | Publico     | Solicita correo de recuperacion.                                                               |
-| `POST`   | `/api/authentication/password/reset`                | Publico     | Restablece contrasena con token.                                                               |
-| `POST`   | `/api/authentication/email/verification/request`    | Publico     | Reenvia correo de verificacion.                                                                |
-| `POST`   | `/api/authentication/email/verification/confirm`    | Publico     | Confirma email con token.                                                                      |
-| `GET`    | `/api/authentication/2fa/status`                    | Autenticado | Consulta estado 2FA.                                                                           |
-| `POST`   | `/api/authentication/2fa/setup`                     | Autenticado | Inicia configuracion 2FA.                                                                      |
-| `POST`   | `/api/authentication/2fa/enable`                    | Autenticado | Habilita 2FA con codigo TOTP.                                                                  |
-| `POST`   | `/api/authentication/2fa/disable`                   | Autenticado | Deshabilita 2FA con codigo TOTP.                                                               |
-| `POST`   | `/api/authentication/2fa/recovery-codes/regenerate` | Autenticado | Regenera recovery codes.                                                                       |
-| `DELETE` | `/api/authentication/2fa/reset`                     | Autenticado | Resetea 2FA del usuario actual.                                                                |
+| Metodo   | Ruta                                                   | Acceso      | Descripcion                                                                                    |
+| -------- | ------------------------------------------------------ | ----------- | ---------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/authentication/login`                            | Publico     | Inicia sesion.                                                                                 |
+| `POST`   | `/api/authentication/2fa/verify-login`                 | Publico     | Completa login cuando el usuario tiene 2FA activo.                                             |
+| `POST`   | `/api/authentication/register`                         | Publico     | Registra usuario y envia verificacion de email.                                                |
+| `POST`   | `/api/authentication/refresh`                          | Publico     | Rota refresh token y emite nuevos tokens.                                                      |
+| `POST`   | `/api/authentication/logout`                           | Autenticado | Cierra la sesion actual si hay refresh cookie; sin refresh cookie revoca sesiones del usuario. |
+| `POST`   | `/api/authentication/logout-all`                       | Autenticado | Revoca todas las sesiones del usuario.                                                         |
+| `GET`    | `/api/authentication/me`                               | Autenticado | Obtiene perfil actual.                                                                         |
+| `GET`    | `/api/authentication/companies`                        | Autenticado | Lista companias disponibles para el usuario actual.                                            |
+| `GET`    | `/api/authentication/capabilities`                     | Autenticado | Lista permisos efectivos del usuario para la compania seleccionada, si se envia header.        |
+| `POST`   | `/api/authentication/heartbeat`                        | Autenticado | Confirma que la sesion autenticada sigue activa.                                               |
+| `PATCH`  | `/api/authentication/me`                               | Autenticado | Actualiza perfil actual.                                                                       |
+| `GET`    | `/api/authentication/sessions`                         | Autenticado | Lista sesiones activas.                                                                        |
+| `DELETE` | `/api/authentication/sessions/:sessionId`              | Autenticado | Revoca una sesion.                                                                             |
+| `GET`    | `/api/authentication/trusted-devices`                  | Autenticado | Lista dispositivos confiables vigentes.                                                        |
+| `DELETE` | `/api/authentication/trusted-devices/:trustedDeviceId` | Autenticado | Revoca un dispositivo confiable.                                                               |
+| `PATCH`  | `/api/authentication/password`                         | Autenticado | Cambia la contrasena propia y revoca sesiones/dispositivos confiables.                         |
+| `POST`   | `/api/authentication/password/reset/request`           | Publico     | Solicita correo de recuperacion.                                                               |
+| `POST`   | `/api/authentication/password/reset`                   | Publico     | Restablece contrasena con token.                                                               |
+| `POST`   | `/api/authentication/email/verification/request`       | Publico     | Reenvia correo de verificacion.                                                                |
+| `POST`   | `/api/authentication/email/verification/confirm`       | Publico     | Confirma email con token.                                                                      |
+| `GET`    | `/api/authentication/2fa/status`                       | Autenticado | Consulta estado 2FA.                                                                           |
+| `POST`   | `/api/authentication/2fa/setup`                        | Autenticado | Inicia configuracion 2FA.                                                                      |
+| `POST`   | `/api/authentication/2fa/enable`                       | Autenticado | Habilita 2FA con codigo TOTP.                                                                  |
+| `POST`   | `/api/authentication/2fa/disable`                      | Autenticado | Deshabilita 2FA con codigo TOTP.                                                               |
+| `POST`   | `/api/authentication/2fa/recovery-codes/regenerate`    | Autenticado | Regenera recovery codes.                                                                       |
+| `DELETE` | `/api/authentication/2fa/reset`                        | Autenticado | Resetea 2FA del usuario actual.                                                                |
 
 ## Login
 
@@ -243,20 +280,24 @@ Publico. Rate limit: 5 requests por 60 segundos.
 ```json
 {
     "username": "admin",
-    "password": "Secret123"
+    "password": "Secret123",
+    "trustedDeviceToken": "7f5e3c0c2a4f9b..."
 }
 ```
 
-| Campo      | Tipo     | Requerido | Reglas                         |
-| ---------- | -------- | --------- | ------------------------------ |
-| `username` | `string` | Si        | Se recorta y colapsa espacios. |
-| `password` | `string` | Si        | Se recorta y colapsa espacios. |
+| Campo                | Tipo     | Requerido | Reglas                                                                                               |
+| -------------------- | -------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| `username`           | `string` | Si        | Se recorta y colapsa espacios.                                                                       |
+| `password`           | `string` | Si        | Se recorta y colapsa espacios.                                                                       |
+| `trustedDeviceToken` | `string` | No        | Token opaco guardado por app movil despues de validar 2FA con `trustDevice: true`. Maximo 256 chars. |
 
 ### Response `200`
 
 Si el usuario no tiene 2FA activo, devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`.
 
-Si el usuario tiene 2FA activo, limpia cookies existentes y devuelve `TwoFactorChallengeResponse`. Usa `expiresInSeconds` o `expiresAt` para mostrar el contador del desafio en frontend.
+Si el usuario tiene 2FA activo y `trustedDeviceToken` es valido, vigente y pertenece a ese usuario, devuelve `TokenResponse` sin pedir codigo 2FA y actualiza `lastUsedAt` del dispositivo confiable.
+
+Si el usuario tiene 2FA activo y no envia un dispositivo confiable valido, limpia cookies existentes y devuelve `TwoFactorChallengeResponse`. Usa `expiresInSeconds` o `expiresAt` para mostrar el contador del desafio en frontend. Un token confiable invalido o expirado no bloquea el login; solo evita el bypass y obliga a resolver 2FA.
 
 ## Verificar login 2FA
 
@@ -271,7 +312,8 @@ Con codigo TOTP:
 ```json
 {
     "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
-    "code": "123456"
+    "code": "123456",
+    "trustDevice": true
 }
 ```
 
@@ -280,19 +322,21 @@ Con recovery code:
 ```json
 {
     "challengeToken": "c8b7c6c94fa14e1ebc1a6b62d37f5e84",
-    "recoveryCode": "ABCD-EFGH"
+    "recoveryCode": "ABCD-EFGH",
+    "trustDevice": true
 }
 ```
 
-| Campo            | Tipo     | Requerido   | Reglas                                                                                         |
-| ---------------- | -------- | ----------- | ---------------------------------------------------------------------------------------------- |
-| `challengeToken` | `string` | Si          | Token devuelto por `POST /api/authentication/login` cuando `requiresTwoFactor` es `true`.      |
-| `code`           | `string` | Condicional | Codigo TOTP. Requerido si no se envia `recoveryCode`.                                          |
-| `recoveryCode`   | `string` | Condicional | Recovery code de un solo uso. Requerido si no se envia `code`. Acepta formato con o sin guion. |
+| Campo            | Tipo      | Requerido   | Reglas                                                                                            |
+| ---------------- | --------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| `challengeToken` | `string`  | Si          | Token devuelto por `POST /api/authentication/login` cuando `requiresTwoFactor` es `true`.         |
+| `code`           | `string`  | Condicional | Codigo TOTP. Requerido si no se envia `recoveryCode`.                                             |
+| `recoveryCode`   | `string`  | Condicional | Recovery code de un solo uso. Requerido si no se envia `code`. Acepta formato con o sin guion.    |
+| `trustDevice`    | `boolean` | No          | Si es `true`, emite `trustedDevice.token` en la respuesta para app movil o dispositivo confiable. |
 
 ### Response `200`
 
-Devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`. Si se usa `recoveryCode`, el backend lo marca como usado y no puede reutilizarse.
+Devuelve `TokenResponse` y setea cookies `access_token` y `refresh_token`. Si `trustDevice` es `true`, incluye `trustedDevice.token` y `trustedDevice.expiresAt`; el cliente debe guardar ese token en storage seguro porque no podra consultarlo despues. Si se usa `recoveryCode`, el backend lo marca como usado y no puede reutilizarse.
 
 ## Registro
 
@@ -571,13 +615,61 @@ Si se revoca la sesion actual, el backend limpia cookies.
 }
 ```
 
+## Listar dispositivos confiables
+
+`GET /api/authentication/trusted-devices`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Devuelve `TrustedDevice[]` con dispositivos no revocados y no expirados del usuario autenticado. No devuelve el token plano del dispositivo.
+
+### Response `200`
+
+```json
+[
+    {
+        "id": "7c41d43b-13a4-4988-9a76-bb85ffb8a3f7",
+        "deviceName": "iPhone de Nicolas",
+        "platform": "ios",
+        "userAgent": "ProxVale/1.0 iOS",
+        "ipAddress": "127.0.0.1",
+        "lastUsedAt": "2026-09-01T12:00:00.000Z",
+        "expiresAt": "2026-10-01T12:00:00.000Z",
+        "createdAt": "2026-09-01T12:00:00.000Z"
+    }
+]
+```
+
+## Revocar dispositivo confiable
+
+`DELETE /api/authentication/trusted-devices/:trustedDeviceId`
+
+Autenticado. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
+
+Revoca un dispositivo confiable del usuario autenticado. Despues de revocarlo, ese dispositivo ya no podra omitir el challenge 2FA y debera validar 2FA para volver a registrarse.
+
+### Path params
+
+| Parametro         | Tipo   | Descripcion                         |
+| ----------------- | ------ | ----------------------------------- |
+| `trustedDeviceId` | `uuid` | ID del dispositivo confiable propio. |
+
+### Response `200`
+
+```json
+{
+    "id": "7c41d43b-13a4-4988-9a76-bb85ffb8a3f7",
+    "revoked": true
+}
+```
+
 ## Cambiar contrasena
 
 `PATCH /api/authentication/password`
 
 Autenticado. Rate limit: 5 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
-Al cambiar la contrasena, el backend revoca sesiones del usuario y limpia cookies. El frontend debe enviar al usuario a login al recibir respuesta exitosa.
+Al cambiar la contrasena, el backend revoca sesiones y dispositivos confiables del usuario, y limpia cookies. El frontend debe enviar al usuario a login al recibir respuesta exitosa.
 
 ### Body
 
@@ -635,7 +727,7 @@ Devuelve la misma respuesta aunque el email no exista para evitar enumeracion de
 
 Publico. Rate limit: 5 requests por 60 segundos.
 
-Al restablecer la contrasena, el backend marca el token como usado y revoca sesiones del usuario.
+Al restablecer la contrasena, el backend marca el token como usado y revoca sesiones y dispositivos confiables del usuario.
 
 ### Body
 
@@ -771,6 +863,8 @@ Valida el codigo TOTP contra el secreto pendiente. Al habilitar 2FA, devuelve re
 
 Autenticado. Rate limit: 5 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
+Al deshabilitar 2FA, el backend revoca los dispositivos confiables del usuario.
+
 ### Body
 
 ```json
@@ -815,7 +909,7 @@ Autenticado. Rate limit: 3 requests por 60 segundos. Este endpoint se puede usar
 
 Autenticado. Rate limit: 2 requests por 60 segundos. Este endpoint se puede usar aunque `mustChangePassword` sea `true`.
 
-Resetea secretos 2FA y recovery codes del usuario actual.
+Resetea secretos 2FA y recovery codes del usuario actual. Tambien revoca sus dispositivos confiables.
 
 ### Response `200`
 
@@ -847,14 +941,17 @@ La biometria del dispositivo no debe enviarse al backend como reemplazo directo 
 Flujo recomendado:
 
 1. En el primer login del dispositivo, llamar `POST /api/authentication/login` con usuario y contrasena.
-2. Si el usuario tiene 2FA activo, completar una vez `POST /api/authentication/2fa/verify-login` con `challengeToken` y codigo TOTP o recovery code.
-3. Cuando el backend devuelva `TokenResponse`, guardar el `refreshToken` en storage seguro protegido por biometria del sistema operativo.
+2. Si el usuario tiene 2FA activo, completar `POST /api/authentication/2fa/verify-login` con `challengeToken`, codigo TOTP o recovery code, y `trustDevice: true` si el usuario eligio confiar en este dispositivo.
+3. Cuando el backend devuelva `TokenResponse`, guardar `refreshToken` y, si existe, `trustedDevice.token` en storage seguro protegido por biometria del sistema operativo.
 4. Mantener el `accessToken` en memoria o en storage seguro segun la politica de la app.
-5. En siguientes aperturas, pedir Face ID, Touch ID o huella para desbloquear el `refreshToken` local.
+5. En siguientes aperturas con sesion vigente, pedir Face ID, Touch ID o huella para desbloquear el `refreshToken` local.
 6. Con ese `refreshToken`, llamar `POST /api/authentication/refresh` y reemplazar tokens por los nuevos.
-7. Usar `Authorization: Bearer <accessToken>` para endpoints autenticados.
+7. Si la sesion ya no existe o el usuario inicia sesion de nuevo en el mismo dispositivo confiable, desbloquear `trustedDevice.token` con biometria y enviarlo como `trustedDeviceToken` en `POST /api/authentication/login`.
+8. Usar `Authorization: Bearer <accessToken>` para endpoints autenticados.
 
-El usuario debe volver a pasar por 2FA cuando sea un dispositivo nuevo, cuando cierre sesion, cuando se revoque la sesion, cuando expire el refresh token, cuando venza la sesion total o por inactividad, o despues de cambios sensibles como cambio de contrasena.
+El usuario debe volver a pasar por 2FA cuando sea un dispositivo nuevo, cuando no exista `trustedDevice.token`, cuando el dispositivo confiable expire, cuando sea revocado desde `DELETE /api/authentication/trusted-devices/:trustedDeviceId`, cuando cambie o restablezca contrasena, o cuando se deshabilite/resetee 2FA.
+
+Cerrar sesion no revoca automaticamente un dispositivo confiable. Si la app quiere "cerrar sesion y olvidar este dispositivo", debe borrar `trustedDevice.token` del storage local y revocar el dispositivo correspondiente con `DELETE /api/authentication/trusted-devices/:trustedDeviceId`.
 
 El `challengeToken` de 2FA no representa una sesion movil. Debe vivir solo en memoria durante la pantalla de verificacion y descartarse si vence, falla por intentos maximos o el usuario cancela el flujo.
 
@@ -879,6 +976,7 @@ Campos y datos que no deben mostrarse o persistirse como datos de UI normal:
 
 - `accessToken` y `refreshToken`: si usas cookies, tratarlos como detalle tecnico de respuesta.
 - `challengeToken`: conservarlo solo durante el flujo 2FA.
+- `trustedDevice.token`: guardarlo solo en storage seguro del dispositivo; no enviarlo a logs, analytics ni estado global.
 - `recoveryCodes`: mostrarlos una sola vez al usuario y no persistirlos en estado global.
 - `otpAuthenticationUrl` y `secret`: usarlos solo para configurar 2FA.
 

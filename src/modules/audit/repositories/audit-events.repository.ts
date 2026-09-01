@@ -67,6 +67,8 @@ export class AuditEventsRepository {
                     companyId: event.companyId,
                     scopeKey: event.scopeKey,
                     scopeId: event.scopeId,
+                    resourceType: event.resourceType,
+                    resourceId: event.resourceId,
                     reason: event.reason,
                     createdAt: event.createdAt,
                 }));
@@ -170,9 +172,11 @@ export class AuditEventsRepository {
     }
 
     private securityWhere(dto: FindAuditEventsDto, scope: AuditQueryScope): Prisma.SecurityAuditLogWhereInput {
-        if (dto.method || dto.path || dto.resourceType || dto.resourceId) return { id: '__never__' };
+        if (dto.method || dto.path) return { id: '__never__' };
         return {
             ...this.sharedAuditWhere(dto, scope),
+            resourceType: this.contains(dto.resourceType),
+            resourceId: dto.resourceId,
             ...(dto.search
                 ? {
                       OR: [
@@ -180,6 +184,8 @@ export class AuditEventsRepository {
                           { actorUsername: { contains: dto.search, mode: Prisma.QueryMode.insensitive } },
                           { reason: { contains: dto.search, mode: Prisma.QueryMode.insensitive } },
                           { requestId: { contains: dto.search, mode: Prisma.QueryMode.insensitive } },
+                          { resourceType: { contains: dto.search, mode: Prisma.QueryMode.insensitive } },
+                          { resourceId: { contains: dto.search, mode: Prisma.QueryMode.insensitive } },
                       ],
                   }
                 : {}),
@@ -321,6 +327,8 @@ export class AuditEventsRepository {
             companyId: event.companyId,
             scopeKey: event.scopeKey,
             scopeId: event.scopeId,
+            resourceType: event.resourceType,
+            resourceId: event.resourceId,
             reason: event.reason,
             ipAddress: event.ipAddress,
             userAgent: event.userAgent,

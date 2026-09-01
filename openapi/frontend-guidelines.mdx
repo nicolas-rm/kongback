@@ -21,7 +21,7 @@ La documentacion de `openapi/` describe el contrato completo del backend. El fro
 - Una pantalla puede mostrar acciones contextuales de otro dominio cuando usa el recurso actual solo como referencia. En ese caso, evalua la visibilidad con `capabilities.modules.<dominioPropietario>.actions.<accion>`, no con el modulo donde aparece visualmente el boton.
 - Para `cardholderCards`, `cardholderVehicles` y `cardholderWork`, consultar `capabilities` con `X-Company-Id` si el rol del tarjetahabiente esta asignado dentro de una compania/subcompania.
 - Usar `X-Company-Id` solo cuando el endpoint opere en contexto de compania o sea mixto.
-- En app movil, usar tokens del body con `Authorization: Bearer`; si se usa biometria, debe proteger el `refreshToken` local en storage seguro, no reemplazar 2FA ni mandar flags de confianza al backend.
+- En app movil, usar tokens del body con `Authorization: Bearer`; si se usa biometria, debe proteger `refreshToken` y `trustedDevice.token` en storage seguro, no reemplazar 2FA ni mandar flags de confianza al backend.
 - No convertir automaticamente cada archivo MDX, modulo o endpoint en una ruta del frontend. La navegacion se define por producto, `capabilities` y el mapa de UI de esta guia.
 
 ## Mapa de UI por modulo
@@ -54,7 +54,7 @@ Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu 
 
 ## Endpoints que no son paginas
 
-- `/api/authentication/*`: login, perfil, cambio de contrasena, 2FA, sesiones, companias disponibles y capacidades son flujos de autenticacion/configuracion.
+- `/api/authentication/*`: login, perfil, cambio de contrasena, 2FA, sesiones, dispositivos confiables, companias disponibles y capacidades son flujos de autenticacion/configuracion.
 - `/api/users/:id/access`: seccion `Accesos` dentro del detalle de usuario.
 - `/api/users/:id/permissions`: lectura avanzada de permisos efectivos; no controles editables.
 - `/api/users/:id/password`, `/api/users/:id/2fa/unlink`, `/api/users/:id/resend-credentials`: acciones sensibles del usuario.

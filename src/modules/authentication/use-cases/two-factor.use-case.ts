@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { CryptoService } from '@/crypto/crypto.service';
 import { I18N_KEYS, I18nBadRequestException, I18nUnauthorizedException } from '@/i18n';
+import { AuditService } from '@/modules/audit/audit.service';
 import { TwoFactorCodeDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { buildTotpOtpAuthenticationUrl, generateRecoveryCodes, generateTotpSecret, normalizeRecoveryCode, verifyTotpCode } from '@/utilities/authentication/totp.util';
@@ -11,7 +12,8 @@ export class TwoFactorUseCase {
     constructor(
         private readonly config: AppConfigService,
         private readonly repository: AuthenticationRepository,
-        private readonly cryptoService: CryptoService
+        private readonly cryptoService: CryptoService,
+        private readonly audit: AuditService
     ) {}
 
     async status(userId: string) {
@@ -33,6 +35,13 @@ export class TwoFactorUseCase {
         const expiresInSeconds = this.config.twoFactor.setupTtlMinutes * 60;
         const expiresAt = new Date(createdAt.getTime() + expiresInSeconds * 1000);
         await this.repository.setPendingTwoFactorSecret(user.id, this.cryptoService.encrypt(secret), createdAt);
+        void this.audit.recordSecurity({
+            action: 'two_factor_setup_started',
+            result: 'success',
+            resourceType: 'User',
+            resourceId: user.id,
+            metadata: { userId: user.id, expiresAt },
+        });
 
         return {
             secret,
@@ -65,6 +74,13 @@ export class TwoFactorUseCase {
             user.id,
             recoveryCodes.map((code) => this.cryptoService.hashToken(normalizeRecoveryCode(code)))
         );
+        void this.audit.recordSecurity({
+            action: 'two_factor_enabled',
+            result: 'success',
+            resourceType: 'User',
+            resourceId: user.id,
+            metadata: { userId: user.id, recoveryCodesCount: recoveryCodes.length },
+        });
 
         return { enabled: true, recoveryCodes };
     }
@@ -77,6 +93,13 @@ export class TwoFactorUseCase {
         if (!secret || !this.verify(secret, dto.code)) throw new I18nBadRequestException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
 
         await this.repository.disableTwoFactor(user.id);
+        void this.audit.recordSecurity({
+            action: 'two_factor_disabled',
+            result: 'success',
+            resourceType: 'User',
+            resourceId: user.id,
+            metadata: { userId: user.id },
+        });
         return { enabled: false };
     }
 
@@ -92,12 +115,26 @@ export class TwoFactorUseCase {
             user.id,
             recoveryCodes.map((code) => this.cryptoService.hashToken(normalizeRecoveryCode(code)))
         );
+        void this.audit.recordSecurity({
+            action: 'two_factor_recovery_codes_regenerated',
+            result: 'success',
+            resourceType: 'User',
+            resourceId: user.id,
+            metadata: { userId: user.id, recoveryCodesCount: recoveryCodes.length },
+        });
 
         return { recoveryCodes };
     }
 
     async reset(userId: string) {
         await this.repository.resetTwoFactor(userId);
+        void this.audit.recordSecurity({
+            action: 'two_factor_reset',
+            result: 'success',
+            resourceType: 'User',
+            resourceId: userId,
+            metadata: { userId },
+        });
         return { twoFactorReset: true };
     }
 

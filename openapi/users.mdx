@@ -105,9 +105,9 @@ Esta API es mixta:
 | `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Reemplaza accesos del usuario.               |
 | `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Global/compania | Elimina un acceso puntual del usuario.       |
 | `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Global/compania | Lista permisos efectivos del usuario.        |
-| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Global          | Cambia la contrasena del usuario.            |
-| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Global          | Desvincula la configuracion 2FA del usuario. |
-| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Global          | Regenera y envia credenciales de acceso.     |
+| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Global          | Cambia contrasena y revoca sesiones/dispositivos confiables. |
+| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Global          | Desvincula 2FA y revoca dispositivos confiables.             |
+| `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Global          | Regenera credenciales y revoca sesiones/dispositivos confiables. |
 
 ## Crear usuario
 
@@ -395,6 +395,8 @@ Devuelve `Permission[]`.
 
 Requiere `users.password.update`.
 
+Actualiza la contrasena del usuario, revoca sus sesiones activas y revoca sus dispositivos confiables.
+
 ### Body
 
 ```json
@@ -423,7 +425,7 @@ Requiere `users.password.update`.
 
 Requiere `users.2fa.unlink`.
 
-Desactiva 2FA, limpia secretos pendientes/confirmados y elimina recovery codes del usuario.
+Desactiva 2FA, limpia secretos pendientes/confirmados, elimina recovery codes y revoca dispositivos confiables del usuario.
 
 ### Response `200`
 
@@ -439,7 +441,7 @@ Desactiva 2FA, limpia secretos pendientes/confirmados y elimina recovery codes d
 
 Requiere `users.credentials.resend`.
 
-Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassword: true` y envia un correo de credenciales usando el idioma preferido del usuario.
+Genera una contrasena temporal segura, actualiza el usuario con `mustChangePassword: true`, revoca sus sesiones/dispositivos confiables y envia un correo de credenciales usando el idioma preferido del usuario.
 
 ### Response `201`
 

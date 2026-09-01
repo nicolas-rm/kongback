@@ -68,6 +68,8 @@ export class AuditService {
                 data: {
                     ...base,
                     action: input.action,
+                    resourceType: input.resourceType ?? null,
+                    resourceId: input.resourceId ?? null,
                     result: input.result ?? 'success',
                 },
             })
@@ -160,8 +162,31 @@ export class AuditService {
             ipAddress: request ? this.resolveIpAddress(request) : null,
             userAgent: request?.get('user-agent') ?? null,
             reason: input.reason ?? null,
-            metadata: this.toJson(input.metadata),
+            metadata: this.toJson(this.enrichMetadata(input.metadata, request, user)),
         };
+    }
+
+    private enrichMetadata(metadata: unknown, request: AuditRequest | undefined, user: AuditRequest['user']): unknown {
+        const auditContext = this.auditContextMetadata(request, user);
+        if (!auditContext) return metadata;
+
+        if (metadata === undefined || metadata === null) return { auditContext };
+        if (this.isPlainRecord(metadata)) return { ...metadata, auditContext };
+        return { value: metadata, auditContext };
+    }
+
+    private auditContextMetadata(request: AuditRequest | undefined, user: AuditRequest['user']): Record<string, unknown> | null {
+        const entries = Object.entries({
+            sessionId: user?.sessionId ?? undefined,
+            deviceName: request?.get('x-device-name') ?? undefined,
+            devicePlatform: request?.get('x-device-platform') ?? undefined,
+            isGlobalAdmin: user?.isGlobalAdmin ?? undefined,
+        }).filter(([, value]) => value !== undefined);
+        return entries.length > 0 ? Object.fromEntries(entries) : null;
+    }
+
+    private isPlainRecord(value: unknown): value is Record<string, unknown> {
+        return value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date) && !Buffer.isBuffer(value);
     }
 
     private async safeWrite<T>(operation: () => Promise<T>): Promise<void> {

@@ -29,6 +29,7 @@ export const envSchema = z.object({
     TWO_FACTOR_SETUP_QR_ROTATE_SECONDS: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.setupQrRotateSeconds),
     TWO_FACTOR_LOGIN_CHALLENGE_TTL_MINUTES: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.loginChallengeTtlMinutes),
     TWO_FACTOR_LOGIN_CHALLENGE_MAX_ATTEMPTS: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.loginChallengeMaxAttempts),
+    TWO_FACTOR_TRUSTED_DEVICE_TTL_DAYS: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.trustedDeviceTtlDays),
     TWO_FACTOR_RECOVERY_CODES_COUNT: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.recoveryCodesCount),
     TWO_FACTOR_TOTP_DIGITS: z.coerce.number().int().min(6).max(8).default(APP_DEFAULTS.twoFactor.totpDigits),
     TWO_FACTOR_TOTP_PERIOD_SECONDS: z.coerce.number().int().positive().default(APP_DEFAULTS.twoFactor.totpPeriodSeconds),

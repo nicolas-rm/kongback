@@ -23,6 +23,16 @@ export type CreateRefreshTokenInput = {
     ipAddress?: string | null;
 };
 
+export type CreateTrustedDeviceInput = {
+    userId: string;
+    tokenHash: string;
+    expiresAt: Date;
+    deviceName?: string | null;
+    platform?: string | null;
+    userAgent?: string | null;
+    ipAddress?: string | null;
+};
+
 @Injectable()
 export class AuthenticationRepository {
     constructor(private readonly prisma: PrismaService) {}
@@ -103,6 +113,42 @@ export class AuthenticationRepository {
                 userAgent: input.userAgent ?? null,
                 ipAddress: input.ipAddress ?? null,
             },
+            select: { id: true },
+        });
+    }
+
+    createTrustedDevice(input: CreateTrustedDeviceInput) {
+        return this.prisma.trustedDevice.create({
+            data: {
+                userId: input.userId,
+                tokenHash: input.tokenHash,
+                expiresAt: input.expiresAt,
+                deviceName: input.deviceName ?? null,
+                platform: input.platform ?? null,
+                userAgent: input.userAgent ?? null,
+                ipAddress: input.ipAddress ?? null,
+            },
+            select: { id: true, expiresAt: true },
+        });
+    }
+
+    findActiveTrustedDevice(userId: string, tokenHash: string) {
+        return this.prisma.trustedDevice.findFirst({
+            where: {
+                userId,
+                tokenHash,
+                revokedAt: null,
+                expiresAt: { gt: new Date() },
+                user: { status: 'active' },
+            },
+            select: { id: true, userId: true, expiresAt: true },
+        });
+    }
+
+    markTrustedDeviceUsed(id: string, usedAt = new Date()) {
+        return this.prisma.trustedDevice.update({
+            where: { id },
+            data: { lastUsedAt: usedAt },
             select: { id: true },
         });
     }
@@ -235,6 +281,13 @@ export class AuthenticationRepository {
         });
     }
 
+    revokeUserTrustedDevices(userId: string, revokedAt = new Date()) {
+        return this.prisma.trustedDevice.updateMany({
+            where: { userId, revokedAt: null },
+            data: { revokedAt },
+        });
+    }
+
     revokeSession(userId: string, sessionId: string, revokedAt = new Date()) {
         return this.prisma.$transaction(async (tx) => {
             const session = await tx.session.findFirst({
@@ -274,6 +327,32 @@ export class AuthenticationRepository {
                 idleExpiresAt: true,
                 expiresAt: true,
             },
+        });
+    }
+
+    listActiveTrustedDevices(userId: string) {
+        const now = new Date();
+
+        return this.prisma.trustedDevice.findMany({
+            where: { userId, revokedAt: null, expiresAt: { gt: now } },
+            orderBy: [{ lastUsedAt: 'desc' }, { createdAt: 'desc' }],
+            select: {
+                id: true,
+                deviceName: true,
+                platform: true,
+                userAgent: true,
+                ipAddress: true,
+                lastUsedAt: true,
+                expiresAt: true,
+                createdAt: true,
+            },
+        });
+    }
+
+    revokeTrustedDevice(userId: string, trustedDeviceId: string, revokedAt = new Date()) {
+        return this.prisma.trustedDevice.updateMany({
+            where: { id: trustedDeviceId, userId, revokedAt: null },
+            data: { revokedAt },
         });
     }
 
@@ -528,9 +607,13 @@ export class AuthenticationRepository {
         });
     }
 
-    disableTwoFactor(userId: string) {
+    disableTwoFactor(userId: string, revokedAt = new Date()) {
         return this.prisma.$transaction(async (tx) => {
             await tx.twoFactorRecoveryCode.deleteMany({ where: { userId } });
+            await tx.trustedDevice.updateMany({
+                where: { userId, revokedAt: null },
+                data: { revokedAt },
+            });
             return tx.user.update({
                 where: { id: userId },
                 data: {

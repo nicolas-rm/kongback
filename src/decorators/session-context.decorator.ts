@@ -10,6 +10,7 @@ export const SessionContextData = createParamDecorator((_data: unknown, context:
         ipAddress: forwardedFor || request.ip || null,
         userAgent: request.get('user-agent') ?? null,
         deviceName: request.get('x-device-name') ?? null,
+        devicePlatform: request.get('x-device-platform') ?? null,
         language: request.get('accept-language') ?? null,
     };
 });

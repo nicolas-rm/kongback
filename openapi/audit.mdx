@@ -54,8 +54,8 @@ Estos filtros aplican a los listados. Algunos campos solo tienen efecto en ciert
 | `actorUserId`  | `uuid`    | No        | Filtra por usuario actor.                                                 |
 | `companyId`    | `uuid`    | No        | Filtra por compania. Se ignora si `X-Company-Id` ya fija otro alcance.    |
 | `requestId`    | `string`  | No        | Correlaciona request tecnico con eventos especificos.                     |
-| `resourceType` | `string`  | No        | Filtra por tipo de recurso, por ejemplo `Card`, `SubCompany`, `Document`. |
-| `resourceId`   | `string`  | No        | Filtra por id del recurso afectado.                                       |
+| `resourceType` | `string`  | No        | Filtra por tipo de recurso, por ejemplo `User`, `Session`, `TrustedDevice`, `Card`, `SubCompany` o `Document`. No aplica a `/requests`. |
+| `resourceId`   | `string`  | No        | Filtra por id del recurso afectado. No aplica a `/requests`.              |
 | `from`         | `isoDate` | No        | Fecha/hora inicial.                                                       |
 | `to`           | `isoDate` | No        | Fecha/hora final.                                                         |
 
@@ -67,6 +67,7 @@ Ejemplo:
 GET /api/audit/cards?action=assigned&from=2026-08-01T00:00:00.000Z
 GET /api/audit/cardcloud?path=/v1/transfer
 GET /api/audit/security?result=denied
+GET /api/audit/security?resourceType=TrustedDevice
 GET /api/audit/requests?method=POST&path=/api/cards
 ```
 
@@ -150,6 +151,19 @@ Response `200`:
     "createdAt": "2026-08-21T18:00:00.000Z"
 }
 ```
+
+## Metadata enriquecida
+
+Los eventos manuales pueden incluir `metadata` de dominio. El backend agrega `metadata.auditContext` cuando existe contexto disponible de la request:
+
+| Campo                                | Tipo      | Descripcion                                                                  |
+| ------------------------------------ | --------- | ---------------------------------------------------------------------------- |
+| `metadata.auditContext.sessionId`    | `string`  | Sesion autenticada que origino el evento, cuando existe.                     |
+| `metadata.auditContext.deviceName`   | `string`  | Valor recibido en `X-Device-Name`, cuando el cliente lo envia.               |
+| `metadata.auditContext.devicePlatform` | `string` | Valor recibido en `X-Device-Platform`, por ejemplo `web`, `ios` o `android`. |
+| `metadata.auditContext.isGlobalAdmin` | `boolean` | Indica si el actor se resolvio como administrador global en esa request.      |
+
+Para eventos de seguridad, `resourceType` y `resourceId` tambien se guardan de forma estructurada cuando el servicio conoce el recurso afectado. Ejemplos: `User`, `Session` y `TrustedDevice`.
 
 ## Endpoints operativos directos
 

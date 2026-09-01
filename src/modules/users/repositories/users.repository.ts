@@ -67,14 +67,36 @@ export class UsersRepository {
         });
     }
 
-    updatePassword(id: string, passwordHash: string, mustChangePassword: boolean) {
-        return this.prisma.user.updateMany({
-            where: { id },
-            data: { passwordHash, mustChangePassword },
+    updatePassword(id: string, passwordHash: string, mustChangePassword: boolean, revokedAt = new Date()) {
+        return this.prisma.$transaction(async (tx) => {
+            const result = await tx.user.updateMany({
+                where: { id },
+                data: { passwordHash, mustChangePassword },
+            });
+            if (result.count === 0) return { count: 0, revokedSessions: 0, revokedTrustedDevices: 0 };
+
+            const revokedSessions = await tx.session.updateMany({
+                where: { userId: id, revokedAt: null },
+                data: { revokedAt },
+            });
+            await tx.refreshToken.updateMany({
+                where: { userId: id, revokedAt: null },
+                data: { revokedAt },
+            });
+            const revokedTrustedDevices = await tx.trustedDevice.updateMany({
+                where: { userId: id, revokedAt: null },
+                data: { revokedAt },
+            });
+
+            return {
+                count: result.count,
+                revokedSessions: revokedSessions.count,
+                revokedTrustedDevices: revokedTrustedDevices.count,
+            };
         });
     }
 
-    resetTwoFactor(id: string) {
+    resetTwoFactor(id: string, revokedAt = new Date()) {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.user.updateMany({
                 where: { id },
@@ -88,8 +110,12 @@ export class UsersRepository {
             });
             if (result.count === 0) return null;
 
-            await tx.twoFactorRecoveryCode.deleteMany({ where: { userId: id } });
-            return { id };
+            const deletedRecoveryCodes = await tx.twoFactorRecoveryCode.deleteMany({ where: { userId: id } });
+            const revokedTrustedDevices = await tx.trustedDevice.updateMany({
+                where: { userId: id, revokedAt: null },
+                data: { revokedAt },
+            });
+            return { id, deletedRecoveryCodes: deletedRecoveryCodes.count, revokedTrustedDevices: revokedTrustedDevices.count };
         });
     }
 

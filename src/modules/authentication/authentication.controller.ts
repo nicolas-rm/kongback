@@ -125,6 +125,19 @@ export class AuthenticationController {
         return this.authenticationService.listSessions(user.id, refreshToken);
     }
 
+    @Get('trusted-devices')
+    @SkipMustChangePassword()
+    trustedDevices(@CurrentUser() user: RequestUser) {
+        return this.authenticationService.listTrustedDevices(user.id);
+    }
+
+    @Delete('trusted-devices/:trustedDeviceId')
+    @RequestConfig({ statusCode: HttpStatus.OK })
+    @SkipMustChangePassword()
+    revokeTrustedDevice(@CurrentUser() user: RequestUser, @Param('trustedDeviceId', ParseUUIDPipe) trustedDeviceId: string) {
+        return this.authenticationService.revokeTrustedDevice(user.id, trustedDeviceId);
+    }
+
     @Delete('sessions/:sessionId')
     @RequestConfig({ statusCode: HttpStatus.OK })
     @SkipMustChangePassword()

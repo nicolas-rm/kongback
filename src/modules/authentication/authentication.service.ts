@@ -27,6 +27,7 @@ import {
     RequestPasswordResetUseCase,
     ResetPasswordUseCase,
     RevokeSessionUseCase,
+    TrustedDevicesUseCase,
     TwoFactorUseCase,
     UpdateMyProfileUseCase,
     VerifyEmailUseCase,
@@ -49,7 +50,8 @@ export class AuthenticationService {
         private readonly requestPasswordResetUseCase: RequestPasswordResetUseCase,
         private readonly resetPasswordUseCase: ResetPasswordUseCase,
         private readonly verifyEmailUseCase: VerifyEmailUseCase,
-        private readonly twoFactorUseCase: TwoFactorUseCase
+        private readonly twoFactorUseCase: TwoFactorUseCase,
+        private readonly trustedDevicesUseCase: TrustedDevicesUseCase
     ) {}
 
     login(dto: LoginDto, sessionContext?: SessionContext) {
@@ -98,6 +100,14 @@ export class AuthenticationService {
 
     revokeSession(userId: string, sessionId: string, refreshToken?: string) {
         return this.revokeSessionUseCase.execute(userId, sessionId, refreshToken);
+    }
+
+    listTrustedDevices(userId: string) {
+        return this.trustedDevicesUseCase.list(userId);
+    }
+
+    revokeTrustedDevice(userId: string, trustedDeviceId: string) {
+        return this.trustedDevicesUseCase.revoke(userId, trustedDeviceId);
     }
 
     changePassword(userId: string, dto: ChangePasswordDto) {

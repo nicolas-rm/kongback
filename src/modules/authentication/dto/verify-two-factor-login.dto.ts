@@ -1,4 +1,4 @@
-import { ValidatorString } from '@/decorators';
+import { ValidatorBoolean, ValidatorString } from '@/decorators';
 
 export class VerifyTwoFactorLoginDto {
     @ValidatorString()
@@ -9,4 +9,7 @@ export class VerifyTwoFactorLoginDto {
 
     @ValidatorString({ optional: true })
     recoveryCode?: string;
+
+    @ValidatorBoolean({ optional: true })
+    trustDevice?: boolean;
 }
