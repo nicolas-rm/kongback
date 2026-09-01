@@ -1,10 +1,8 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsString, ValidateNested } from 'class-validator';
 import { ValidatorArray, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
+import { CARDCLOUD_TRANSFER_ENTITY_TYPES, type CardcloudTransferEntityType } from '@/modules/cardcloud/types/cardcloud-provider.types';
 import { PaginationDto } from '@/utilities/pagination/pagination.dto';
-
-const TRANSFER_ENTITY_TYPES = ['account', 'subaccount', 'card'] as const;
-type TransferEntityType = (typeof TRANSFER_ENTITY_TYPES)[number];
 
 export class CardcloudDateRangeQueryDto {
     @ValidatorString({ optional: true })
@@ -81,15 +79,15 @@ export class ValidateCardcloudCardDto {
 
 export class TransferCardcloudFundsDto {
     @ValidatorString({ toLowerCase: true })
-    @IsIn(TRANSFER_ENTITY_TYPES)
-    sourceType!: TransferEntityType;
+    @IsIn(CARDCLOUD_TRANSFER_ENTITY_TYPES)
+    sourceType!: CardcloudTransferEntityType;
 
     @ValidatorString()
     source!: string;
 
     @ValidatorString({ toLowerCase: true })
-    @IsIn(TRANSFER_ENTITY_TYPES)
-    destinationType!: TransferEntityType;
+    @IsIn(CARDCLOUD_TRANSFER_ENTITY_TYPES)
+    destinationType!: CardcloudTransferEntityType;
 
     @ValidatorString()
     destination!: string;

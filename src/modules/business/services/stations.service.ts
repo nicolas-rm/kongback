@@ -3,7 +3,7 @@ import { Prisma, Status } from '@prisma/client';
 import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
-import { assertActive, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
+import { assertActive, notFound, toAddressData } from '@/modules/business/business.helpers';
 import { CreateStationDto, FindStationsDto, UpdateStationDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { StationsRepository } from '@/modules/business/repositories/stations.repository';
@@ -39,7 +39,7 @@ export class StationsService {
             subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope),
             subCompany: subCompanyScopeWhere(scope),
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.StationWhereInput>(dto.search, ['stationNumber', 'name']) } : {}),
+            ...(dto.search ? { OR: this.stationSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -74,5 +74,11 @@ export class StationsService {
         if (!station) throw notFound();
         void this.audit.recordBusiness({ action: 'station_deactivated', resourceType: 'Station', resourceId: station.id, after: { id: station.id, status: station.status } });
         return { id: station.id, status: station.status };
+    }
+
+    private stationSearch(search: string): Prisma.StationWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [{ stationNumber: contains }, { name: contains }, { subCompany: { key: contains } }, { subCompany: { name: contains } }];
     }
 }

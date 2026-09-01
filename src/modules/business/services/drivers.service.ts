@@ -3,7 +3,7 @@ import { Prisma, Status } from '@prisma/client';
 import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
-import { assertActive, notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
+import { assertActive, notFound, toAddressData } from '@/modules/business/business.helpers';
 import { CreateDriverDto, FindDriversDto, FindStatusRecordsDto, UpdateDriverDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { DriversRepository } from '@/modules/business/repositories/drivers.repository';
@@ -43,7 +43,7 @@ export class DriversService {
             subCompany: subCompanyScopeWhere(scope),
             userId: dto.userId,
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.DriverWhereInput>(dto.search, ['name', 'externalReference']) } : {}),
+            ...(dto.search ? { OR: this.driverSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
@@ -63,7 +63,7 @@ export class DriversService {
             driverId: id,
             subCompany: subCompanyScopeWhere(scope),
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.VehicleWhereInput>(dto.search, ['plates', 'economicNumber', 'model']) } : {}),
+            ...(dto.search ? { OR: this.vehicleSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.vehicles.findMany(where, dto.skip, dto.actualLimit), this.vehicles.count(where)]);
         return paginate(data, total, dto);
@@ -92,5 +92,33 @@ export class DriversService {
         if (!driver) throw notFound();
         void this.audit.recordBusiness({ action: 'driver_deactivated', resourceType: 'Driver', resourceId: driver.id, after: { id: driver.id, status: driver.status } });
         return { id: driver.id, status: driver.status };
+    }
+
+    private driverSearch(search: string): Prisma.DriverWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [
+            { name: contains },
+            { externalReference: contains },
+            { subCompany: { key: contains } },
+            { subCompany: { name: contains } },
+            { user: { is: { username: contains } } },
+            { user: { is: { fullName: contains } } },
+        ];
+    }
+
+    private vehicleSearch(search: string): Prisma.VehicleWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [
+            { plates: contains },
+            { economicNumber: contains },
+            { model: contains },
+            { subCompany: { key: contains } },
+            { subCompany: { name: contains } },
+            { fuel: { code: contains } },
+            { fuel: { name: contains } },
+            { driver: { is: { name: contains } } },
+        ];
     }
 }

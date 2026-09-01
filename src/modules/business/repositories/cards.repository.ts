@@ -153,6 +153,7 @@ export class CardsRepository {
             subCompany: { select: this.subCompanySummarySelect() },
             vehicle: { select: this.vehicleSummarySelect() },
             designFuel: { select: this.fuelSummarySelect() },
+            stock: { select: this.stockSummarySelect() },
         };
     }
 
@@ -177,6 +178,19 @@ export class CardsRepository {
             id: true,
             code: true,
             name: true,
+        };
+    }
+
+    private stockSummarySelect(): Prisma.CardcloudSelect {
+        return {
+            id: true,
+            externalId: true,
+            subCompanyId: true,
+            assignedCardId: true,
+            maskedPan: true,
+            clientId: true,
+            balance: true,
+            providerStatus: true,
         };
     }
 }

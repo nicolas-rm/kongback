@@ -45,14 +45,7 @@ export class CardholdersService {
         if (dto.hasCards === false) and.push({ OR: [{ driver: null }, { driver: { is: { ...driverScope, vehicles: { none: cardFilter } } } }, { driver: { isNot: driverScope } }] });
         if (dto.search) {
             and.push({
-                OR: [
-                    { username: { contains: dto.search, mode: 'insensitive' } },
-                    { email: { contains: dto.search, mode: 'insensitive' } },
-                    { fullName: { contains: dto.search, mode: 'insensitive' } },
-                    { driver: { is: { name: { contains: dto.search, mode: 'insensitive' } } } },
-                    { driver: { is: { subCompany: { name: { contains: dto.search, mode: 'insensitive' } } } } },
-                    { driver: { is: { subCompany: { key: { contains: dto.search, mode: 'insensitive' } } } } },
-                ],
+                OR: this.cardholderSearch(dto, scope),
             });
         }
 
@@ -82,6 +75,32 @@ export class CardholdersService {
             subCompany: subCompanyScopeWhere(scope),
             ...(dto.subCompanyId ? { subCompanyId: dto.subCompanyId } : {}),
         };
+    }
+
+    private cardholderSearch(dto: FindCardholdersDto, scope?: CompanyScope): Prisma.UserWhereInput[] {
+        const search = dto.search ?? '';
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+        const driverScope = this.driverScopeWhere(dto, scope);
+        const vehicleScope: Prisma.VehicleWhereInput = {
+            subCompany: subCompanyScopeWhere(scope),
+            ...(dto.subCompanyId ? { subCompanyId: dto.subCompanyId } : {}),
+        };
+
+        return [
+            { username: contains },
+            { email: contains },
+            { fullName: contains },
+            { driver: { is: { ...driverScope, name: contains } } },
+            { driver: { is: { ...driverScope, externalReference: contains } } },
+            { driver: { is: { ...driverScope, subCompany: { ...subCompanyScopeWhere(scope), key: contains } } } },
+            { driver: { is: { ...driverScope, subCompany: { ...subCompanyScopeWhere(scope), name: contains } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, plates: contains } } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, economicNumber: contains } } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, card: { is: { externalId: contains } } } } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, card: { is: { stock: { is: { maskedPan: contains } } } } } } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, card: { is: { stock: { is: { clientId: contains } } } } } } } } },
+            { driver: { is: { ...driverScope, vehicles: { some: { ...vehicleScope, card: { is: { stock: { is: { providerStatus: contains } } } } } } } } },
+        ];
     }
 
     private serialize(record: CardholderUserRecord, scope?: CompanyScope) {

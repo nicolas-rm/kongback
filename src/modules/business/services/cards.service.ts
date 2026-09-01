@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { CardAssignmentMode, NotificationType, Prisma, Status } from '@prisma/client';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
-import { assertActive, invalidRelation, notFound, textSearch } from '@/modules/business/business.helpers';
+import { assertActive, invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import {
     AssignCardsToSubCompanyDto,
@@ -31,6 +31,8 @@ type CardcloudSubaccountCardsRaw = {
     cards?: CardcloudSubaccountCard[];
     total_pages?: string | number | null;
 };
+
+type CardRecord = Awaited<ReturnType<CardsRepository['findMany']>>[number];
 
 @Injectable()
 export class CardsService {
@@ -66,8 +68,8 @@ export class CardsService {
             status: dto.status ?? Status.active,
             assignedAt: assignmentMode === CardAssignmentMode.unassigned ? null : (dto.assignedAt ?? new Date()),
         });
-        void this.audit.recordCard({ action: 'card_created', resourceType: 'Card', resourceId: card.id, after: card });
-        return card;
+        void this.audit.recordCard({ action: 'card_created', resourceType: 'Card', resourceId: card.id, after: this.cardAuditSnapshot(card) });
+        return this.mapCard(card);
     }
 
     async findAll(dto: FindCardsDto, scope?: CompanyScope) {
@@ -78,16 +80,20 @@ export class CardsService {
             designFuelId: dto.designFuelId,
             assignmentMode: dto.assignmentMode,
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.CardWhereInput>(dto.search, ['externalId']) } : {}),
+            ...(dto.search ? { OR: this.cardSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((card) => this.mapCard(card)),
+            total,
+            dto
+        );
     }
 
     async findOne(id: string, scope?: CompanyScope) {
         const card = await this.repository.findById(id, scope);
         if (!card) throw notFound();
-        return card;
+        return this.mapCard(card);
     }
 
     async validateOwnedCard(dto: ValidateOwnedCardDto, scope?: CompanyScope) {
@@ -149,10 +155,14 @@ export class CardsService {
             subCompany: subCompanyScopeWhere(scope),
             designFuelId,
             status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.CardWhereInput>(dto.search, ['externalId']) } : {}),
+            ...(dto.search ? { OR: this.cardSearch(dto.search) } : {}),
         };
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
-        return paginate(data, total, dto);
+        return paginate(
+            data.map((card) => this.mapCard(card)),
+            total,
+            dto
+        );
     }
 
     async assignCardsToSubCompany(dto: AssignCardsToSubCompanyDto, scope?: CompanyScope) {
@@ -168,13 +178,14 @@ export class CardsService {
             action: 'cards_assigned_to_sub_company',
             resourceType: 'SubCompany',
             resourceId: target.id,
-            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, requested: dto.cards.length, resolved: externalIds.length, result },
+            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, requested: dto.cards.length, resolved: externalIds.length, result: this.syncResultAuditSummary(result) },
         });
 
         return {
             subCompanyId: target.id,
             cardcloudSubaccountId: target.cardcloudSubaccountId,
             ...result,
+            cards: result.cards.map((card) => this.mapCard(card)),
         };
     }
 
@@ -188,7 +199,7 @@ export class CardsService {
             action: 'sub_company_cards_synced',
             resourceType: 'SubCompany',
             resourceId: target.id,
-            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, fetched: cards.length, resolved: externalIds.length, result },
+            metadata: { cardcloudSubaccountId: target.cardcloudSubaccountId, fetched: cards.length, resolved: externalIds.length, result: this.syncResultAuditSummary(result) },
         });
 
         return {
@@ -196,6 +207,7 @@ export class CardsService {
             cardcloudSubaccountId: target.cardcloudSubaccountId,
             fetched: cards.length,
             ...result,
+            cards: result.cards.map((card) => this.mapCard(card)),
         };
     }
 
@@ -218,8 +230,8 @@ export class CardsService {
 
         const card = await this.repository.update(id, data, scope);
         if (!card) throw notFound();
-        void this.audit.recordCard({ action: 'card_updated', resourceType: 'Card', resourceId: card.id, before: current, metadata: dto, after: card });
-        return card;
+        void this.audit.recordCard({ action: 'card_updated', resourceType: 'Card', resourceId: card.id, before: this.cardAuditSnapshot(current), metadata: dto, after: this.cardAuditSnapshot(card) });
+        return this.mapCard(card);
     }
 
     async deactivate(id: string, scope?: CompanyScope) {
@@ -312,6 +324,46 @@ export class CardsService {
         if (!vehicle) return cardLabel;
         const vehicleLabel = vehicle.economicNumber ? `${vehicle.economicNumber} (${vehicle.plates ?? 'sin placas'})` : (vehicle.plates ?? 'vehiculo sin placas');
         return `${cardLabel} - ${vehicleLabel}`;
+    }
+
+    private cardSearch(search: string): Prisma.CardWhereInput[] {
+        const contains: Prisma.StringFilter = { contains: search, mode: 'insensitive' };
+
+        return [
+            { externalId: contains },
+            { stock: { is: { externalId: contains } } },
+            { stock: { is: { maskedPan: contains } } },
+            { stock: { is: { clientId: contains } } },
+            { stock: { is: { providerStatus: contains } } },
+            { subCompany: { key: contains } },
+            { subCompany: { name: contains } },
+            { vehicle: { is: { plates: contains } } },
+            { vehicle: { is: { economicNumber: contains } } },
+            { designFuel: { is: { code: contains } } },
+            { designFuel: { is: { name: contains } } },
+        ];
+    }
+
+    private mapCard(card: CardRecord) {
+        return {
+            ...card,
+            stock: this.cardcloud.serializeStockSummary(card.stock),
+        };
+    }
+
+    private cardAuditSnapshot(card: CardRecord) {
+        const { stock: _stock, ...snapshot } = card;
+        return snapshot;
+    }
+
+    private syncResultAuditSummary(result: { requested: number; unique: number; created: number; updated: number; unchanged: number }) {
+        return {
+            requested: result.requested,
+            unique: result.unique,
+            created: result.created,
+            updated: result.updated,
+            unchanged: result.unchanged,
+        };
     }
 
     private async resolveCardcloudTarget(subCompanyId: string, scope?: CompanyScope): Promise<{ id: string; cardcloudSubaccountId: string }> {
