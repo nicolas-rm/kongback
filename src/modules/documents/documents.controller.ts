@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Res, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { CurrentCompanyScope, CurrentUser, Permissions, RequireCompany } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
 import { DocumentsService } from '@/modules/documents/services/documents.service';
 import type { UploadedFile as AppUploadedFile } from '@/modules/documents/types/uploaded-file.type';
@@ -24,6 +25,14 @@ export class DocumentsController {
     @Permissions('documents.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindDocumentsDto) {
         return this.documentsService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('documents.read-list')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindDocumentsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.documentsService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id/download')

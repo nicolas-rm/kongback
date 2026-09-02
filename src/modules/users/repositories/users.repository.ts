@@ -52,6 +52,23 @@ export class UsersRepository {
         });
     }
 
+    findActiveDriverByUserId(userId: string) {
+        return this.prisma.driver.findFirst({
+            where: {
+                userId,
+                status: 'active',
+                subCompany: {
+                    status: 'active',
+                    company: { status: 'active' },
+                },
+            },
+            select: {
+                id: true,
+                subCompanyId: true,
+            },
+        });
+    }
+
     update(id: string, data: Prisma.UserUncheckedUpdateManyInput) {
         return this.prisma.$transaction(async (tx) => {
             const result = await tx.user.updateMany({

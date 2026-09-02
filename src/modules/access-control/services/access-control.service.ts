@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignRolePermissionsDto, CreatePermissionDto, CreateRoleDto, FindAccessControlDto, UpdatePermissionDto, UpdateRoleDto } from '@/modules/access-control/dto';
@@ -67,22 +68,31 @@ export class AccessControlService {
     }
 
     async findRoles(dto: FindAccessControlDto) {
-        const where: Prisma.RoleWhereInput = {
-            ...(dto.search
-                ? {
-                      OR: [
-                          { code: { contains: dto.search, mode: 'insensitive' } },
-                          { name: { contains: dto.search, mode: 'insensitive' } },
-                          { description: { contains: dto.search, mode: 'insensitive' } },
-                      ],
-                  }
-                : {}),
-        };
+        const where = this.roleWhere(dto);
         const [data, total] = await Promise.all([this.repository.findRoles(where, dto.skip, dto.actualLimit), this.repository.countRoles(where)]);
         return paginate(
             data.map((role) => RoleResponse.from(role)),
             total,
             dto
+        );
+    }
+
+    async exportRoles(dto: FindAccessControlDto) {
+        const where = this.roleWhere(dto);
+        const roles = await this.repository.findRoles(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordAccess({ action: 'roles_exported', resourceType: 'Role', metadata: { rows: roles.length, search: dto.search, format: dto.format ?? 'xlsx' } });
+
+        return createExcelExport(
+            'roles.xlsx',
+            'Roles',
+            [
+                { header: 'ID', value: (role) => role.id },
+                { header: 'Codigo', value: (role) => role.code },
+                { header: 'Nombre', value: (role) => role.name },
+                { header: 'Descripcion', value: (role) => valueOrDash(role.description) },
+            ],
+            roles,
+            dto.format
         );
     }
 
@@ -132,22 +142,31 @@ export class AccessControlService {
     }
 
     async findPermissions(dto: FindAccessControlDto) {
-        const where: Prisma.PermissionWhereInput = {
-            ...(dto.search
-                ? {
-                      OR: [
-                          { code: { contains: dto.search, mode: 'insensitive' } },
-                          { name: { contains: dto.search, mode: 'insensitive' } },
-                          { description: { contains: dto.search, mode: 'insensitive' } },
-                      ],
-                  }
-                : {}),
-        };
+        const where = this.permissionWhere(dto);
         const [data, total] = await Promise.all([this.repository.findPermissions(where, dto.skip, dto.actualLimit), this.repository.countPermissions(where)]);
         return paginate(
             data.map((permission) => PermissionResponse.from(permission)),
             total,
             dto
+        );
+    }
+
+    async exportPermissions(dto: FindAccessControlDto) {
+        const where = this.permissionWhere(dto);
+        const permissions = await this.repository.findPermissions(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordAccess({ action: 'permissions_exported', resourceType: 'Permission', metadata: { rows: permissions.length, search: dto.search, format: dto.format ?? 'xlsx' } });
+
+        return createExcelExport(
+            'permisos.xlsx',
+            'Permisos',
+            [
+                { header: 'ID', value: (permission) => permission.id },
+                { header: 'Codigo', value: (permission) => permission.code },
+                { header: 'Nombre', value: (permission) => valueOrDash(permission.name) },
+                { header: 'Descripcion', value: (permission) => valueOrDash(permission.description) },
+            ],
+            permissions,
+            dto.format
         );
     }
 
@@ -178,5 +197,33 @@ export class AccessControlService {
 
         const activePermissions = await this.repository.countActivePermissions(uniquePermissionIds);
         if (activePermissions !== uniquePermissionIds.length) throw new I18nBadRequestException(I18N_KEYS.prisma.invalidRelation, 'Algunos datos relacionados no son validos.');
+    }
+
+    private roleWhere(dto: FindAccessControlDto): Prisma.RoleWhereInput {
+        return {
+            ...(dto.search
+                ? {
+                      OR: [
+                          { code: { contains: dto.search, mode: 'insensitive' } },
+                          { name: { contains: dto.search, mode: 'insensitive' } },
+                          { description: { contains: dto.search, mode: 'insensitive' } },
+                      ],
+                  }
+                : {}),
+        };
+    }
+
+    private permissionWhere(dto: FindAccessControlDto): Prisma.PermissionWhereInput {
+        return {
+            ...(dto.search
+                ? {
+                      OR: [
+                          { code: { contains: dto.search, mode: 'insensitive' } },
+                          { name: { contains: dto.search, mode: 'insensitive' } },
+                          { description: { contains: dto.search, mode: 'insensitive' } },
+                      ],
+                  }
+                : {}),
+        };
     }
 }

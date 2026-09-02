@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus, joinValues, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { SUB_COMPANY_SCOPE_KEY, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AuditService } from '@/modules/audit/audit.service';
@@ -29,6 +30,55 @@ export class CardholdersService {
             records.map((record) => this.serialize(record, scope)),
             total,
             dto
+        );
+    }
+
+    async exportList(dto: FindCardholdersDto, scope?: CompanyScope) {
+        const where = this.buildWhere(dto, scope);
+        const records = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        const cardholders = records.map((record) => this.serialize(record, scope));
+
+        void this.audit.recordCard({
+            action: 'cardholders_exported',
+            resourceType: 'Cardholder',
+            metadata: {
+                rows: cardholders.length,
+                subCompanyId: dto.subCompanyId,
+                hasDriver: dto.hasDriver,
+                hasCards: dto.hasCards,
+                status: dto.status,
+                search: dto.search,
+                format: dto.format ?? 'xlsx',
+            },
+        });
+
+        return createExcelExport(
+            'tarjetahabientes.xlsx',
+            'Tarjetahabientes',
+            [
+                { header: 'ID', value: (cardholder) => cardholder.id },
+                { header: 'Usuario', value: (cardholder) => cardholder.username },
+                { header: 'Email', value: (cardholder) => cardholder.email },
+                { header: 'Nombre', value: (cardholder) => cardholder.fullName },
+                { header: 'Estado', value: (cardholder) => formatStatus(cardholder.status) },
+                { header: 'Operativo', value: (cardholder) => formatBoolean(cardholder.isOperational) },
+                { header: 'Conductor', value: (cardholder) => valueOrDash(cardholder.driver?.name) },
+                { header: 'Referencia conductor', value: (cardholder) => valueOrDash(cardholder.driver?.externalReference) },
+                { header: 'Subcompania conductor', value: (cardholder) => (cardholder.driver ? `${cardholder.driver.subCompany.key} - ${cardholder.driver.subCompany.name}` : '-') },
+                { header: 'Vehiculos', value: (cardholder) => joinValues(cardholder.vehicles.map((vehicle) => joinValues([vehicle.plates, vehicle.economicNumber]))) },
+                {
+                    header: 'Tarjetas',
+                    value: (cardholder) =>
+                        joinValues(
+                            cardholder.vehicles
+                                .map((vehicle) => vehicle.card)
+                                .filter((card): card is NonNullable<(typeof cardholder.vehicles)[number]['card']> => Boolean(card))
+                                .map((card) => card.stock?.clientId ?? card.stock?.maskedPan ?? card.externalId)
+                        ),
+                },
+            ],
+            cardholders,
+            dto.format
         );
     }
 

@@ -3,6 +3,7 @@ import { Prisma, Status } from '@prisma/client';
 import { ERROR_CODES } from '@/errors/error-codes';
 import { I18N_KEYS, I18nHttpException } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatStatus, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { notFound, textSearch, toAddressData } from '@/modules/business/business.helpers';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
@@ -55,14 +56,34 @@ export class CompaniesService {
     }
 
     async findAll(dto: FindStatusRecordsDto, user: RequestUser) {
-        const companyIds = user.isGlobalAdmin ? undefined : await this.repository.findAccessibleCompanyIds(user.id);
-        const where: Prisma.CompanyWhereInput = {
-            ...(companyIds ? { id: { in: companyIds } } : {}),
-            status: dto.status,
-            ...(dto.search ? { OR: textSearch<Prisma.CompanyWhereInput>(dto.search, ['key', 'externalId', 'name', 'tradeName']) } : {}),
-        };
+        const where = await this.buildWhere(dto, user);
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
+    }
+
+    async exportList(dto: FindStatusRecordsDto, user: RequestUser) {
+        const where = await this.buildWhere(dto, user);
+        const companies = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordBusiness({
+            action: 'companies_exported',
+            resourceType: 'Company',
+            metadata: { rows: companies.length, status: dto.status, search: dto.search, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'companias.xlsx',
+            'Companias',
+            [
+                { header: 'ID', value: (company) => company.id },
+                { header: 'Clave', value: (company) => company.key },
+                { header: 'External ID', value: (company) => valueOrDash(company.externalId) },
+                { header: 'Nombre', value: (company) => company.name },
+                { header: 'Nombre comercial', value: (company) => valueOrDash(company.tradeName) },
+                { header: 'Estado', value: (company) => formatStatus(company.status) },
+            ],
+            companies,
+            dto.format
+        );
     }
 
     async findOne(id: string, user: RequestUser) {
@@ -101,5 +122,14 @@ export class CompaniesService {
         throw new I18nHttpException(HttpStatus.CONFLICT, I18N_KEYS.errors.business.companyReferenceExists, 'La referencia de la empresa ya existe.', {
             code: ERROR_CODES.UNIQUE_CONSTRAINT,
         });
+    }
+
+    private async buildWhere(dto: FindStatusRecordsDto, user: RequestUser): Promise<Prisma.CompanyWhereInput> {
+        const companyIds = user.isGlobalAdmin ? undefined : await this.repository.findAccessibleCompanyIds(user.id);
+        return {
+            ...(companyIds ? { id: { in: companyIds } } : {}),
+            status: dto.status,
+            ...(dto.search ? { OR: textSearch<Prisma.CompanyWhereInput>(dto.search, ['key', 'externalId', 'name', 'tradeName']) } : {}),
+        };
     }
 }

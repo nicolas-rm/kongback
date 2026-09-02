@@ -52,6 +52,9 @@ export class FindStationsDto extends FindStatusRecordsDto {
 
 export class FindStationFuelsDto extends FindStatusRecordsDto {
     @ValidatorUUID({ optional: true })
+    subCompanyId?: string;
+
+    @ValidatorUUID({ optional: true })
     stationId?: string;
 
     @ValidatorUUID({ optional: true })

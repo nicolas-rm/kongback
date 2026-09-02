@@ -39,7 +39,9 @@
         "notFound": "No encontramos el usuario solicitado.",
         "cardholderAdministrativePermissions": "El perfil de tarjetahabiente no puede mezclarse con permisos administrativos.",
         "cardholderAdministrativeRoleConflict": "No puedes combinar el perfil de tarjetahabiente con roles administrativos.",
-        "cardholderSubCompanyScopeRequired": "El perfil de tarjetahabiente debe asignarse a una subcompania."
+        "cardholderRequired": "El usuario asignado al conductor debe tener solo perfil de tarjetahabiente.",
+        "cardholderSubCompanyScopeRequired": "El perfil de tarjetahabiente debe asignarse a una subcompania.",
+        "cardholderDriverSubCompanyMismatch": "El alcance del tarjetahabiente debe coincidir con la subcompania de su conductor activo."
     },
     "business": {
         "companyReferenceExists": "La referencia de la empresa ya existe.",

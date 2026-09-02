@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { AuditService } from '@/modules/audit/audit.service';
 import { paginate } from '@/utilities/pagination/pagination.dto';
-import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, notFound } from '@/modules/business/business.helpers';
 import { CreateStationFuelDto, FindStationFuelsDto, UpdateStationFuelDto } from '@/modules/business/dto';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
@@ -34,7 +34,7 @@ export class StationFuelsService {
     async findAll(dto: FindStationFuelsDto, scope?: CompanyScope) {
         const where: Prisma.StationFuelWhereInput = {
             stationId: dto.stationId,
-            station: { subCompany: subCompanyScopeWhere(scope) },
+            station: { subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope), subCompany: subCompanyScopeWhere(scope) },
             fuelId: dto.fuelId,
             status: dto.status,
             ...(dto.search ? { OR: this.stationFuelSearch(dto.search) } : {}),

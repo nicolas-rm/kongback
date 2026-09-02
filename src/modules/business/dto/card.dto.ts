@@ -72,6 +72,11 @@ export class AssignCardsToSubCompanyDto {
     cards!: string[];
 }
 
+export class AssignCardsToSubCompanyExcelDto {
+    @ValidatorUUID()
+    subCompanyId!: string;
+}
+
 export class SyncSubCompanyCardsDto {
     @ValidatorUUID()
     subCompanyId!: string;

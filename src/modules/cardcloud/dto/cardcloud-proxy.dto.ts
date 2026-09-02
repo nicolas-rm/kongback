@@ -2,9 +2,10 @@ import { Type } from 'class-transformer';
 import { IsIn, IsString, ValidateNested } from 'class-validator';
 import { ValidatorArray, ValidatorNumber, ValidatorString, ValidatorUUID } from '@/decorators';
 import { CARDCLOUD_TRANSFER_ENTITY_TYPES, type CardcloudTransferEntityType } from '@/modules/cardcloud/types/cardcloud-provider.types';
+import { ExportQueryDto } from '@/utilities/export/export-query.dto';
 import { PaginationDto } from '@/utilities/pagination/pagination.dto';
 
-export class CardcloudDateRangeQueryDto {
+export class CardcloudDateRangeQueryDto extends ExportQueryDto {
     @ValidatorString({ optional: true })
     from?: string;
 
@@ -12,7 +13,7 @@ export class CardcloudDateRangeQueryDto {
     to?: string;
 }
 
-export class CardcloudPageQueryDto {
+export class CardcloudPageQueryDto extends ExportQueryDto {
     @ValidatorString({ optional: true })
     page?: string;
 }

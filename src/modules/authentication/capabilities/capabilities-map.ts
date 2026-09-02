@@ -373,6 +373,8 @@ export const MODULE_CAPABILITIES = {
             sync: { all: ['cards.sync'] },
             openAssignCardcloud: { all: ['cardcloud-stock.sub-company.assign'] },
             assignCardcloud: { all: ['cardcloud-stock.sub-company.assign'] },
+            downloadAssignCardcloudTemplate: { all: ['cardcloud-stock.sub-company.assign'] },
+            uploadAssignCardcloudExcel: { all: ['cardcloud-stock.sub-company.assign'] },
         },
     },
 
@@ -508,6 +510,9 @@ export const MODULE_CAPABILITIES = {
             sync: { all: ['cardcloud-stock.sync'] },
             openAssignSubCompany: { all: ['cardcloud-stock.sub-company.assign'] },
             openAssignSubCompanyDialog: { all: ['cardcloud-stock.sub-company.assign'] },
+            openAssignSubCompanyExcel: { all: ['cardcloud-stock.sub-company.assign'] },
+            downloadAssignSubCompanyTemplate: { all: ['cardcloud-stock.sub-company.assign'] },
+            uploadAssignSubCompanyExcel: { all: ['cardcloud-stock.sub-company.assign'] },
             openSubCompanySelect: { all: ['sub-companies.read-list'] },
             assignSubCompany: { all: ['cardcloud-stock.sub-company.assign'] },
             openUnassignSubCompany: { all: ['cardcloud-stock.sub-company.unassign'] },
@@ -573,6 +578,8 @@ export const MODULE_CAPABILITIES = {
             'cardcloud.cards.validate',
             'cardcloud.cards.block',
             'cardcloud.cards.unblock',
+            'cardcloud.cards.assign',
+            'cardcloud.cards.assign.bulk',
         ],
         actions: {
             openDetail: { all: ['cardcloud.cards.read-one'] },
@@ -591,6 +598,8 @@ export const MODULE_CAPABILITIES = {
             validate: { all: ['cardcloud.cards.validate'] },
             block: { all: ['cardcloud.cards.block'] },
             unblock: { all: ['cardcloud.cards.unblock'] },
+            assign: { all: ['cardcloud.cards.assign'] },
+            assignBulk: { all: ['cardcloud.cards.assign.bulk'] },
         },
     },
 

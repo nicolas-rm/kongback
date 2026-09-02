@@ -4,6 +4,7 @@ import { CryptoService } from '@/crypto/crypto.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
+import type { CardcloudCardDetail } from '@/modules/cardcloud/types/cardcloud-provider.types';
 import { FindCardholderVehiclesDto, UpdateCardholderCardNipDto, ValidateCardholderCardDto } from '@/modules/cardholder/dto';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { AuditService } from '@/modules/audit/audit.service';
@@ -127,6 +128,9 @@ type CardholderDriver = Prisma.DriverGetPayload<{ select: typeof DRIVER_SELECT }
 type CardholderCard = Prisma.CardGetPayload<{ select: typeof CARD_SELECT }>;
 type CardholderVehicle = Prisma.VehicleGetPayload<{ select: typeof VEHICLE_SELECT }>;
 
+const CARDHOLDER_PERMISSION_PREFIX = 'cardholder.';
+const SUB_COMPANY_SCOPE_KEY = 'subCompanyId';
+
 @Injectable()
 export class CardholderService {
     constructor(
@@ -198,6 +202,8 @@ export class CardholderService {
     async powerOff(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.blockCard(externalId), 'No fue posible bloquear la tarjeta en este momento. Intenta nuevamente.');
+        await this.syncLocalProviderStatus(card, result.card);
+        const updatedCard = await this.findOwnedCard(user, cardId);
         await this.notify(
             user.id,
             'Tarjeta apagada',
@@ -206,12 +212,14 @@ export class CardholderService {
             NotificationType.warning
         );
         void this.audit.recordCard({ action: 'cardholder_card_blocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
-        return this.withMessage(result, 'La tarjeta se bloqueo correctamente.');
+        return { message: 'La tarjeta se bloqueo correctamente.', card: this.mapCard(updatedCard.card) };
     }
 
     async powerOn(user: RequestUser, cardId: string) {
         const { externalId, card } = await this.findOwnedCardExternalTarget(user, cardId);
         const result = await this.executeCardcloudAction(() => this.cardcloud.unblockCard(externalId), 'No fue posible desbloquear la tarjeta en este momento. Intenta nuevamente.');
+        await this.syncLocalProviderStatus(card, result.card);
+        const updatedCard = await this.findOwnedCard(user, cardId);
         await this.notify(
             user.id,
             'Tarjeta encendida',
@@ -220,7 +228,7 @@ export class CardholderService {
             NotificationType.success
         );
         void this.audit.recordCard({ action: 'cardholder_card_unblocked', resourceType: 'Card', resourceId: card.id, metadata: { externalId } });
-        return this.withMessage(result, 'La tarjeta se desbloqueo correctamente.');
+        return { message: 'La tarjeta se desbloqueo correctamente.', card: this.mapCard(updatedCard.card) };
     }
 
     async getMovements(user: RequestUser, cardId: string, query: CardcloudDateRangeQueryDto) {
@@ -302,7 +310,7 @@ export class CardholderService {
                 }),
             'No pudimos validar la tarjeta con los datos capturados. Verifica la vigencia y el NIP.'
         );
-        const validatedCardId = this.extractStringField(validated, ['card_id', 'cardId', 'id']);
+        const validatedCardId = this.extractStringField(validated, ['card_id', 'card_external_id', 'cardId', 'cardExternalId', 'id']);
 
         if (!validatedCardId || validatedCardId !== externalId) {
             throw new BadRequestException('No pudimos validar la tarjeta con los datos capturados. Verifica la vigencia y el NIP.');
@@ -334,7 +342,36 @@ export class CardholderService {
             throw new ForbiddenException('Este apartado esta disponible solo para tarjetahabientes con conductor activo.');
         }
 
+        await this.assertCardholderAccessMatchesDriver(user.id, driver);
         return driver;
+    }
+
+    private async assertCardholderAccessMatchesDriver(userId: string, driver: CardholderDriver): Promise<void> {
+        const access = await this.prisma.userAccess.findFirst({
+            where: {
+                userId,
+                companyId: driver.subCompany.companyId,
+                company: { status: Status.active },
+                OR: [
+                    { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: driver.subCompanyId },
+                    { scopeKey: null, scopeId: null },
+                ],
+                role: {
+                    permissions: {
+                        some: {
+                            permission: {
+                                code: { startsWith: CARDHOLDER_PERMISSION_PREFIX },
+                            },
+                        },
+                    },
+                },
+            },
+            select: { id: true },
+        });
+
+        if (!access) {
+            throw new ForbiddenException('Este apartado esta disponible solo para tarjetahabientes con acceso activo a la subcompania del conductor.');
+        }
     }
 
     private ownedCardWhere(driver: CardholderDriver): Prisma.CardWhereInput {
@@ -366,6 +403,41 @@ export class CardholderService {
         }
 
         return { driver, card };
+    }
+
+    private async syncLocalProviderStatus(card: CardholderCard, providerCard?: CardcloudCardDetail | null): Promise<void> {
+        const providerStatus = providerCard?.status?.trim();
+        if (!providerStatus) return;
+
+        const externalId = providerCard?.card_external_id?.trim() || providerCard?.card_id?.trim() || card.externalId || card.stock?.externalId || null;
+
+        await this.prisma.$transaction(async (tx) => {
+            const existing = await tx.cardcloud.findFirst({
+                where: {
+                    OR: [{ assignedCardId: card.id }, ...(externalId ? [{ externalId }] : [])],
+                },
+                select: { id: true },
+            });
+
+            if (existing) {
+                await tx.cardcloud.update({
+                    where: { id: existing.id },
+                    data: { providerStatus },
+                });
+                return;
+            }
+
+            if (!externalId) return;
+
+            await tx.cardcloud.create({
+                data: {
+                    externalId,
+                    subCompanyId: card.subCompanyId,
+                    assignedCardId: card.id,
+                    providerStatus,
+                },
+            });
+        });
     }
 
     private async findOwnedCardExternalTarget(user: RequestUser, cardId: string): Promise<{ card: CardholderCard; externalId: string }> {
@@ -444,11 +516,6 @@ export class CardholderService {
         } catch {
             return null;
         }
-    }
-
-    private withMessage(result: unknown, message: string) {
-        if (this.isRecord(result)) return { ...result, message };
-        return { message, result };
     }
 
     private extractPan(value: unknown): string | null {

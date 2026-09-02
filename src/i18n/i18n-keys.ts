@@ -40,7 +40,9 @@ export const I18N_KEYS = {
             notFound: 'errors.users.notFound',
             cardholderAdministrativePermissions: 'errors.users.cardholderAdministrativePermissions',
             cardholderAdministrativeRoleConflict: 'errors.users.cardholderAdministrativeRoleConflict',
+            cardholderRequired: 'errors.users.cardholderRequired',
             cardholderSubCompanyScopeRequired: 'errors.users.cardholderSubCompanyScopeRequired',
+            cardholderDriverSubCompanyMismatch: 'errors.users.cardholderDriverSubCompanyMismatch',
         },
         business: {
             companyReferenceExists: 'errors.business.companyReferenceExists',

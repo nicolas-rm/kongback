@@ -1,7 +1,9 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, CurrentUser, Permissions, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersService } from '@/modules/users/services/users.service';
 
@@ -21,6 +23,15 @@ export class UsersController {
     @RequireSystemOrCompanyAccess()
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindUsersDto) {
         return this.usersService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('users.read-list')
+    @RequireSystemOrCompanyAccess()
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindUsersDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.usersService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Patch(':id')

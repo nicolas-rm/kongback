@@ -39,7 +39,9 @@
         "notFound": "Wir konnten den angeforderten Benutzer nicht finden.",
         "cardholderAdministrativePermissions": "Das Karteninhaberprofil darf nicht mit administrativen Berechtigungen kombiniert werden.",
         "cardholderAdministrativeRoleConflict": "Du kannst das Karteninhaberprofil nicht mit administrativen Rollen kombinieren.",
-        "cardholderSubCompanyScopeRequired": "Das Karteninhaberprofil muss einer Untergesellschaft zugewiesen werden."
+        "cardholderRequired": "Der dem Fahrer zugewiesene Benutzer darf nur ein Karteninhaberprofil haben.",
+        "cardholderSubCompanyScopeRequired": "Das Karteninhaberprofil muss einer Untergesellschaft zugewiesen werden.",
+        "cardholderDriverSubCompanyMismatch": "Der Karteninhaberbereich muss zur Untergesellschaft des aktiven Fahrers passen."
     },
     "business": {
         "companyReferenceExists": "Die Unternehmensreferenz existiert bereits.",

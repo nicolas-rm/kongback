@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateVehicleDto, FindStatusRecordsDto, FindVehiclesDto, SetVehicleDriverDto, UpdateVehicleDto } from '@/modules/business/dto';
 import { VehiclesService } from '@/modules/business/services/vehicles.service';
 
@@ -19,6 +21,14 @@ export class VehiclesController {
     @Permissions('vehicles.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindVehiclesDto) {
         return this.vehiclesService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('vehicles.read-list')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindVehiclesDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.vehiclesService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id/drivers')

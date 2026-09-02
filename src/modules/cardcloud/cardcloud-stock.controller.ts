@@ -1,5 +1,7 @@
-import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequestConfig, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { AssignCardcloudSubCompanyDto, FindCardcloudStockDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
@@ -13,6 +15,15 @@ export class CardcloudStockController {
     @Permissions('cardcloud-stock.read-list')
     findStock(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardcloudStockDto) {
         return this.cardcloudService.findStock(dto, scope);
+    }
+
+    @Get('export')
+    @RequireSystemOrCompanyAccess()
+    @Permissions('cardcloud-stock.read-list')
+    async exportStock(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardcloudStockDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardcloudService.exportStock(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Post('sync')

@@ -6,9 +6,10 @@ import { AppMailerService } from '@/mailer/mailer.service';
 import { AuditService } from '@/modules/audit/audit.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 import { PermissionResponse } from '@/modules/access-control/responses';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { generateSecurePassword } from '@/utilities/password/generate-password';
-import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { scopedSubCompanyIdFilter, SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
 import { UsersRepository } from '@/modules/users/repositories/users.repository';
 import { UserAccessResponse, UserResponse } from '@/modules/users/responses';
@@ -62,32 +63,40 @@ export class UsersService {
     }
 
     async findAll(dto: FindUsersDto, scope?: CompanyScope) {
-        const where: Prisma.UserWhereInput = {
-            status: dto.status,
-            ...(scope?.companyId
-                ? {
-                      accesses: {
-                          some: scope.subCompanyIds
-                              ? { companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds }, company: { status: 'active' } }
-                              : { companyId: scope.companyId, company: { status: 'active' } },
-                      },
-                  }
-                : {}),
-            ...(dto.search
-                ? {
-                      OR: [
-                          { username: { contains: dto.search, mode: 'insensitive' } },
-                          { email: { contains: dto.search, mode: 'insensitive' } },
-                          { fullName: { contains: dto.search, mode: 'insensitive' } },
-                      ],
-                  }
-                : {}),
-        };
+        const where = this.buildWhere(dto, scope);
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(
             data.map((user) => UserResponse.from(user)),
             total,
             dto
+        );
+    }
+
+    async exportList(dto: FindUsersDto, scope?: CompanyScope) {
+        const where = this.buildWhere(dto, scope);
+        const users = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordAccess({
+            action: 'users_exported',
+            resourceType: 'User',
+            metadata: { rows: users.length, status: dto.status, search: dto.search, companyId: scope?.companyId, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'usuarios.xlsx',
+            'Usuarios',
+            [
+                { header: 'ID', value: (user) => user.id },
+                { header: 'Usuario', value: (user) => user.username },
+                { header: 'Email', value: (user) => user.email },
+                { header: 'Nombre', value: (user) => user.fullName },
+                { header: 'Idioma', value: (user) => user.preferredLanguage },
+                { header: 'Estado', value: (user) => formatStatus(user.status) },
+                { header: 'Debe cambiar contrasena', value: (user) => formatBoolean(user.mustChangePassword) },
+                { header: 'Email verificado', value: (user) => formatBoolean(Boolean(user.emailVerifiedAt)) },
+                { header: '2FA activo', value: (user) => formatBoolean(user.twoFactorEnabled) },
+            ],
+            users,
+            dto.format
         );
     }
 
@@ -249,6 +258,42 @@ export class UsersService {
         await this.notifications.createForUser(userId, { title, message, detail, type }).catch(() => null);
     }
 
+    private buildWhere(dto: FindUsersDto, scope?: CompanyScope): Prisma.UserWhereInput {
+        const accessWhere = this.buildUserAccessWhere(dto, scope);
+        return {
+            status: dto.status,
+            ...(accessWhere ? { accesses: { some: accessWhere } } : {}),
+            ...(dto.search
+                ? {
+                      OR: [
+                          { username: { contains: dto.search, mode: 'insensitive' } },
+                          { email: { contains: dto.search, mode: 'insensitive' } },
+                          { fullName: { contains: dto.search, mode: 'insensitive' } },
+                      ],
+                  }
+                : {}),
+        };
+    }
+
+    private buildUserAccessWhere(dto: FindUsersDto, scope?: CompanyScope): Prisma.UserAccessWhereInput | undefined {
+        const subCompanyId = scopedSubCompanyIdFilter(dto.subCompanyId, scope);
+
+        if (subCompanyId) {
+            return {
+                ...(scope?.companyId ? { companyId: scope.companyId } : {}),
+                scopeKey: SUB_COMPANY_SCOPE_KEY,
+                scopeId: subCompanyId,
+                company: { status: 'active' },
+            };
+        }
+
+        if (!scope?.companyId) return undefined;
+
+        return scope.subCompanyIds
+            ? { companyId: scope.companyId, scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds }, company: { status: 'active' } }
+            : { companyId: scope.companyId, company: { status: 'active' } };
+    }
+
     private async assertUserActive(userId: string, scope?: CompanyScope): Promise<void> {
         const user = await this.repository.findById(userId, scope);
         if (!user || user.status !== 'active') throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
@@ -337,10 +382,25 @@ export class UsersService {
         }
 
         const cardholderRoleIds = new Set(profiles.filter((role) => role.isCardholderRole).map((role) => role.id));
-        const hasInvalidCardholderScope = newAccesses.some((access) => cardholderRoleIds.has(access.roleId) && (!access.companyId || access.scopeKey !== SUB_COMPANY_SCOPE_KEY || !access.scopeId));
+        const cardholderAccesses = newAccesses.filter((access) => cardholderRoleIds.has(access.roleId));
+        const hasInvalidCardholderScope = cardholderAccesses.some((access) => !access.companyId || access.scopeKey !== SUB_COMPANY_SCOPE_KEY || !access.scopeId);
 
         if (hasInvalidCardholderScope) {
             throw new I18nBadRequestException(I18N_KEYS.errors.users.cardholderSubCompanyScopeRequired, 'El perfil de tarjetahabiente debe asignarse a una subcompania.');
+        }
+
+        await this.assertCardholderDriverSubCompany(userId, cardholderAccesses);
+    }
+
+    private async assertCardholderDriverSubCompany(userId: string | null, accesses: ResolvedAccessInput[]): Promise<void> {
+        if (!userId || accesses.length === 0) return;
+
+        const driver = await this.repository.findActiveDriverByUserId(userId);
+        if (!driver) return;
+
+        const hasMismatch = accesses.some((access) => access.scopeId !== driver.subCompanyId);
+        if (hasMismatch) {
+            throw new I18nBadRequestException(I18N_KEYS.errors.users.cardholderDriverSubCompanyMismatch, 'El alcance del tarjetahabiente debe coincidir con la subcompania de su conductor activo.');
         }
     }
 }

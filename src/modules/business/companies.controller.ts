@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentUser, Permissions, RequireSystemAccess } from '@/decorators';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateCompanyDto, FindStatusRecordsDto, UpdateCompanyDto } from '@/modules/business/dto';
 import { CompaniesService } from '@/modules/business/services/companies.service';
 
@@ -19,6 +21,14 @@ export class CompaniesController {
     @Permissions('companies.read-list')
     findAll(@CurrentUser() user: RequestUser, @Query() dto: FindStatusRecordsDto) {
         return this.companiesService.findAll(dto, user);
+    }
+
+    @Get('export')
+    @Permissions('companies.read-list')
+    async exportList(@CurrentUser() user: RequestUser, @Query() dto: FindStatusRecordsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.companiesService.exportList(dto, user);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

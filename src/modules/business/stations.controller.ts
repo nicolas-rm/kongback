@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateStationDto, FindStationsDto, UpdateStationDto } from '@/modules/business/dto';
 import { StationsService } from '@/modules/business/services/stations.service';
 
@@ -19,6 +21,14 @@ export class StationsController {
     @Permissions('stations.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindStationsDto) {
         return this.stationsService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('stations.read-list')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindStationsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.stationsService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

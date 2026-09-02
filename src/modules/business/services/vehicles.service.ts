@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { NotificationType, Prisma, Status } from '@prisma/client';
 import { AuditService } from '@/modules/audit/audit.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { scopedSubCompanyIdFilter, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, invalidRelation, notFound } from '@/modules/business/business.helpers';
@@ -44,16 +45,39 @@ export class VehiclesService {
     }
 
     async findAll(dto: FindVehiclesDto, scope?: CompanyScope) {
-        const where: Prisma.VehicleWhereInput = {
-            subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope),
-            subCompany: subCompanyScopeWhere(scope),
-            fuelId: dto.fuelId,
-            driverId: dto.driverId,
-            status: dto.status,
-            ...(dto.search ? { OR: this.vehicleSearch(dto.search) } : {}),
-        };
+        const where = this.buildWhere(dto, scope);
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
+    }
+
+    async exportList(dto: FindVehiclesDto, scope?: CompanyScope) {
+        const where = this.buildWhere(dto, scope);
+        const vehicles = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordBusiness({
+            action: 'vehicles_exported',
+            resourceType: 'Vehicle',
+            metadata: { rows: vehicles.length, subCompanyId: dto.subCompanyId, fuelId: dto.fuelId, driverId: dto.driverId, status: dto.status, search: dto.search, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'vehiculos.xlsx',
+            'Vehiculos',
+            [
+                { header: 'ID', value: (vehicle) => vehicle.id },
+                { header: 'Placas', value: (vehicle) => vehicle.plates },
+                { header: 'Numero economico', value: (vehicle) => valueOrDash(vehicle.economicNumber) },
+                { header: 'Modelo', value: (vehicle) => valueOrDash(vehicle.model) },
+                { header: 'Ano', value: (vehicle) => valueOrDash(vehicle.year) },
+                { header: 'Combustible', value: (vehicle) => `${vehicle.fuel.code} - ${vehicle.fuel.name}` },
+                { header: 'Control de odometro', value: (vehicle) => formatBoolean(vehicle.odometerControl) },
+                { header: 'Odometro inicial', value: (vehicle) => valueOrDash(vehicle.odometerInitial) },
+                { header: 'Conductor', value: (vehicle) => (vehicle.driver ? vehicle.driver.name : '-') },
+                { header: 'Subcompania', value: (vehicle) => `${vehicle.subCompany.key} - ${vehicle.subCompany.name}` },
+                { header: 'Estado', value: (vehicle) => formatStatus(vehicle.status) },
+            ],
+            vehicles,
+            dto.format
+        );
     }
 
     async findOne(id: string, scope?: CompanyScope) {
@@ -152,6 +176,17 @@ export class VehiclesService {
 
     private vehicleReference(vehicle: { plates: string; economicNumber?: string | null }): string {
         return vehicle.economicNumber ? `Vehiculo ${vehicle.economicNumber} (${vehicle.plates})` : `Vehiculo ${vehicle.plates}`;
+    }
+
+    private buildWhere(dto: FindVehiclesDto, scope?: CompanyScope): Prisma.VehicleWhereInput {
+        return {
+            subCompanyId: scopedSubCompanyIdFilter(dto.subCompanyId, scope),
+            subCompany: subCompanyScopeWhere(scope),
+            fuelId: dto.fuelId,
+            driverId: dto.driverId,
+            status: dto.status,
+            ...(dto.search ? { OR: this.vehicleSearch(dto.search) } : {}),
+        };
     }
 
     private vehicleSearch(search: string): Prisma.VehicleWhereInput[] {
