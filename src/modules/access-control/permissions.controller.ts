@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { Permissions, RequireSystemAccess } from '@/decorators';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { CreatePermissionDto, FindAccessControlDto, UpdatePermissionDto } from '@/modules/access-control/dto';
 
@@ -18,6 +20,14 @@ export class PermissionsController {
     @Permissions('permissions.read-list')
     findAll(@Query() dto: FindAccessControlDto) {
         return this.accessControlService.findPermissions(dto);
+    }
+
+    @Get('export')
+    @Permissions('permissions.read-list')
+    async exportList(@Query() dto: FindAccessControlDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.accessControlService.exportPermissions(dto);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

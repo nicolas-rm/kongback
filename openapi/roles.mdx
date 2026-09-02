@@ -72,6 +72,7 @@ Esta API es de administracion global. Los permisos `roles.*` deben venir de un a
 | -------- | ---------------------------- | -------------------------- | -------------------------------------- |
 | `POST`   | `/api/roles`                 | `roles.create`             | Crea un rol.                           |
 | `GET`    | `/api/roles`                 | `roles.read-list`          | Lista roles con paginacion y busqueda. |
+| `GET`    | `/api/roles/export`          | `roles.read-list`          | Exporta roles filtrados.               |
 | `GET`    | `/api/roles/:id`             | `roles.read-one`           | Obtiene un rol por ID.                 |
 | `PATCH`  | `/api/roles/:id`             | `roles.update`             | Actualiza un rol.                      |
 | `DELETE` | `/api/roles/:id`             | `roles.delete`             | Elimina un rol.                        |
@@ -128,6 +129,18 @@ GET /api/roles?page=1&limit=20&search=admin
 ### Response `200`
 
 Devuelve `PaginatedRoleResponse`.
+
+## Exportar roles
+
+`GET /api/roles/export`
+
+Requiere `roles.read-list` y acceso global.
+
+Query params: acepta los mismos filtros de `GET /api/roles` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Obtener rol
 
@@ -264,7 +277,7 @@ Usa `capabilities.modules.roles.actions` para mostrar u ocultar controles:
 | Boton `Crear rol`                | `roles.actions.openCreate` o `roles.actions.create`        | `roles.create`                    |
 | Busqueda/listado/refrescar tabla | `roles.actions.readList` o `roles.actions.refreshList`     | `roles.read-list`                 |
 | Configurar columnas              | `roles.actions.configureColumns`                           | `roles.read-list`                 |
-| Exportar listado local           | `roles.actions.exportList`                                 | `roles.read-list`                 |
+| Exportar listado                 | `roles.actions.exportList`                                 | `roles.read-list`                 |
 | Ver detalle                      | `roles.actions.openDetailDrawer` o `roles.actions.readOne` | `roles.read-one`                  |
 | Editar datos base                | `roles.actions.openEditDrawer` o `roles.actions.update`    | `roles.update`                    |
 | Abrir pestana de permisos        | `roles.actions.openPermissionsTab`                         | `roles.permissions.read` o assign |
@@ -272,7 +285,7 @@ Usa `capabilities.modules.roles.actions` para mostrar u ocultar controles:
 | Guardar permisos del rol         | `roles.actions.replacePermissions`                         | `roles.permissions.assign`        |
 | Eliminar rol                     | `roles.actions.openDeleteDialog` o `roles.actions.delete`  | `roles.delete`                    |
 
-`configureColumns` y `exportList` representan acciones locales del listado; no implican endpoints adicionales mientras el front use los datos ya cargados por `GET /api/roles`.
+`configureColumns` es accion local del listado. `exportList` usa `GET /api/roles/export` y debe descargar el archivo como blob.
 
 ## Errores comunes
 

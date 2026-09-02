@@ -24,6 +24,40 @@ La documentacion de `openapi/` describe el contrato completo del backend. El fro
 - En app movil, usar tokens del body con `Authorization: Bearer`; si se usa biometria, debe proteger `refreshToken` y `trustedDevice.token` en storage seguro, no reemplazar 2FA ni mandar flags de confianza al backend.
 - No convertir automaticamente cada archivo MDX, modulo o endpoint en una ruta del frontend. La navegacion se define por producto, `capabilities` y el mapa de UI de esta guia.
 
+## Exportaciones desde backend
+
+Los listados principales que tengan accion `exportList` deben exportarse desde backend, no armando archivos en el navegador. El front solo decide el formato, envia los mismos filtros del listado y descarga el blob recibido.
+
+Contrato comun:
+
+```http
+GET /api/<modulo>/export?format=xlsx&search=texto
+```
+
+Para reportes contextuales, usa la ruta del recurso seguida de `/export`, por ejemplo `GET /api/cardcloud/cards/:uuid/movements/export`.
+
+| Campo    | Tipo                         | Requerido | Descripcion                                                                |
+| -------- | ---------------------------- | --------- | -------------------------------------------------------------------------- |
+| `format` | `xlsx \| excel \| csv \| txt \| pdf` | No        | Formato de salida. Default `xlsx`; `excel` es alias de `xlsx`.             |
+| filtros  | Segun listado                | No        | Se aceptan los filtros documentados en el `GET` del listado del modulo.    |
+
+Respuesta `200`: archivo binario con headers:
+
+| Header                | Valor                                                                 |
+| --------------------- | --------------------------------------------------------------------- |
+| `Content-Type`        | MIME segun `format`.                                                  |
+| `Content-Disposition` | `attachment` con nombre de archivo y extension correspondiente.       |
+| `Content-Length`      | Tamano del archivo generado.                                          |
+
+Reglas:
+
+- El backend aplica filtros de busqueda y estado/relaciones igual que el listado.
+- El backend ignora paginacion (`page`, `limit`, `all`) para exportar desde el primer registro filtrado.
+- El limite operativo de exportacion es `5000` filas por request.
+- El front debe usar `responseType: "blob"` y tomar el nombre desde `Content-Disposition`.
+- `pdf` es salida tabular simple para revision/impresion; para edicion o conciliacion usa `xlsx` o `csv`.
+- Si el modulo requiere `X-Company-Id`, el export tambien lo requiere.
+
 ## Mapa de UI por modulo
 
 Esta tabla guia la construccion de navegacion. No reemplaza permisos: todo menu debe filtrarse con `capabilities.sidebar` y todo boton/accion con `capabilities.modules`.

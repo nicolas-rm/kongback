@@ -52,6 +52,7 @@ En listados, `subCompany` se devuelve como summary y `address` no se devuelve. `
 | -------- | ------------------- | -------------------- | ----------------------- |
 | `POST`   | `/api/stations`     | `stations.create`    | Crea una estacion.      |
 | `GET`    | `/api/stations`     | `stations.read-list` | Lista estaciones.       |
+| `GET`    | `/api/stations/export` | `stations.read-list` | Exporta estaciones filtradas. |
 | `GET`    | `/api/stations/:id` | `stations.read-one`  | Obtiene una estacion.   |
 | `PATCH`  | `/api/stations/:id` | `stations.update`    | Actualiza una estacion. |
 | `DELETE` | `/api/stations/:id` | `stations.delete`    | Desactiva una estacion. |
@@ -67,6 +68,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`.
 Para columnas visibles, usa `subCompany.name`; conserva `subCompanyId` para filtros y acciones.
 
 Response `200`: resultado paginado de `Station` con `subCompany` summary y sin `address`.
+
+## Exportar estaciones
+
+`GET /api/stations/export`
+
+Requiere `stations.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/stations` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -139,7 +152,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.stations.actions.readList`.
 - Refrescar listado: `modules.stations.actions.refreshList`.
 - Configurar columnas: `modules.stations.actions.configureColumns`.
-- Exportar listado desde el front: `modules.stations.actions.exportList`.
+- Exportar listado: `modules.stations.actions.exportList`.
 - Abrir detalle: `modules.stations.actions.openDetail` u `modules.stations.actions.openDetailDrawer`.
 - Consultar detalle: `modules.stations.actions.readOne`.
 - Pestañas de detalle `Formulario` y `Direccion`: `modules.stations.actions.openDetailForm` y `modules.stations.actions.openDetailAddress`.
@@ -153,7 +166,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Actualizar estacion: `modules.stations.actions.update`.
 - Desactivar estacion: `modules.stations.actions.openDeactivate`, `modules.stations.actions.openDeactivateDialog` o `modules.stations.actions.deactivate`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. La pestaña `Combustibles disponibles` consume permisos y endpoints de `station-fuels`; no debe mostrarse si el usuario no puede consultar esa relacion. `delete` en este modulo significa desactivar la estacion, no borrado fisico.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/stations/export` y se habilita cuando el usuario puede consultar el listado. La pestaña `Combustibles disponibles` consume permisos y endpoints de `station-fuels`; no debe mostrarse si el usuario no puede consultar esa relacion. `delete` en este modulo significa desactivar la estacion, no borrado fisico.
 
 El front debe enviar `X-Company-Id`. `subCompanyId` debe venir de un select de subcompanias disponibles para la compania seleccionada y el alcance del usuario.
 

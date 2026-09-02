@@ -103,6 +103,7 @@ Base path: `/api/users`
 | -------- | ----------------------------------- | -------------------------- | ---------------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
 | `POST`   | `/api/users`                        | `users.create`             | Sistema/compania | Crea usuarios, opcionalmente con acceso inicial. | Crear cuentas afecta identidad y accesos; requiere permiso explicito.          |
 | `GET`    | `/api/users`                        | `users.read-list`          | Sistema/compania | Lista usuarios con filtros y paginacion.         | Expone datos de usuarios; debe limitarse a administradores autorizados.        |
+| `GET`    | `/api/users/export`                 | `users.read-list`          | Sistema/compania | Exporta usuarios filtrados.                      | Descarga datos de usuarios visibles; usa el mismo permiso del listado.         |
 | `GET`    | `/api/users/:id`                    | `users.read-one`           | Sistema/compania | Consulta un usuario por ID.                      | Ver detalle de usuario requiere autorizacion y scope correcto.                 |
 | `PATCH`  | `/api/users/:id`                    | `users.update`             | Sistema          | Actualiza datos base de un usuario.              | Cambia identidad/estado global del usuario; requiere acceso de sistema.        |
 | `DELETE` | `/api/users/:id`                    | `users.delete`             | Sistema          | Elimina usuario.                                 | Es accion destructiva sobre identidad global.                                  |
@@ -123,6 +124,7 @@ Base path: `/api/roles`
 | -------- | ---------------------------- | -------------------------- | ------- | ----------------------------- | --------------------------------------------------------------------- |
 | `POST`   | `/api/roles`                 | `roles.create`             | Sistema | Crea un rol.                  | Los roles agrupan permisos; solo administracion global debe crearlos. |
 | `GET`    | `/api/roles`                 | `roles.read-list`          | Sistema | Lista roles.                  | Expone estructura RBAC global.                                        |
+| `GET`    | `/api/roles/export`          | `roles.read-list`          | Sistema | Exporta roles filtrados.      | Descarga estructura RBAC global; usa el mismo permiso del listado.    |
 | `GET`    | `/api/roles/:id`             | `roles.read-one`           | Sistema | Consulta detalle de rol.      | Permite inspeccionar RBAC global.                                     |
 | `PATCH`  | `/api/roles/:id`             | `roles.update`             | Sistema | Actualiza rol.                | Cambia etiquetas/codigos usados para accesos.                         |
 | `DELETE` | `/api/roles/:id`             | `roles.delete`             | Sistema | Elimina rol.                  | Puede romper o remover autorizaciones.                                |
@@ -137,6 +139,7 @@ Base path: `/api/permissions`
 | -------- | ---------------------- | ----------------------- | ------- | ------------------------------ | -------------------------------------------------------------------------- |
 | `POST`   | `/api/permissions`     | `permissions.create`    | Sistema | Crea permiso en catalogo RBAC. | El catalogo controla guards del backend; es administracion tecnica global. |
 | `GET`    | `/api/permissions`     | `permissions.read-list` | Sistema | Lista permisos.                | Expone catalogo tecnico de capacidades.                                    |
+| `GET`    | `/api/permissions/export` | `permissions.read-list` | Sistema | Exporta permisos filtrados.    | Descarga catalogo tecnico de permisos; usa el mismo permiso del listado.   |
 | `GET`    | `/api/permissions/:id` | `permissions.read-one`  | Sistema | Consulta permiso por ID.       | Permite diagnosticar o editar catalogo RBAC.                               |
 | `PATCH`  | `/api/permissions/:id` | `permissions.update`    | Sistema | Actualiza permiso.             | Cambiar codigos/nombres afecta autorizacion.                               |
 | `DELETE` | `/api/permissions/:id` | `permissions.delete`    | Sistema | Elimina permiso.               | Puede retirar capacidades de roles.                                        |
@@ -149,6 +152,7 @@ Base path: `/api/companies`
 | -------- | -------------------- | --------------------- | ----------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `POST`   | `/api/companies`     | `companies.create`    | Sistema                 | Crea compania y subcompania default ligada a Cardcloud. | Crear tenants/clientes es administracion global.                       |
 | `GET`    | `/api/companies`     | `companies.read-list` | Autenticado con permiso | Lista companias accesibles para el usuario.             | Expone catalogo de tenants; el servicio filtra por acceso del usuario. |
+| `GET`    | `/api/companies/export` | `companies.read-list` | Autenticado con permiso | Exporta companias filtradas.                            | Descarga companias visibles; usa el mismo permiso del listado.         |
 | `GET`    | `/api/companies/:id` | `companies.read-one`  | Autenticado con permiso | Consulta una compania.                                  | Debe validar que el usuario pueda ver esa compania.                    |
 | `PATCH`  | `/api/companies/:id` | `companies.update`    | Sistema                 | Actualiza compania.                                     | Modifica datos del tenant global.                                      |
 | `DELETE` | `/api/companies/:id` | `companies.delete`    | Sistema                 | Desactiva compania.                                     | Desactivar un tenant impacta modulos operativos.                       |
@@ -161,6 +165,7 @@ Base path: `/api/sub-companies`
 | -------- | ------------------------------------------ | ------------------------- | -------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `POST`   | `/api/sub-companies`                       | `sub-companies.create`    | Compania | Crea subcompania y subcuenta Cardcloud.           | Crea unidad operativa dentro de la compania seleccionada.                                        |
 | `GET`    | `/api/sub-companies`                       | `sub-companies.read-list` | Compania | Lista subcompanias visibles.                      | Expone estructura operativa de la compania.                                                      |
+| `GET`    | `/api/sub-companies/export`                | `sub-companies.read-list` | Compania | Exporta subcompanias filtradas.                   | Descarga estructura operativa visible; usa el mismo permiso del listado.                         |
 | `GET`    | `/api/sub-companies/:id/drivers/download`  | `drivers.download`        | Compania | Descarga conductores de una subcompania en Excel. | Exporta datos operativos de conductores; requiere permiso de descarga del modulo de conductores. |
 | `GET`    | `/api/sub-companies/:id/vehicles/download` | `vehicles.download`       | Compania | Descarga vehiculos de una subcompania en Excel.   | Exporta datos operativos de flotilla; requiere permiso de descarga del modulo de vehiculos.      |
 | `GET`    | `/api/sub-companies/:id/cards/download`    | `cards.download`          | Compania | Descarga tarjetas de una subcompania en Excel.    | Exporta inventario operativo de tarjetas; requiere permiso de descarga del modulo de tarjetas.   |
@@ -176,7 +181,9 @@ Base path: `/api/drivers`
 | -------- | --------------------------- | ---------------------------- | -------- | ----------------------------------------------------- | ------------------------------------------------------------ |
 | `POST`   | `/api/drivers`              | `drivers.create`             | Compania | Crea conductor.                                       | Agrega entidad operativa dentro de la compania/subcompania.  |
 | `GET`    | `/api/drivers`              | `drivers.read-list`          | Compania | Lista conductores.                                    | Expone datos operativos de personal/conductores.             |
+| `GET`    | `/api/drivers/export`       | `drivers.read-list`          | Compania | Exporta conductores filtrados.                        | Descarga conductores visibles; usa el mismo permiso del listado. |
 | `GET`    | `/api/drivers/:id/vehicles` | `drivers.vehicles.read-list` | Compania | Lista vehiculos actualmente asignados a un conductor. | Expone relaciones operativas del conductor dentro del scope. |
+| `GET`    | `/api/drivers/:id/vehicles/export` | `drivers.vehicles.read-list` | Compania | Exporta vehiculos actualmente asignados a un conductor. | Descarga relaciones operativas del conductor; usa el mismo permiso del listado. |
 | `GET`    | `/api/drivers/:id`          | `drivers.read-one`           | Compania | Consulta conductor.                                   | Debe validar scope de compania/subcompania.                  |
 | `PATCH`  | `/api/drivers/:id`          | `drivers.update`             | Compania | Actualiza conductor.                                  | Cambia datos operativos y posible usuario vinculado.         |
 | `DELETE` | `/api/drivers/:id`          | `drivers.delete`             | Compania | Desactiva conductor.                                  | Accion destructiva en catalogo operativo.                    |
@@ -189,6 +196,7 @@ Base path: `/api/vehicles`
 | -------- | --------------------------- | ---------------------------- | -------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
 | `POST`   | `/api/vehicles`             | `vehicles.create`            | Compania | Crea vehiculo.                                      | Agrega activo operativo dentro de la compania.                         |
 | `GET`    | `/api/vehicles`             | `vehicles.read-list`         | Compania | Lista vehiculos.                                    | Expone flotilla visible por scope.                                     |
+| `GET`    | `/api/vehicles/export`      | `vehicles.read-list`         | Compania | Exporta vehiculos filtrados.                        | Descarga flotilla visible; usa el mismo permiso del listado.           |
 | `GET`    | `/api/vehicles/:id/drivers` | `vehicles.drivers.read-list` | Compania | Lista conductor actualmente asignado a un vehiculo. | Expone relaciones operativas de flotilla dentro del scope.             |
 | `GET`    | `/api/vehicles/:id`         | `vehicles.read-one`          | Compania | Consulta vehiculo.                                  | Debe validar que el vehiculo pertenezca al scope.                      |
 | `PATCH`  | `/api/vehicles/:id/driver`  | `vehicles.driver.assign`     | Compania | Asigna o quita conductor.                           | Modifica una relacion operativa especifica y sensible para uso diario. |
@@ -203,11 +211,15 @@ Base path: `/api/cards`
 | -------- | ----------------------------------------- | ------------------------------------ | -------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `POST`   | `/api/cards`                              | `cards.create`                       | Compania | Crea tarjeta local manual.                                    | Agrega instrumento operativo local; uso excepcional si no viene de Cardcloud.                          |
 | `GET`    | `/api/cards`                              | `cards.read-list`                    | Compania | Lista tarjetas locales.                                       | Expone inventario operativo de tarjetas dentro del scope.                                              |
+| `GET`    | `/api/cards/export`                       | `cards.download`                     | Compania | Exporta tarjetas locales filtradas.                           | Descarga inventario de tarjetas; requiere permiso explicito de descarga.                               |
 | `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`             | Compania | Lista tarjetas por combustible de diseno.                     | Consulta especializada para asignaciones/seleccion filtrada.                                           |
 | `POST`   | `/api/cards/assign-sub-company`           | `cardcloud-stock.sub-company.assign` | Compania | Ubica tarjetas Cardcloud en subcompania y sincroniza locales. | Mueve stock externo al contexto operativo local; no es creacion manual.                                |
+| `GET`    | `/api/cards/assign-sub-company-excel`     | `cardcloud-stock.sub-company.assign` | Compania | Descarga plantilla Excel de asignacion masiva.                | Usa el mismo permiso critico porque prepara el flujo de mover stock Cardcloud a subcompania/subcuenta. |
+| `POST`   | `/api/cards/assign-sub-company-excel`     | `cardcloud-stock.sub-company.assign` | Compania | Procesa asignacion masiva por Excel.                          | Mueve multiples tarjetas del proveedor al contexto operativo local desde archivo validado.             |
 | `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                         | Compania | Sincroniza tarjetas de una subcompania desde Cardcloud.       | Actualiza inventario local desde proveedor externo por subcompania.                                    |
 | `POST`   | `/api/cards/validate`                     | `cards.validate`                     | Compania | Valida una tarjeta local contra Cardcloud.                    | Usa datos sensibles del proveedor para confirmar propiedad/uso; no debe exponerse como accion general. |
 | `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list`          | Compania | Lista movimientos externos de una tarjeta local.              | Expone actividad de tarjeta despues de validar scope local.                                            |
+| `GET`    | `/api/cards/:id/movements/export`         | `cards.movements.read-list`          | Compania | Exporta movimientos externos de una tarjeta local.            | Descarga actividad de tarjeta despues de validar scope local; usa el mismo permiso del listado.        |
 | `GET`    | `/api/cards/:id`                          | `cards.read-one`                     | Compania | Consulta tarjeta.                                             | Debe validar pertenencia al scope.                                                                     |
 | `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`            | Compania | Actualiza asignacion operativa de tarjeta.                    | Modifica relacion tarjeta-vehiculo o libera la tarjeta.                                                |
 | `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`               | Compania | Asigna tarjeta a vehiculo.                                    | Modifica relacion operativa entre tarjeta y vehiculo.                                                  |
@@ -223,6 +235,7 @@ Base path: `/api/fuels`
 | -------- | ---------------- | ----------------- | ----------------------- | ------------------------ | ----------------------------------------------------------- |
 | `POST`   | `/api/fuels`     | `fuels.create`    | Sistema                 | Crea combustible global. | Catalogo global usado por vehiculos, tarjetas y estaciones. |
 | `GET`    | `/api/fuels`     | `fuels.read-list` | Autenticado con permiso | Lista combustibles.      | Se usa como catalogo de referencia para modulos operativos. |
+| `GET`    | `/api/fuels/export` | `fuels.read-list` | Autenticado con permiso | Exporta combustibles filtrados. | Descarga catalogo visible; usa el mismo permiso del listado.          |
 | `GET`    | `/api/fuels/:id` | `fuels.read-one`  | Autenticado con permiso | Consulta combustible.    | Permite validar/mostrar catalogo global.                    |
 | `PATCH`  | `/api/fuels/:id` | `fuels.update`    | Sistema                 | Actualiza combustible.   | Cambia catalogo global compartido.                          |
 | `DELETE` | `/api/fuels/:id` | `fuels.delete`    | Sistema                 | Desactiva combustible.   | Impacta disponibilidad en relaciones operativas.            |
@@ -235,6 +248,7 @@ Base path: `/api/stations`
 | -------- | ------------------- | -------------------- | -------- | ------------------- | ---------------------------------------------------- |
 | `POST`   | `/api/stations`     | `stations.create`    | Compania | Crea estacion.      | Agrega punto operativo dentro del scope.             |
 | `GET`    | `/api/stations`     | `stations.read-list` | Compania | Lista estaciones.   | Expone estaciones visibles por compania/subcompania. |
+| `GET`    | `/api/stations/export` | `stations.read-list` | Compania | Exporta estaciones filtradas. | Descarga estaciones visibles; usa el mismo permiso del listado. |
 | `GET`    | `/api/stations/:id` | `stations.read-one`  | Compania | Consulta estacion.  | Debe validar pertenencia al scope.                   |
 | `PATCH`  | `/api/stations/:id` | `stations.update`    | Compania | Actualiza estacion. | Cambia datos operativos y ubicacion.                 |
 | `DELETE` | `/api/stations/:id` | `stations.delete`    | Compania | Desactiva estacion. | Accion destructiva del catalogo operativo.           |
@@ -258,6 +272,7 @@ Base path: `/api/cardcloud-stock`
 | Metodo  | Ruta                                            | Permiso                                | Alcance          | Para que sirve                                  | Por que se necesita                                                                           |
 | ------- | ----------------------------------------------- | -------------------------------------- | ---------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `GET`   | `/api/cardcloud-stock`                          | `cardcloud-stock.read-list`            | Sistema/compania | Lista espejo local de stock Cardcloud.          | Expone inventario financiero/operativo sincronizado sin llamar al proveedor en cada consulta. |
+| `GET`   | `/api/cardcloud-stock/export`                   | `cardcloud-stock.read-list`            | Sistema/compania | Exporta stock local filtrado.                   | Descarga el espejo local visible; usa el mismo permiso del listado.                           |
 | `POST`  | `/api/cardcloud-stock/sync`                     | `cardcloud-stock.sync`                 | Sistema          | Sincroniza espejo local global desde Cardcloud. | Accion tecnica global sobre inventario del proveedor.                                         |
 | `PATCH` | `/api/cardcloud-stock/:id/assign-sub-company`   | `cardcloud-stock.sub-company.assign`   | Sistema/compania | Asigna stock a subcompania/subcuenta.           | Mueve la tarjeta a la subcuenta Cardcloud destino antes de actualizar el espejo local.        |
 | `PATCH` | `/api/cardcloud-stock/:id/unassign-sub-company` | `cardcloud-stock.sub-company.unassign` | Sistema/compania | Quita subcompania del stock local.              | Libera stock local sin llamar al proveedor externo.                                           |
@@ -270,6 +285,7 @@ Base path: `/api/cardcloud`
 | ------- | -------------------------------------------- | ------------------------------------------- | ---------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `GET`   | `/api/cardcloud/account`                     | `cardcloud.account.read-one`                | Sistema          | Consulta la cuenta conectada, wallet y saldo para la pantalla Cuenta Cardcloud. | Expone informacion global del proveedor y alimenta la pestana Cuenta/Recargar.               |
 | `GET`   | `/api/cardcloud/account/movements`           | `cardcloud.account.movements.read-list`     | Sistema          | Lista movimientos de cuenta Cardcloud con filtros por fecha.                    | Expone movimientos financieros globales y alimenta la pestana Movimientos/Consultar.         |
+| `GET`   | `/api/cardcloud/account/movements/export`    | `cardcloud.account.movements.read-list`     | Sistema          | Exporta movimientos de cuenta Cardcloud.                                        | Descarga los movimientos visibles; usa el mismo permiso del listado.                         |
 | `POST`  | `/api/cardcloud/account/transfer`            | `cardcloud.account.transfer`                | Sistema          | Ejecuta transferencia Cardcloud.                                                | Mueve fondos; requiere permiso critico global.                                               |
 | `POST`  | `/api/cardcloud/account/transfer-bulk`       | `cardcloud.account.transfer.bulk`           | Sistema          | Ejecuta transferencias en lote.                                                 | Puede mover fondos masivamente.                                                              |
 | `GET`   | `/api/cardcloud/account/transfer-bulk-excel` | `cardcloud.account.transfer.bulk`           | Sistema          | Descarga plantilla Excel de fondeo masivo.                                      | Facilita cargas masivas; usa el mismo permiso critico de transferencia.                      |
@@ -278,6 +294,7 @@ Base path: `/api/cardcloud`
 | `POST`  | `/api/cardcloud/account/cards/assign-bulk`   | `cardcloud.cards.assign.bulk`               | Sistema          | Asigna tarjetas especificas en Cardcloud.                                       | Accion masiva directa contra proveedor externo.                                              |
 | `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema          | Consulta detalle externo de tarjeta.                                            | Expone datos del proveedor para una tarjeta.                                                 |
 | `GET`   | `/api/cardcloud/cards/:uuid/movements`       | `cardcloud.cards.movements.read-list`       | Sistema          | Lista movimientos externos de tarjeta.                                          | Expone actividad financiera/operativa de tarjeta.                                            |
+| `GET`   | `/api/cardcloud/cards/:uuid/movements/export` | `cardcloud.cards.movements.read-list`      | Sistema          | Exporta movimientos externos de tarjeta.                                        | Descarga actividad financiera/operativa; usa el mismo permiso del listado.                   |
 | `GET`   | `/api/cardcloud/cards/movement/:uuid`        | `cardcloud.cards.movements.read-one`        | Sistema          | Consulta detalle de movimiento externo.                                         | Expone detalle de transaccion/movimiento.                                                    |
 | `GET`   | `/api/cardcloud/cards/:uuid/sensitive`       | `cardcloud.cards.sensitive.read-one`        | Sistema          | Consulta datos sensibles de tarjeta.                                            | Es informacion altamente sensible; requiere permiso dedicado.                                |
 | `GET`   | `/api/cardcloud/cards/:uuid/cvv`             | `cardcloud.cards.cvv.read`                  | Sistema          | Consulta CVV temporal.                                                          | Expone dato sensible de pago; requiere permiso dedicado.                                     |
@@ -286,18 +303,22 @@ Base path: `/api/cardcloud`
 | `POST`  | `/api/cardcloud/cards/:uuid/block`           | `cardcloud.cards.block`                     | Sistema          | Bloquea tarjeta en Cardcloud.                                                   | Cambia disponibilidad de tarjeta en proveedor.                                               |
 | `POST`  | `/api/cardcloud/cards/:uuid/unblock`         | `cardcloud.cards.unblock`                   | Sistema          | Desbloquea tarjeta en Cardcloud.                                                | Cambia disponibilidad de tarjeta en proveedor.                                               |
 | `GET`   | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.read-list`           | Sistema/compania | Lista subcuentas Cardcloud.                                                     | Sin compania expone proxy global; con compania filtra solo subcuentas vinculadas localmente. |
+| `GET`   | `/api/cardcloud/subaccounts/export`          | `cardcloud.subaccounts.read-list`           | Sistema/compania | Exporta subcuentas Cardcloud visibles.                                          | Descarga subcuentas visibles; usa el mismo permiso del listado.                              |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid`           | `cardcloud.subaccounts.read-one`            | Sistema/compania | Consulta subcuenta Cardcloud.                                                   | Con compania valida que la subcuenta externa este vinculada a una subcompania local visible. |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/cards`     | `cardcloud.subaccounts.cards.read-list`     | Sistema/compania | Lista tarjetas de subcuenta Cardcloud.                                          | Con compania valida pertenencia local antes de consultar tarjetas externas.                  |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/cards/export` | `cardcloud.subaccounts.cards.read-list`  | Sistema/compania | Exporta tarjetas de subcuenta Cardcloud.                                        | Descarga tarjetas de una subcuenta visible; usa el mismo permiso del listado.                |
 | `POST`  | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.create`              | Sistema          | Crea subcuenta Cardcloud.                                                       | Modifica estructura del proveedor; normalmente lo usan flujos internos.                      |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/movements` | `cardcloud.subaccounts.movements.read-list` | Sistema/compania | Lista movimientos de subcuenta.                                                 | Con compania valida pertenencia local antes de consultar movimientos externos.               |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/movements/export` | `cardcloud.subaccounts.movements.read-list` | Sistema/compania | Exporta movimientos de subcuenta.                                               | Descarga movimientos de una subcuenta visible; usa el mismo permiso del listado.             |
 
 ## CardholdersController
 
 Base path: `/api/cardholders`
 
-| Metodo | Ruta               | Permiso                 | Alcance  | Para que sirve                             | Por que se necesita                                                     |
-| ------ | ------------------ | ----------------------- | -------- | ------------------------------------------ | ----------------------------------------------------------------------- |
-| `GET`  | `/api/cardholders` | `cardholders.read-list` | Compania | Lista usuarios con perfil tarjetahabiente. | Permite revisar altas incompletas y validar conductor/vehiculo/tarjeta. |
+| Metodo | Ruta                      | Permiso                 | Alcance  | Para que sirve                             | Por que se necesita                                                     |
+| ------ | ------------------------- | ----------------------- | -------- | ------------------------------------------ | ----------------------------------------------------------------------- |
+| `GET`  | `/api/cardholders`        | `cardholders.read-list` | Compania | Lista usuarios con perfil tarjetahabiente. | Permite revisar altas incompletas y validar conductor/vehiculo/tarjeta. |
+| `GET`  | `/api/cardholders/export` | `cardholders.read-list` | Compania | Exporta tarjetahabientes filtrados.        | Descarga vista operativa visible; usa el mismo permiso del listado.     |
 
 ## CardholderController
 
@@ -319,6 +340,38 @@ Estos endpoints no usan `X-Company-Id`. El permiso RBAC permite entrar o ejecuta
 | `GET`   | `/api/cardholder/cards/:cardId/sensitive` | `cardholder.cards.sensitive.read-one`  | Tarjetahabiente autenticado | Consulta datos sensibles de tarjeta propia.         | Expone datos sensibles; requiere permiso dedicado y accion explicita.         |
 | `PATCH` | `/api/cardholder/cards/:cardId/nip`       | `cardholder.cards.nip.update`          | Tarjetahabiente autenticado | Actualiza NIP de una tarjeta propia.                | Modifica credencial de tarjeta; requiere permiso dedicado y propiedad local.  |
 
+## AuditEventsController
+
+Base path: `/api/audit`
+
+| Metodo | Ruta                                        | Permiso           | Alcance          | Para que sirve                                           | Por que se necesita                                                 |
+| ------ | ------------------------------------------- | ----------------- | ---------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET`  | `/api/audit/requests`                       | `audit.read-list` | Sistema/compania | Lista logs tecnicos HTTP.                                | Expone trazabilidad tecnica dentro del alcance autorizado.          |
+| `GET`  | `/api/audit/requests/export`                | `audit.read-list` | Sistema/compania | Exporta logs tecnicos HTTP filtrados.                    | Descarga trazabilidad tecnica visible; usa el permiso del listado.  |
+| `GET`  | `/api/audit/requests/:id`                   | `audit.read-one`  | Sistema/compania | Consulta detalle de un log tecnico HTTP.                 | El detalle puede contener payload sanitizado y requiere permiso.    |
+| `GET`  | `/api/audit/security`                       | `audit.read-list` | Sistema/compania | Lista eventos de seguridad.                              | Expone eventos de auth, sesiones y seguridad dentro del alcance.    |
+| `GET`  | `/api/audit/security/export`                | `audit.read-list` | Sistema/compania | Exporta eventos de seguridad filtrados.                  | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/security/:id`                   | `audit.read-one`  | Sistema/compania | Consulta detalle de evento de seguridad.                 | El detalle puede contener contexto sensible sanitizado.             |
+| `GET`  | `/api/audit/access`                         | `audit.read-list` | Sistema/compania | Lista eventos de usuarios, roles, permisos y accesos.    | Expone cambios de autorizacion dentro del alcance.                  |
+| `GET`  | `/api/audit/access/export`                  | `audit.read-list` | Sistema/compania | Exporta eventos de acceso filtrados.                     | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/access/:id`                     | `audit.read-one`  | Sistema/compania | Consulta detalle de evento de acceso.                    | Permite revisar cambios de autorizacion puntuales.                  |
+| `GET`  | `/api/audit/business`                       | `audit.read-list` | Sistema/compania | Lista eventos operativos de negocio.                     | Expone cambios de catalogos y operacion dentro del alcance.         |
+| `GET`  | `/api/audit/business/export`                | `audit.read-list` | Sistema/compania | Exporta eventos operativos filtrados.                    | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/business/:id`                   | `audit.read-one`  | Sistema/compania | Consulta detalle de evento operativo.                    | Permite revisar antes/despues de cambios puntuales.                 |
+| `GET`  | `/api/audit/cards`                          | `audit.read-list` | Sistema/compania | Lista eventos de tarjetas locales y portal.              | Expone trazabilidad de tarjetas dentro del alcance.                 |
+| `GET`  | `/api/audit/cards/export`                   | `audit.read-list` | Sistema/compania | Exporta eventos de tarjetas filtrados.                   | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/cards/:id`                      | `audit.read-one`  | Sistema/compania | Consulta detalle de evento de tarjeta.                   | Permite revisar cambios de tarjeta puntuales.                       |
+| `GET`  | `/api/audit/cardcloud`                      | `audit.read-list` | Sistema/compania | Lista eventos Cardcloud y llamadas externas.             | Expone trazabilidad de integracion dentro del alcance.              |
+| `GET`  | `/api/audit/cardcloud/export`               | `audit.read-list` | Sistema/compania | Exporta eventos Cardcloud filtrados.                     | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/cardcloud/:id`                  | `audit.read-one`  | Sistema/compania | Consulta detalle de evento Cardcloud.                    | Permite revisar llamadas o cambios externos puntuales.              |
+| `GET`  | `/api/audit/transfers`                      | `audit.read-list` | Sistema/compania | Lista transferencias Cardcloud auditadas.                | Expone movimientos de fondos auditados dentro del alcance.          |
+| `GET`  | `/api/audit/transfers/export`               | `audit.read-list` | Sistema/compania | Exporta transferencias auditadas filtradas.              | Descarga auditoria financiera visible; usa el permiso del listado.  |
+| `GET`  | `/api/audit/transfers/:id`                  | `audit.read-one`  | Sistema/compania | Consulta detalle de transferencia auditada.              | Permite revisar un movimiento auditado puntual.                     |
+| `GET`  | `/api/audit/card-assignments`               | `audit.read-list` | Sistema/compania | Lista asignaciones de tarjetas auditadas.                | Expone cambios de ubicacion/asignacion de tarjetas.                 |
+| `GET`  | `/api/audit/card-assignments/export`        | `audit.read-list` | Sistema/compania | Exporta asignaciones de tarjetas auditadas filtradas.    | Descarga auditoria visible; usa el permiso del listado.             |
+| `GET`  | `/api/audit/card-assignments/cards/:id`     | `audit.read-one`  | Sistema/compania | Consulta detalle de asignacion auditada local.           | Permite revisar una asignacion local puntual.                       |
+| `GET`  | `/api/audit/card-assignments/cardcloud/:id` | `audit.read-one`  | Sistema/compania | Consulta detalle de asignacion auditada Cardcloud.       | Permite revisar una asignacion externa puntual.                     |
+
 ## DocumentsController
 
 Base path: `/api/documents`
@@ -327,6 +380,7 @@ Base path: `/api/documents`
 | -------- | ----------------------------- | --------------------- | -------- | ------------------------------------------ | --------------------------------------------- |
 | `POST`   | `/api/documents`              | `documents.create`    | Compania | Sube y registra documento.                 | Crea archivo y metadata dentro del scope.     |
 | `GET`    | `/api/documents`              | `documents.read-list` | Compania | Lista documentos activos.                  | Expone adjuntos/metadata del scope.           |
+| `GET`    | `/api/documents/export`       | `documents.read-list` | Compania | Exporta metadata de documentos filtrados.  | Descarga metadata visible; usa el mismo permiso del listado. |
 | `GET`    | `/api/documents/:id/download` | `documents.download`  | Compania | Descarga archivo.                          | Acceso al binario requiere permiso separado.  |
 | `GET`    | `/api/documents/:id`          | `documents.read-one`  | Compania | Consulta metadata de documento.            | Permite ver detalle sin descargar archivo.    |
 | `PATCH`  | `/api/documents/:id`          | `documents.update`    | Compania | Actualiza metadata editable.               | Cambia titulo, descripcion o categoria.       |

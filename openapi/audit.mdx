@@ -20,20 +20,28 @@ Si la peticion incluye `X-Company-Id`, el backend limita la consulta a eventos d
 | Metodo | Ruta                                        | Permiso           | Descripcion                                                        |
 | ------ | ------------------------------------------- | ----------------- | ------------------------------------------------------------------ |
 | `GET`  | `/api/audit/requests`                       | `audit.read-list` | Lista logs tecnicos HTTP (`RequestLog`).                           |
+| `GET`  | `/api/audit/requests/export`                | `audit.read-list` | Exporta logs tecnicos HTTP filtrados.                              |
 | `GET`  | `/api/audit/requests/:id`                   | `audit.read-one`  | Detalle de un log tecnico HTTP.                                    |
 | `GET`  | `/api/audit/security`                       | `audit.read-list` | Lista eventos de seguridad, auth, sesiones y permisos.             |
+| `GET`  | `/api/audit/security/export`                | `audit.read-list` | Exporta eventos de seguridad filtrados.                            |
 | `GET`  | `/api/audit/security/:id`                   | `audit.read-one`  | Detalle de un evento de seguridad.                                 |
 | `GET`  | `/api/audit/access`                         | `audit.read-list` | Lista eventos de usuarios, roles, permisos y accesos.              |
+| `GET`  | `/api/audit/access/export`                  | `audit.read-list` | Exporta eventos de acceso filtrados.                               |
 | `GET`  | `/api/audit/access/:id`                     | `audit.read-one`  | Detalle de un evento de acceso.                                    |
 | `GET`  | `/api/audit/business`                       | `audit.read-list` | Lista eventos operativos de negocio.                               |
+| `GET`  | `/api/audit/business/export`                | `audit.read-list` | Exporta eventos operativos filtrados.                              |
 | `GET`  | `/api/audit/business/:id`                   | `audit.read-one`  | Detalle de un evento operativo.                                    |
 | `GET`  | `/api/audit/cards`                          | `audit.read-list` | Lista eventos de tarjetas locales y portal tarjetahabiente.        |
+| `GET`  | `/api/audit/cards/export`                   | `audit.read-list` | Exporta eventos de tarjetas filtrados.                             |
 | `GET`  | `/api/audit/cards/:id`                      | `audit.read-one`  | Detalle de un evento de tarjeta.                                   |
 | `GET`  | `/api/audit/cardcloud`                      | `audit.read-list` | Lista eventos de Cardcloud, stock, subcuentas y llamadas externas. |
+| `GET`  | `/api/audit/cardcloud/export`               | `audit.read-list` | Exporta eventos Cardcloud filtrados.                               |
 | `GET`  | `/api/audit/cardcloud/:id`                  | `audit.read-one`  | Detalle de un evento Cardcloud.                                    |
 | `GET`  | `/api/audit/transfers`                      | `audit.read-list` | Lista historial auditado de transferencias Cardcloud.              |
+| `GET`  | `/api/audit/transfers/export`               | `audit.read-list` | Exporta transferencias auditadas filtradas.                        |
 | `GET`  | `/api/audit/transfers/:id`                  | `audit.read-one`  | Detalle de una transferencia auditada.                             |
 | `GET`  | `/api/audit/card-assignments`               | `audit.read-list` | Lista historial auditado de asignaciones de tarjetas.              |
+| `GET`  | `/api/audit/card-assignments/export`        | `audit.read-list` | Exporta asignaciones de tarjetas auditadas filtradas.              |
 | `GET`  | `/api/audit/card-assignments/cards/:id`     | `audit.read-one`  | Detalle de una asignacion auditada en tarjetas locales.            |
 | `GET`  | `/api/audit/card-assignments/cardcloud/:id` | `audit.read-one`  | Detalle de una asignacion auditada en Cardcloud.                   |
 
@@ -53,6 +61,7 @@ Estos filtros aplican a los listados. Algunos campos solo tienen efecto en ciert
 | `path`         | `string`  | No        | Filtra requests HTTP por ruta o Cardcloud por ruta externa.               |
 | `actorUserId`  | `uuid`    | No        | Filtra por usuario actor.                                                 |
 | `companyId`    | `uuid`    | No        | Filtra por compania. Se ignora si `X-Company-Id` ya fija otro alcance.    |
+| `subCompanyId` | `uuid`    | No        | Filtra eventos con `scopeKey: "subCompanyId"` y `scopeId` igual al UUID enviado. No aplica a `/requests` porque esos logs no guardan scope. |
 | `requestId`    | `string`  | No        | Correlaciona request tecnico con eventos especificos.                     |
 | `resourceType` | `string`  | No        | Filtra por tipo de recurso, por ejemplo `User`, `Session`, `TrustedDevice`, `Card`, `SubCompany` o `Document`. No aplica a `/requests`. |
 | `resourceId`   | `string`  | No        | Filtra por id del recurso afectado. No aplica a `/requests`.              |
@@ -105,6 +114,29 @@ Response `200`:
     }
 }
 ```
+
+## Exportar auditoria
+
+Cada grupo de auditoria tiene endpoint de exportacion propio:
+
+```txt
+GET /api/audit/requests/export
+GET /api/audit/security/export
+GET /api/audit/access/export
+GET /api/audit/business/export
+GET /api/audit/cards/export
+GET /api/audit/cardcloud/export
+GET /api/audit/transfers/export
+GET /api/audit/card-assignments/export
+```
+
+Requiere `audit.read-list`.
+
+Query params: acepta los mismos filtros comunes de auditoria mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas. La exportacion incluye columnas comunes: fuente, fecha, resultado, accion, metodo/ruta, codigo HTTP, usuario, compania, alcance, recurso, razon y `requestId`.
 
 ## Consultar detalle por grupo
 
@@ -194,6 +226,8 @@ Internamente consulta eventos `card` y `cardcloud` cuya accion contiene `assign`
 - `card_vehicle_assigned`
 - `card_unassigned`
 - `cards_assigned_to_sub_company`
+- `cards_assign_sub_company_excel_template_downloaded`
+- `cards_assigned_to_sub_company_excel_processed`
 - `cardcloud_cards_assigned`
 - `cardcloud_cards_assigned_bulk`
 - `cardcloud_stock_sub_company_assigned`
@@ -231,7 +265,9 @@ No generes un item de sidebar propio por ahora. Cuando `Inicio` muestre auditori
 | Tab `Asignaciones de tarjetas` | `modules.audit.actions.openCardAssignmentsTab` o `modules.audit.actions.readCardAssignments` | `audit.read-list` |
 | Filtros de auditoria           | `modules.audit.actions.filterList`                                                           | `audit.read-list` |
 | Configurar columnas            | `modules.audit.actions.configureColumns`                                                     | `audit.read-list` |
-| Exportar listado local         | `modules.audit.actions.exportList`                                                           | `audit.read-list` |
+| Exportar listado               | `modules.audit.actions.exportList`                                                           | `audit.read-list` |
 | Abrir detalle                  | `modules.audit.actions.openDetail` o `modules.audit.actions.readOne`                         | `audit.read-one`  |
 
 En los detalles, muestra `metadata`, `before`, `after`, `ipAddress`, `userAgent`, `path` y `externalPath` solo cuando existan. Oculta `body`, `cookies` y `query` de `RequestLog` salvo a perfiles auditores de alta confianza.
+
+`exportList` debe llamar el endpoint `/export` del tab activo. `configureColumns` sigue siendo una accion local de interfaz.

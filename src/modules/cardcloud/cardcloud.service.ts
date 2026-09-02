@@ -8,6 +8,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external.service';
 import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import type { ExportQueryDto } from '@/utilities/export/export-query.dto';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus, sanitizeFilenamePart, valueOrDash } from '@/utilities/export/excel-export';
 import {
     AssignCardcloudCardsBulkDto,
     AssignCardcloudCardsDto,
@@ -187,6 +189,35 @@ export class CardcloudService {
         return movements;
     }
 
+    async exportCardMovements(uuid: string, query: CardcloudDateRangeQueryDto) {
+        const response = await this.getCardMovements(uuid, query);
+        const movements = response.movements.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_card_movements_exported',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/movements`,
+            metadata: { rows: movements.length, from: query.from, to: query.to, format: query.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            `movimientos-tarjeta-${sanitizeFilenamePart(uuid)}.xlsx`,
+            'Movimientos tarjeta',
+            [
+                { header: 'Movimiento ID', value: (movement) => movement.movement_id },
+                { header: 'Fecha', value: (movement) => valueOrDash(movement.date) },
+                { header: 'Tipo', value: (movement) => valueOrDash(movement.type) },
+                { header: 'Descripcion', value: (movement) => valueOrDash(movement.description) },
+                { header: 'Estado', value: (movement) => valueOrDash(movement.status) },
+                { header: 'Autorizacion', value: (movement) => valueOrDash(movement.authorization_code) },
+                { header: 'Monto', value: (movement) => valueOrDash(movement.amount) },
+                { header: 'Saldo', value: (movement) => valueOrDash(movement.balance) },
+            ],
+            movements,
+            query.format
+        );
+    }
+
     async getCardSensitiveData(uuid: string): Promise<CardcloudCardSensitiveDataResponse> {
         const data = await this.external.get<CardcloudCardSensitiveDataResponse>(`/v1/card/${uuid}/sensitive`);
         void this.audit.recordCardcloud({ action: 'cardcloud_card_sensitive_data_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/sensitive` });
@@ -241,6 +272,33 @@ export class CardcloudService {
         return filtered;
     }
 
+    async exportSubaccounts(dto: ExportQueryDto, scope?: CompanyScope) {
+        const response = await this.getSubaccounts(scope);
+        const subaccounts = response.subaccounts.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_subaccounts_exported',
+            resourceType: 'CardcloudSubaccount',
+            externalPath: '/v1/subaccounts',
+            metadata: { rows: subaccounts.length, companyId: scope?.companyId, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'subcuentas-cardcloud.xlsx',
+            'Subcuentas',
+            [
+                { header: 'Subcuenta ID', value: (subaccount) => subaccount.subaccount_id },
+                { header: 'External ID', value: (subaccount) => valueOrDash(subaccount.external_id) },
+                { header: 'Descripcion', value: (subaccount) => valueOrDash(subaccount.description) },
+                { header: 'Saldo', value: (subaccount) => valueOrDash(subaccount.wallet.balance) },
+                { header: 'CLABE', value: (subaccount) => valueOrDash(subaccount.wallet.clabe) },
+                { header: 'Movimientos recientes', value: (subaccount) => subaccount.wallet.last_movements.length },
+                { header: 'Subcompania local', value: (subaccount) => this.localSubCompanyLabel(subaccount) },
+            ],
+            subaccounts,
+            dto.format
+        );
+    }
+
     async getSubaccount(uuid: string, scope?: CompanyScope): Promise<CardcloudSubaccountDetail> {
         await this.assertLinkedSubaccount(uuid, scope);
         const subaccount = await this.external.get<CardcloudSubaccountDetail>(`/v1/subaccounts/${uuid}`);
@@ -259,6 +317,37 @@ export class CardcloudService {
             metadata: { page: query.page },
         });
         return cards;
+    }
+
+    async exportSubaccountCards(uuid: string, query: CardcloudPageQueryDto, scope?: CompanyScope) {
+        const response = await this.getSubaccountCards(uuid, query, scope);
+        const cards = response.cards.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_subaccount_cards_exported',
+            resourceType: 'CardcloudSubaccount',
+            resourceId: uuid,
+            externalPath: `/v1/subaccounts/${uuid}/cards`,
+            metadata: { rows: cards.length, page: query.page, companyId: scope?.companyId, format: query.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            `tarjetas-subcuenta-${sanitizeFilenamePart(uuid)}.xlsx`,
+            'Tarjetas subcuenta',
+            [
+                { header: 'Tarjeta ID', value: (card) => card.card_id },
+                { header: 'External ID', value: (card) => valueOrDash(card.card_external_id) },
+                { header: 'Client ID', value: (card) => valueOrDash(card.client_id) },
+                { header: 'PAN enmascarado', value: (card) => valueOrDash(card.masked_pan) },
+                { header: 'Tipo', value: (card) => valueOrDash(card.card_type) },
+                { header: 'Marca', value: (card) => valueOrDash(card.brand) },
+                { header: 'BIN', value: (card) => valueOrDash(card.bin) },
+                { header: 'Saldo', value: (card) => valueOrDash(card.balance) },
+                { header: 'CLABE', value: (card) => valueOrDash(card.clabe) },
+                { header: 'Estado', value: (card) => valueOrDash(card.status) },
+            ],
+            cards,
+            query.format
+        );
     }
 
     async createSubaccount(dto: CreateCardcloudSubaccountDto): Promise<CardcloudCreatedSubaccount> {
@@ -293,6 +382,38 @@ export class CardcloudService {
             metadata: { from: query.from, to: query.to },
         });
         return movements;
+    }
+
+    async exportSubaccountMovements(uuid: string, query: CardcloudDateRangeQueryDto, scope?: CompanyScope) {
+        const response = await this.getSubaccountMovements(uuid, query, scope);
+        const movements = response.movements.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_subaccount_movements_exported',
+            resourceType: 'CardcloudSubaccount',
+            resourceId: uuid,
+            externalPath: `/v1/subaccounts/${uuid}/movements`,
+            metadata: { rows: movements.length, from: query.from, to: query.to, companyId: scope?.companyId, format: query.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            `movimientos-subcuenta-${sanitizeFilenamePart(uuid)}.xlsx`,
+            'Movimientos subcuenta',
+            [
+                { header: 'Movimiento ID', value: (movement) => movement.movement_id },
+                { header: 'Fecha', value: (movement) => valueOrDash(movement.date) },
+                { header: 'Tipo', value: (movement) => valueOrDash(movement.type) },
+                { header: 'Descripcion', value: (movement) => valueOrDash(movement.description) },
+                { header: 'Referencia', value: (movement) => valueOrDash(movement.reference) },
+                { header: 'Autorizacion', value: (movement) => valueOrDash(movement.authorization_code) },
+                { header: 'Monto', value: (movement) => valueOrDash(movement.amount) },
+                { header: 'Saldo', value: (movement) => valueOrDash(movement.balance) },
+                { header: 'Tarjeta ID', value: (movement) => valueOrDash(movement.card?.card_id) },
+                { header: 'Client ID', value: (movement) => valueOrDash(movement.card?.client_id) },
+                { header: 'PAN enmascarado', value: (movement) => valueOrDash(movement.card?.masked_pan) },
+            ],
+            movements,
+            query.format
+        );
     }
 
     async assignCards(dto: AssignCardcloudCardsDto): Promise<CardcloudAssignCardsResponse> {
@@ -481,17 +602,38 @@ export class CardcloudService {
         return movements;
     }
 
-    async findStock(dto: FindCardcloudStockDto, scope?: CompanyScope): Promise<PaginatedResult<CardcloudStockResponse>> {
-        const where: Prisma.CardcloudWhereInput = {
-            AND: [
-                this.stockScopeWhere(scope, true),
-                {
-                    subCompanyId: dto.subCompanyId,
-                    providerStatus: dto.providerStatus,
-                    ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
-                },
+    async exportAccountMovements(query: CardcloudDateRangeQueryDto) {
+        const response = await this.getAccountMovements(query);
+        const movements = response.movements.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_account_movements_exported',
+            resourceType: 'CardcloudAccount',
+            externalPath: '/v1/account/movements',
+            metadata: { rows: movements.length, from: query.from, to: query.to, format: query.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'movimientos-cuenta-cardcloud.xlsx',
+            'Movimientos cuenta',
+            [
+                { header: 'Movimiento ID', value: (movement) => movement.movement_id },
+                { header: 'Fecha', value: (movement) => valueOrDash(movement.date) },
+                { header: 'Tipo', value: (movement) => valueOrDash(movement.type) },
+                { header: 'Descripcion', value: (movement) => valueOrDash(movement.description) },
+                { header: 'Referencia', value: (movement) => valueOrDash(movement.reference) },
+                { header: 'Monto', value: (movement) => valueOrDash(movement.amount) },
+                { header: 'Saldo', value: (movement) => valueOrDash(movement.balance) },
+                { header: 'Tarjeta ID', value: (movement) => valueOrDash(movement.card?.card_id) },
+                { header: 'Client ID', value: (movement) => valueOrDash(movement.card?.client_id) },
+                { header: 'PAN enmascarado', value: (movement) => valueOrDash(movement.card?.masked_pan) },
             ],
-        };
+            movements,
+            query.format
+        );
+    }
+
+    async findStock(dto: FindCardcloudStockDto, scope?: CompanyScope): Promise<PaginatedResult<CardcloudStockResponse>> {
+        const where = this.buildStockWhere(dto, scope);
 
         const [records, total] = await Promise.all([
             this.prisma.cardcloud.findMany({
@@ -513,6 +655,42 @@ export class CardcloudService {
             records.map((record) => this.serializeLocalStock(record)),
             total,
             dto
+        );
+    }
+
+    async exportStock(dto: FindCardcloudStockDto, scope?: CompanyScope) {
+        const where = this.buildStockWhere(dto, scope);
+        const records = await this.prisma.cardcloud.findMany({
+            where,
+            take: EXCEL_EXPORT_MAX_ROWS,
+            orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
+            select: this.localStockSelect(),
+        });
+        const stock = records.map((record) => this.serializeLocalStock(record));
+
+        void this.audit.recordCardcloud({
+            action: 'cardcloud_stock_exported',
+            resourceType: 'CardcloudStock',
+            metadata: { rows: stock.length, subCompanyId: dto.subCompanyId, providerStatus: dto.providerStatus, search: dto.search, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'stock-cardcloud.xlsx',
+            'Stock Cardcloud',
+            [
+                { header: 'ID', value: (item) => item.id },
+                { header: 'External ID', value: (item) => item.externalId },
+                { header: 'Client ID', value: (item) => valueOrDash(item.clientId) },
+                { header: 'PAN enmascarado', value: (item) => valueOrDash(item.maskedPan) },
+                { header: 'Saldo', value: (item) => valueOrDash(item.balance) },
+                { header: 'Estado proveedor', value: (item) => valueOrDash(item.providerStatus) },
+                { header: 'Subcompania', value: (item) => (item.subCompany ? `${item.subCompany.key} - ${item.subCompany.name}` : '-') },
+                { header: 'Tarjeta local', value: (item) => formatBoolean(Boolean(item.assignedCardId)) },
+                { header: 'Modo local', value: (item) => this.formatCardAssignmentMode(item.assignedCard?.assignmentMode) },
+                { header: 'Estado tarjeta local', value: (item) => formatStatus(item.assignedCard?.status) },
+            ],
+            stock,
+            dto.format
         );
     }
 
@@ -955,6 +1133,11 @@ export class CardcloudService {
         return { ...item, localSubCompany };
     }
 
+    private localSubCompanyLabel(subaccount: CardcloudSubaccount | CardcloudVisibleSubaccount): string {
+        if (!('localSubCompany' in subaccount) || !subaccount.localSubCompany) return '-';
+        return `${subaccount.localSubCompany.key} - ${subaccount.localSubCompany.name}`;
+    }
+
     private transferBulkExcelResult(row: ParsedTransferBulkExcelRow, status: CardcloudTransferBulkExcelRowStatus, message: string): TransferBulkExcelInternalResult {
         return {
             row: row.row,
@@ -1145,6 +1328,25 @@ export class CardcloudService {
             { subCompany: { key: { contains: search, mode: 'insensitive' } } },
             { subCompany: { name: { contains: search, mode: 'insensitive' } } },
         ];
+    }
+
+    private buildStockWhere(dto: FindCardcloudStockDto, scope?: CompanyScope): Prisma.CardcloudWhereInput {
+        return {
+            AND: [
+                this.stockScopeWhere(scope, true),
+                {
+                    subCompanyId: dto.subCompanyId,
+                    providerStatus: dto.providerStatus,
+                    ...(dto.search ? { OR: this.stockSearch(dto.search) } : {}),
+                },
+            ],
+        };
+    }
+
+    private formatCardAssignmentMode(mode: CardAssignmentMode | null | undefined): string {
+        if (mode === CardAssignmentMode.vehicle) return 'Vehiculo';
+        if (mode === CardAssignmentMode.unassigned) return 'Sin asignar';
+        return '-';
     }
 
     private async findLocalStock(id: string, scope?: CompanyScope): Promise<CardcloudStockResponse> {

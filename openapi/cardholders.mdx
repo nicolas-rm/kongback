@@ -15,9 +15,10 @@ Requiere header `X-Company-Id: <companyId>`. El listado queda limitado a usuario
 
 ## Endpoints
 
-| Metodo | Ruta               | Permiso                 | Descripcion                                |
-| ------ | ------------------ | ----------------------- | ------------------------------------------ |
-| `GET`  | `/api/cardholders` | `cardholders.read-list` | Lista usuarios con perfil tarjetahabiente. |
+| Metodo | Ruta                      | Permiso                 | Descripcion                                |
+| ------ | ------------------------- | ----------------------- | ------------------------------------------ |
+| `GET`  | `/api/cardholders`        | `cardholders.read-list` | Lista usuarios con perfil tarjetahabiente. |
+| `GET`  | `/api/cardholders/export` | `cardholders.read-list` | Exporta tarjetahabientes filtrados.        |
 
 ## Listar tarjetahabientes
 
@@ -113,6 +114,18 @@ Response `200`:
 }
 ```
 
+## Exportar tarjetahabientes
+
+`GET /api/cardholders/export`
+
+Requiere `cardholders.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/cardholders` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas. No exporta datos sensibles de tarjetas ni credenciales.
+
 ## Reglas
 
 - El endpoint lista usuarios con accesos cuyo rol tenga permisos `cardholder.*`.
@@ -156,3 +169,5 @@ Filtros recomendados:
 - Pendientes de configurar con `hasDriver=false` o `hasCards=false`.
 
 No muestres `scopeKey`, `scopeId`, `companyId` ni `cardcloudSubaccountId` como campos editables. Son datos tecnicos para relacionar accesos y subcuentas.
+
+`exportList` usa `GET /api/cardholders/export`; `configureColumns` sigue siendo accion local de interfaz.

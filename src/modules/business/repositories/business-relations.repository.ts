@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Status } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
+import { buildActiveUserAccessWhere } from '@/utilities/authentication/active-user-access-filter';
 import { companyScopeWhere, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 
 @Injectable()
@@ -31,6 +32,31 @@ export class BusinessRelationsRepository {
 
     countActiveUsers(ids: string[]): Promise<number> {
         return this.prisma.user.count({ where: { id: { in: ids }, status: Status.active } });
+    }
+
+    findActiveUserAccessProfiles(userId: string) {
+        return this.prisma.userAccess.findMany({
+            where: buildActiveUserAccessWhere({ userId }),
+            select: {
+                companyId: true,
+                scopeKey: true,
+                scopeId: true,
+                role: {
+                    select: {
+                        code: true,
+                        permissions: {
+                            select: {
+                                permission: {
+                                    select: {
+                                        code: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
     }
 
     countActiveDrivers(ids: string[], scope?: CompanyScope): Promise<number> {

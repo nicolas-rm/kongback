@@ -65,11 +65,15 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `vehicle`,
 | -------- | ----------------------------------------- | ------------------------------------ | ------------------------------------------ |
 | `POST`   | `/api/cards`                              | `cards.create`                       | Crea una tarjeta local manualmente.        |
 | `POST`   | `/api/cards/assign-sub-company`           | `cardcloud-stock.sub-company.assign` | Ubica tarjetas Cardcloud en subcompania.   |
+| `GET`    | `/api/cards/assign-sub-company-excel`     | `cardcloud-stock.sub-company.assign` | Descarga plantilla Excel de asignacion.    |
+| `POST`   | `/api/cards/assign-sub-company-excel`     | `cardcloud-stock.sub-company.assign` | Procesa asignacion masiva por Excel.       |
 | `POST`   | `/api/cards/sync-sub-company`             | `cards.sync`                         | Sincroniza tarjetas de una subcompania.    |
 | `POST`   | `/api/cards/validate`                     | `cards.validate`                     | Valida una tarjeta local contra Cardcloud. |
 | `GET`    | `/api/cards`                              | `cards.read-list`                    | Lista tarjetas locales.                    |
+| `GET`    | `/api/cards/export`                       | `cards.download`                     | Exporta tarjetas locales filtradas.        |
 | `GET`    | `/api/cards/by-design-fuel/:designFuelId` | `cards.design-fuel.read`             | Lista tarjetas por combustible de diseno.  |
 | `GET`    | `/api/cards/:id/movements`                | `cards.movements.read-list`          | Lista movimientos externos de la tarjeta.  |
+| `GET`    | `/api/cards/:id/movements/export`         | `cards.movements.read-list`          | Exporta movimientos externos de la tarjeta. |
 | `GET`    | `/api/cards/:id`                          | `cards.read-one`                     | Obtiene una tarjeta.                       |
 | `PATCH`  | `/api/cards/:id/assignment`               | `cards.assignment.update`            | Actualiza asignacion operativa parcial.    |
 | `PATCH`  | `/api/cards/:id/assign-vehicle`           | `cards.vehicle.assign`               | Asigna tarjeta a vehiculo.                 |
@@ -88,6 +92,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `vehic
 Para columnas visibles, usa `stock.maskedPan`, `stock.clientId`, `stock.balance`, `stock.providerStatus`, `vehicle.plates`, `vehicle.economicNumber`, `designFuel.name` y `subCompany.name`.
 
 Response `200`: resultado paginado de `Card`.
+
+## Exportar tarjetas
+
+`GET /api/cards/export`
+
+Requiere `cards.download`.
+
+Query params: acepta los mismos filtros de `GET /api/cards` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Listar por combustible de diseno
 
@@ -219,6 +235,103 @@ Response `201`:
 }
 ```
 
+## Asignar tarjetas a subcompania por Excel
+
+`GET /api/cards/assign-sub-company-excel`
+
+Permiso: `cardcloud-stock.sub-company.assign`.
+
+Descarga archivo `.xlsx` con hoja `Asignacion` precargada solo con tarjetas disponibles: registros de `cardcloud-stock` con `subCompanyId = null`, `assignedCardId = null` y `clientId` presente. Para seleccionar que tarjetas asignar, el operador debe eliminar del archivo las filas que no quiera procesar y subir el archivo con los `clientId` que permanecen.
+
+Columnas:
+
+| Columna          | Requerida | Uso                                                                    |
+| ---------------- | --------- | ---------------------------------------------------------------------- |
+| `clientId`       | Si        | ID de cliente de Cardcloud. El backend lo usa para resolver la tarjeta. |
+| `maskedPan`      | No        | Referencia visual de la tarjeta enmascarada.                           |
+| `providerStatus` | No        | Estado crudo recibido de Cardcloud.                                    |
+
+Response `200`: archivo Excel `plantilla-asignacion-tarjetas.xlsx`.
+
+`POST /api/cards/assign-sub-company-excel`
+
+Permiso: `cardcloud-stock.sub-company.assign`.
+
+Content-Type: `multipart/form-data`.
+
+Body:
+
+| Campo          | Tipo     | Requerido | Descripcion                                                        |
+| -------------- | -------- | --------- | ------------------------------------------------------------------ |
+| `subCompanyId` | `string` | Si        | Subcompania destino. El backend deriva su `cardcloudSubaccountId`. |
+| `file`         | `file`   | Si        | Archivo `.xlsx` con la plantilla o columnas compatibles.           |
+
+Reglas:
+
+- Solo procesa la primera hoja del archivo.
+- La columna `clientId` es obligatoria y es la llave que se procesa.
+- `maskedPan` y `providerStatus` son referencias. El backend no usa esas columnas para resolver la asignacion.
+- Acepta encabezados equivalentes para `clientId`, por ejemplo `client_id`, `client id`, `clienteId` o `cliente id`.
+- Por compatibilidad, si un archivo antiguo trae `card`, `subCompany` o `description`, el backend las ignora para resolver la asignacion y solo las devuelve como contexto en el resultado por fila.
+- Omite filas completamente vacias.
+- Marca como fallidas las filas sin `clientId`, `clientId` duplicados dentro del archivo, `clientId` no encontrados, `clientId` ambiguos y filas que excedan el limite.
+- Procesa maximo `100` tarjetas por archivo, igual que la asignacion JSON.
+- Busca cada `clientId` contra el stock local disponible: sin subcompania local, sin tarjeta local asignada y visible como stock libre. Si encuentra exactamente una tarjeta, toma su `externalId` interno de Cardcloud para enviarlo al proveedor.
+- Valida que la subcompania este activa, pertenezca al `X-Company-Id` y tenga `cardcloudSubaccountId`.
+- Llama primero a Cardcloud `/v1/account/cards/assign_bulk` con `subaccount_id = subCompany.cardcloudSubaccountId`.
+- Solo despues de respuesta correcta sincroniza las tarjetas locales y el espejo `cardcloud-stock`.
+- Al terminar crea una notificacion para el usuario que ejecuto la carga con resumen de exitos, fallos y omitidas.
+
+Response `201`:
+
+```json
+{
+    "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+    "cardcloudSubaccountId": "019cd4ad-38dd-7125-a68a-209519d79869",
+    "results": [
+        {
+            "row": 2,
+            "clientId": "CLI-001",
+            "externalId": "019cd4ad-38dd-7125-a68a-209519d79869",
+            "maskedPan": "XXXXXXXXXXXX1001",
+            "providerStatus": "NORMAL",
+            "subCompany": null,
+            "description": null,
+            "status": "succeeded",
+            "stockId": "stock-id",
+            "cardId": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+            "message": "Tarjeta asignada correctamente."
+        }
+    ],
+    "summary": {
+        "totalRows": 1,
+        "requested": 1,
+        "unique": 1,
+        "prepared": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "omitted": 0,
+        "created": 1,
+        "updated": 0,
+        "unchanged": 0
+    },
+    "cards": [
+        {
+            "id": "ff2584aa-e2fc-4d75-b11c-61e447f3cbb0",
+            "subCompanyId": "79d03f1d-3da4-478e-806e-75ef9d86c992",
+            "vehicleId": null,
+            "designFuelId": null,
+            "externalId": "019cd4ad-38dd-7125-a68a-209519d79869",
+            "assignmentMode": "unassigned",
+            "status": "active",
+            "assignedAt": null
+        }
+    ]
+}
+```
+
+`results[].status`: `succeeded`, `failed`, `omitted`.
+
 ## Sincronizar tarjetas de subcompania
 
 `POST /api/cards/sync-sub-company`
@@ -286,6 +399,16 @@ Query params: `from`, `to`.
 El backend valida que la tarjeta local pertenezca al alcance de la compania y usa `externalId` para consultar movimientos externos en Cardcloud.
 
 Response `200`: respuesta cruda del proveedor Cardcloud para movimientos de tarjeta.
+
+`GET /api/cards/:id/movements/export`
+
+Permiso: `cards.movements.read-list`.
+
+Query params: acepta `from`, `to` y `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend valida que la tarjeta local pertenezca al alcance de la compania, resuelve `externalId` y exporta hasta `5000` movimientos externos devueltos por Cardcloud.
 
 ## Actualizar
 
@@ -384,9 +507,10 @@ El bloque `stock` viene del espejo local `cardcloud-stock`; no llama a Cardcloud
 | Entrar al modulo        | `modules.cards.canEnter`                                                          | `cards.module`                       | Mostrar menu Tarjetas.                   |
 | Buscar/refrescar/listar | `modules.cards.actions.readList` / `modules.cards.actions.refreshList`            | `cards.read-list`                    | Tabla principal.                         |
 | Configurar columnas     | `modules.cards.actions.configureColumns`                                          | `cards.read-list`                    | Preferencia visual del listado.          |
-| Descargar listado       | `modules.cards.actions.exportList`                                                | `cards.download`                     | Exportar tarjetas locales.               |
+| Descargar listado       | `modules.cards.actions.exportList`                                                | `cards.download`                     | `GET /api/cards/export`.                 |
 | Ver detalle             | `modules.cards.actions.openDetail`                                                | `cards.read-one`                     | Drawer/modal de detalle.                 |
 | Ver movimientos         | `modules.cards.actions.openMovements`                                             | `cards.movements.read-list`          | Drawer/tab de movimientos.               |
+| Exportar movimientos    | `modules.cards.actions.exportMovements`                                           | `cards.movements.read-list`          | `GET /api/cards/:id/movements/export`.   |
 | Editar                  | `modules.cards.actions.openEdit` / `modules.cards.actions.update`                 | `cards.update`                       | Editar combustible, ID externo y estado. |
 | Asignar vehiculo        | `modules.cards.actions.openAssignVehicle` / `modules.cards.actions.assignVehicle` | `cards.vehicle.assign`               | Relacionar tarjeta con vehiculo activo.  |
 | Quitar asignacion       | `modules.cards.actions.openUnassign` / `modules.cards.actions.unassign`           | `cards.unassign`                     | Liberar tarjeta.                         |
@@ -395,6 +519,8 @@ El bloque `stock` viene del espejo local `cardcloud-stock`; no llama a Cardcloud
 | Validar tarjeta         | `modules.cards.actions.openValidate` / `modules.cards.actions.validate`           | `cards.validate`                     | Flujo sensible y controlado.             |
 | Sincronizar subcompania | `modules.cards.actions.openSyncSubCompany` / `modules.cards.actions.sync`         | `cards.sync`                         | Accion contextual por subcompania.       |
 | Asignar Cardcloud       | `modules.cards.actions.openAssignCardcloud`                                       | `cardcloud-stock.sub-company.assign` | Preferir mostrarla en Stock Cardcloud.   |
+| Descargar plantilla     | `modules.cards.actions.downloadAssignCardcloudTemplate`                           | `cardcloud-stock.sub-company.assign` | Para asignacion masiva por Excel.        |
+| Procesar Excel          | `modules.cards.actions.uploadAssignCardcloudExcel`                                | `cardcloud-stock.sub-company.assign` | Para asignacion masiva por Excel.        |
 
 Botones primarios recomendados en Tarjetas: buscar, refrescar, configurar columnas, exportar y acciones por fila. No muestres `Crear tarjeta`, `Sincronizar`, `Validar tarjeta` ni `Asignar Cardcloud` como toolbar principal salvo decision explicita de producto.
 
@@ -415,7 +541,7 @@ Para la accion de asignar vehiculo, muestra vehiculos activos de la misma subcom
 
 Si el front quiere una sola accion compatible con el contrato anterior, puede usar `PATCH /api/cards/:id/assignment`; internamente solo soporta asignar a vehiculo o quitar asignacion.
 
-Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`. Como accion principal, usa preferentemente `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde Stock Cardcloud.
+Para asignar tarjetas a una subcompania, el usuario debe seleccionar la subcompania y las tarjetas desde una lista controlada; nunca debe escribir `subaccount_id`. El backend deriva la subcuenta desde `cardcloudSubaccountId`. Como accion principal individual, usa preferentemente `PATCH /api/cardcloud-stock/:id/assign-sub-company` desde Stock Cardcloud. Para carga masiva por archivo, usa `GET /api/cards/assign-sub-company-excel` y `POST /api/cards/assign-sub-company-excel`.
 
 Si la tarjeta se crea sin vehiculo, dejala como `unassigned` y ofrece la asignacion como accion posterior. Si se crea desde el detalle de un vehiculo, deriva `vehicleId`, `subCompanyId` y `assignedAt` desde ese contexto cuando aplique.
 

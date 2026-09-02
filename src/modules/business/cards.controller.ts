@@ -1,8 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { CurrentCompanyScope, CurrentUser, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CardcloudDateRangeQueryDto } from '@/modules/cardcloud/dto/cardcloud-proxy.dto';
 import {
+    AssignCardsToSubCompanyExcelDto,
     AssignCardsToSubCompanyDto,
     AssignCardVehicleDto,
     CreateCardDto,
@@ -14,6 +18,8 @@ import {
     ValidateOwnedCardDto,
 } from '@/modules/business/dto';
 import { CardsService } from '@/modules/business/services/cards.service';
+import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
+import type { UploadedFile as AppUploadedFile } from '@/modules/documents/types/uploaded-file.type';
 
 @RequireCompany()
 @Controller('cards')
@@ -30,6 +36,14 @@ export class CardsController {
     @Permissions('cards.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardsDto) {
         return this.cardsService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('cards.download')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindCardsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardsService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Post('validate')
@@ -50,6 +64,26 @@ export class CardsController {
         return this.cardsService.assignCardsToSubCompany(dto, scope);
     }
 
+    @Get('assign-sub-company-excel')
+    @Permissions('cardcloud-stock.sub-company.assign')
+    async downloadAssignCardsToSubCompanyExcelTemplate(@CurrentCompanyScope() scope: CompanyScope | undefined, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardsService.downloadAssignCardsToSubCompanyExcelTemplate(scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
+    @Post('assign-sub-company-excel')
+    @Permissions('cardcloud-stock.sub-company.assign')
+    @UseInterceptors(FileInterceptor('file'))
+    assignCardsToSubCompanyExcel(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @CurrentUser() user: RequestUser,
+        @Body() dto: AssignCardsToSubCompanyExcelDto,
+        @UploadedFile() file?: AppUploadedFile
+    ) {
+        return this.cardsService.assignCardsToSubCompanyExcel(dto, file, scope, user.id);
+    }
+
     @Post('sync-sub-company')
     @Permissions('cards.sync')
     syncSubCompanyCards(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: SyncSubCompanyCardsDto) {
@@ -60,6 +94,19 @@ export class CardsController {
     @Permissions('cards.movements.read-list')
     getMovements(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Query() dto: CardcloudDateRangeQueryDto) {
         return this.cardsService.getMovements(id, dto, scope);
+    }
+
+    @Get(':id/movements/export')
+    @Permissions('cards.movements.read-list')
+    async exportMovements(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Param('id', ParseUUIDPipe) id: string,
+        @Query() dto: CardcloudDateRangeQueryDto,
+        @Res({ passthrough: true }) response: Response
+    ) {
+        const file = await this.cardsService.exportMovements(id, dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

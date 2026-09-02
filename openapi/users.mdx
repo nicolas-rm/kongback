@@ -93,20 +93,21 @@ Esta API es mixta:
 
 ## Endpoints
 
-| Metodo   | Ruta                                | Permiso                    | Alcance         | Descripcion                                  |
-| -------- | ----------------------------------- | -------------------------- | --------------- | -------------------------------------------- |
-| `POST`   | `/api/users`                        | `users.create`             | Global/compania | Crea un usuario.                             |
-| `GET`    | `/api/users`                        | `users.read-list`          | Global/compania | Lista usuarios con paginacion y filtros.     |
-| `GET`    | `/api/users/:id`                    | `users.read-one`           | Global/compania | Obtiene un usuario por ID.                   |
-| `PATCH`  | `/api/users/:id`                    | `users.update`             | Global          | Actualiza datos basicos del usuario.         |
-| `DELETE` | `/api/users/:id`                    | `users.delete`             | Global          | Elimina un usuario.                          |
-| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Global/compania | Lista accesos activos del usuario.           |
-| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Agrega un acceso al usuario.                 |
-| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Reemplaza accesos del usuario.               |
-| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Global/compania | Elimina un acceso puntual del usuario.       |
-| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Global/compania | Lista permisos efectivos del usuario.        |
-| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Global          | Cambia contrasena y revoca sesiones/dispositivos confiables. |
-| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Global          | Desvincula 2FA y revoca dispositivos confiables.             |
+| Metodo   | Ruta                                | Permiso                    | Alcance         | Descripcion                                                      |
+| -------- | ----------------------------------- | -------------------------- | --------------- | ---------------------------------------------------------------- |
+| `POST`   | `/api/users`                        | `users.create`             | Global/compania | Crea un usuario.                                                 |
+| `GET`    | `/api/users`                        | `users.read-list`          | Global/compania | Lista usuarios con paginacion y filtros.                         |
+| `GET`    | `/api/users/export`                 | `users.read-list`          | Global/compania | Exporta usuarios filtrados.                                      |
+| `GET`    | `/api/users/:id`                    | `users.read-one`           | Global/compania | Obtiene un usuario por ID.                                       |
+| `PATCH`  | `/api/users/:id`                    | `users.update`             | Global          | Actualiza datos basicos del usuario.                             |
+| `DELETE` | `/api/users/:id`                    | `users.delete`             | Global          | Elimina un usuario.                                              |
+| `GET`    | `/api/users/:id/access`             | `users.access.read`        | Global/compania | Lista accesos activos del usuario.                               |
+| `POST`   | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Agrega un acceso al usuario.                                     |
+| `PUT`    | `/api/users/:id/access`             | `users.access.assign`      | Global/compania | Reemplaza accesos del usuario.                                   |
+| `DELETE` | `/api/users/:id/access/:accessId`   | `users.access.assign`      | Global/compania | Elimina un acceso puntual del usuario.                           |
+| `GET`    | `/api/users/:id/permissions`        | `users.permissions.read`   | Global/compania | Lista permisos efectivos del usuario.                            |
+| `PATCH`  | `/api/users/:id/password`           | `users.password.update`    | Global          | Cambia contrasena y revoca sesiones/dispositivos confiables.     |
+| `PATCH`  | `/api/users/:id/2fa/unlink`         | `users.2fa.unlink`         | Global          | Desvincula 2FA y revoca dispositivos confiables.                 |
 | `POST`   | `/api/users/:id/resend-credentials` | `users.credentials.resend` | Global          | Regenera credenciales y revoca sesiones/dispositivos confiables. |
 
 ## Crear usuario
@@ -146,6 +147,8 @@ Si el request envia `X-Company-Id`, `access.companyId` puede omitirse; backend l
 
 Regla de perfil tarjetahabiente: un usuario con rol o permisos `cardholder.*` no puede mezclarse con roles administrativos. El backend rechaza crear o asignar accesos si detecta un rol tarjetahabiente combinado con otros roles, o un rol hibrido que mezcle permisos `cardholder.*` con permisos administrativos.
 
+Regla de coherencia con conductor: si el usuario ya tiene un conductor activo vinculado por `Driver.userId`, el alcance del acceso tarjetahabiente debe ser esa misma subcompania. Si se intenta crear/asignar un acceso `cardholder.*` con otra subcompania, responde `400`.
+
 Si `password` se omite, el usuario queda con `mustChangePassword: true` y el backend envia correo de bienvenida con credenciales temporales usando `preferredLanguage` o `es` por defecto.
 
 El front debe enviar roles, no permisos individuales. Los permisos efectivos salen de los roles asignados.
@@ -171,11 +174,12 @@ Si se envia `X-Company-Id`, lista solo usuarios con acceso directo a esa compani
 | `search`  | `string`                          | Opcional             | Busca por `username`, `email` o `fullName`, sin distinguir mayusculas.               |
 | `all`     | `boolean`                         | Opcional             | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
 | `status`  | `active \| inactive \| suspended` | Opcional             | Filtra por estado.                                                                   |
+| `subCompanyId` | `uuid`                       | Opcional             | Filtra usuarios con acceso activo a esa subcompania. Se intersecta con `X-Company-Id` y el alcance del usuario autenticado. |
 
 ### Example
 
 ```http
-GET /api/users?page=1&limit=20&search=admin&status=active
+GET /api/users?page=1&limit=20&search=admin&status=active&subCompanyId=019d6f62-9559-7ab5-9e1d-41ee8953f62b
 ```
 
 ```http
@@ -186,6 +190,18 @@ X-Company-Id: c118d5f0-55c7-48f0-a17f-784909a61f97
 ### Response `200`
 
 Devuelve `PaginatedUserResponse`.
+
+## Exportar usuarios
+
+`GET /api/users/export`
+
+Requiere `users.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/users` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Obtener usuario
 
@@ -318,6 +334,8 @@ Si el request envia `X-Company-Id` y el usuario autenticado esta limitado a una 
 
 No se puede asignar el perfil tarjetahabiente a un usuario que ya tenga roles administrativos. Tampoco se puede asignar un rol administrativo a un usuario que ya tenga perfil tarjetahabiente.
 
+Si el usuario ya esta vinculado a un conductor activo, el acceso tarjetahabiente solo puede apuntar a la misma subcompania del conductor. El backend no mueve automaticamente al conductor ni su operacion.
+
 ### Response `201`
 
 Devuelve la lista completa de accesos activos del usuario.
@@ -333,6 +351,8 @@ Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses
 Si se envia `X-Company-Id`, reemplaza solo los accesos del usuario dentro de esa compania. No modifica accesos globales ni accesos de otras companias.
 
 La regla de aislamiento tambien aplica aqui: los accesos enviados no pueden combinar rol/permisos de tarjetahabiente con roles administrativos. Si el reemplazo se ejecuta dentro de `X-Company-Id`, tambien se consideran los accesos activos que el usuario conserve fuera de ese alcance.
+
+Si el usuario ya tiene conductor activo, cualquier acceso tarjetahabiente enviado en el reemplazo debe conservar la misma subcompania del conductor. Cambiar el acceso del tarjetahabiente a otra subcompania sin ajustar la operacion relacionada responde `400`.
 
 ### Body
 
@@ -480,6 +500,8 @@ El formulario de alta de usuario no debe mapear todos los campos tecnicos del bo
 - Alcance: control de UI con opciones `Toda la compania` y `Solo una subcompania`.
 - Subcompania: select visible solo si Alcance es `Solo una subcompania`.
 
+En listados, el filtro de Subcompania debe enviarse como `subCompanyId`; no uses `scopeKey` ni `scopeId` como controles de busqueda visibles.
+
 Campos que el front puede omitir de forma segura en alta:
 
 - `preferredLanguage`: si se omite, backend usa `es`.
@@ -500,6 +522,7 @@ Alta de tarjetahabiente:
 - Crear el usuario solo crea credenciales y acceso RBAC; no crea el conductor ni asigna vehiculos/tarjetas.
 - Despues de crear el usuario, crea o actualiza el conductor en `/api/drivers` enviando `userId` igual al usuario creado.
 - El conductor, su subcompania, el acceso del usuario, el vehiculo y la tarjeta deben pertenecer al mismo contexto operativo.
+- Si el usuario ya tiene conductor activo, no cambies su acceso tarjetahabiente a otra subcompania desde usuarios. Primero resuelve la operacion del conductor; el backend valida esa coherencia y responde `400` si no coincide.
 - Si el usuario tarjetahabiente no tiene `Driver.userId` activo, los endpoints `/api/cardholder/*` responden `403`.
 - No mezcles este usuario con roles administrativos. Si una persona necesita operar administracion y tambien consultar sus tarjetas, crea usuarios separados.
 
@@ -517,7 +540,7 @@ Usa `capabilities.modules.users.actions` para mostrar u ocultar controles:
 | Boton `Crear usuario`            | `users.actions.openCreate` o `users.actions.create`                  | `users.create`               |
 | Busqueda/listado/refrescar tabla | `users.actions.readList` o `users.actions.refreshList`               | `users.read-list`            |
 | Configurar columnas              | `users.actions.configureColumns`                                     | `users.read-list`            |
-| Exportar listado local           | `users.actions.exportList`                                           | `users.read-list`            |
+| Exportar listado                 | `users.actions.exportList`                                           | `users.read-list`            |
 | Ver detalle                      | `users.actions.openDetailDrawer` o `users.actions.readOne`           | `users.read-one`             |
 | Editar datos base                | `users.actions.openEditModal` o `users.actions.update`               | `users.update`               |
 | Abrir/consultar accesos          | `users.actions.openAccessModal` o `users.actions.readAccess`         | `users.access.read` o assign |
@@ -528,7 +551,7 @@ Usa `capabilities.modules.users.actions` para mostrar u ocultar controles:
 | Reenviar credenciales            | `users.actions.openResendCredentialsModal`                           | `users.credentials.resend`   |
 | Desvincular 2FA                  | `users.actions.openUnlinkTwoFactorModal`                             | `users.2fa.unlink`           |
 
-`configureColumns` y `exportList` representan acciones locales del listado; no implican endpoints adicionales mientras el front use los datos ya cargados por `GET /api/users`. El frontend actual no expone eliminacion de usuarios, aunque el backend conserve permisos internos para administracion avanzada.
+`configureColumns` es accion local del listado. `exportList` usa `GET /api/users/export` y debe descargar el archivo como blob. El frontend actual no expone eliminacion de usuarios, aunque el backend conserve permisos internos para administracion avanzada.
 
 ## Errores comunes
 

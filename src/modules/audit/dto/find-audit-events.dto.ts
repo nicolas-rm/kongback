@@ -28,6 +28,9 @@ export class FindAuditEventsDto extends PaginationDto {
     @ValidatorUUID({ optional: true })
     companyId?: string;
 
+    @ValidatorUUID({ optional: true })
+    subCompanyId?: string;
+
     @ValidatorString({ optional: true })
     requestId?: string;
 

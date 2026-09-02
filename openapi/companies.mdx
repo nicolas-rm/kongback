@@ -50,6 +50,7 @@ En listados, `address` no se devuelve para mantener el payload liviano. `address
 | -------- | -------------------- | --------------------- | ----------------------- |
 | `POST`   | `/api/companies`     | `companies.create`    | Crea una compania.      |
 | `GET`    | `/api/companies`     | `companies.read-list` | Lista companias.        |
+| `GET`    | `/api/companies/export` | `companies.read-list` | Exporta companias filtradas. |
 | `GET`    | `/api/companies/:id` | `companies.read-one`  | Obtiene una compania.   |
 | `PATCH`  | `/api/companies/:id` | `companies.update`    | Actualiza una compania. |
 | `DELETE` | `/api/companies/:id` | `companies.delete`    | Desactiva una compania. |
@@ -67,6 +68,18 @@ GET /api/companies?page=1&limit=20&search=acme&status=active
 ```
 
 Response `200`: resultado paginado de `Company` sin `address`.
+
+## Exportar companias
+
+`GET /api/companies/export`
+
+Requiere `companies.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/companies` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -179,7 +192,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.companies.actions.readList`.
 - Refrescar listado: `modules.companies.actions.refreshList`.
 - Configurar columnas: `modules.companies.actions.configureColumns`.
-- Exportar listado desde el front: `modules.companies.actions.exportList`.
+- Exportar listado: `modules.companies.actions.exportList`.
 - Abrir detalle: `modules.companies.actions.openDetail` u `modules.companies.actions.openDetailDrawer`.
 - Pestañas de detalle `Formulario` y `Direccion`: `modules.companies.actions.openDetailForm` y `modules.companies.actions.openDetailAddress`.
 - Editar compania: `modules.companies.actions.openEdit` u `modules.companies.actions.openEditDrawer`.
@@ -187,7 +200,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Actualizar compania: `modules.companies.actions.update`.
 - Desactivar compania: `modules.companies.actions.openDeactivate`, `modules.companies.actions.openDeactivateDialog` o `modules.companies.actions.deactivate`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la compania, no borrado fisico.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/companies/export` y se habilita cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la compania, no borrado fisico.
 
 Este modulo administra clientes/tenants. No debe depender de la compania seleccionada y no debe enviar `X-Company-Id`.
 

@@ -28,6 +28,7 @@ El catalogo de combustibles es global. Los endpoints de lectura pueden usarse co
 | -------- | ---------------- | ----------------- | ------------------------- |
 | `POST`   | `/api/fuels`     | `fuels.create`    | Crea un combustible.      |
 | `GET`    | `/api/fuels`     | `fuels.read-list` | Lista combustibles.       |
+| `GET`    | `/api/fuels/export` | `fuels.read-list` | Exporta combustibles filtrados. |
 | `GET`    | `/api/fuels/:id` | `fuels.read-one`  | Obtiene un combustible.   |
 | `PATCH`  | `/api/fuels/:id` | `fuels.update`    | Actualiza un combustible. |
 | `DELETE` | `/api/fuels/:id` | `fuels.delete`    | Desactiva un combustible. |
@@ -41,6 +42,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`.
 `search` busca por `code` y `name`.
 
 Response `200`: resultado paginado de `Fuel`.
+
+## Exportar combustibles
+
+`GET /api/fuels/export`
+
+Requiere `fuels.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/fuels` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -109,14 +122,14 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.fuels.actions.readList`.
 - Refrescar listado: `modules.fuels.actions.refreshList`.
 - Configurar columnas: `modules.fuels.actions.configureColumns`.
-- Exportar listado desde el front: `modules.fuels.actions.exportList`.
+- Exportar listado: `modules.fuels.actions.exportList`.
 - Abrir detalle: `modules.fuels.actions.openDetail` u `modules.fuels.actions.openDetailDialog`.
 - Consultar detalle: `modules.fuels.actions.readOne`.
 - Editar combustible: `modules.fuels.actions.openEdit` u `modules.fuels.actions.openEditDialog`.
 - Actualizar combustible: `modules.fuels.actions.update`.
 - Desactivar combustible: `modules.fuels.actions.openDeactivate`, `modules.fuels.actions.openDeactivateDialog` o `modules.fuels.actions.deactivate`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar el combustible, no borrado fisico.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/fuels/export` y se habilita cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar el combustible, no borrado fisico.
 
 Este catalogo es global. No envies `X-Company-Id` para crear, actualizar o desactivar combustibles.
 

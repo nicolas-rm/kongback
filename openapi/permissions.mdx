@@ -53,6 +53,7 @@ Esta API es de administracion global. Los permisos `permissions.*` deben venir d
 | -------- | ---------------------- | ----------------------- | ----------------------------------------- |
 | `POST`   | `/api/permissions`     | `permissions.create`    | Crea un permiso.                          |
 | `GET`    | `/api/permissions`     | `permissions.read-list` | Lista permisos con paginacion y busqueda. |
+| `GET`    | `/api/permissions/export` | `permissions.read-list` | Exporta permisos filtrados.               |
 | `GET`    | `/api/permissions/:id` | `permissions.read-one`  | Obtiene un permiso por ID.                |
 | `PATCH`  | `/api/permissions/:id` | `permissions.update`    | Actualiza un permiso.                     |
 | `DELETE` | `/api/permissions/:id` | `permissions.delete`    | Elimina un permiso.                       |
@@ -107,6 +108,18 @@ GET /api/permissions?page=1&limit=20&search=users
 ### Response `200`
 
 Devuelve `PaginatedPermissionResponse`.
+
+## Exportar permisos
+
+`GET /api/permissions/export`
+
+Requiere `permissions.read-list` y acceso global.
+
+Query params: acepta los mismos filtros de `GET /api/permissions` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Obtener permiso
 
@@ -190,12 +203,12 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.permissions.actions.readList`.
 - Refrescar listado: `modules.permissions.actions.refreshList`.
 - Configurar columnas: `modules.permissions.actions.configureColumns`.
-- Exportar listado desde el front: `modules.permissions.actions.exportList`.
+- Exportar listado: `modules.permissions.actions.exportList`.
 - Abrir detalle: `modules.permissions.actions.openDetail` u `openDetailDrawer`.
 - Editar permiso: `modules.permissions.actions.openEdit` u `openEditDrawer`.
 - Eliminar permiso: `modules.permissions.actions.openDelete` u `openDeleteDialog`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. Si el producto decide que el catalogo sea solo lectura, oculta crear, editar y eliminar aunque el backend conserve esos permisos para super administradores.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/permissions/export` y se habilita cuando el usuario puede consultar el listado. Si el producto decide que el catalogo sea solo lectura, oculta crear, editar y eliminar aunque el backend conserve esos permisos para super administradores.
 
 Esta pantalla debe tratarse como administracion global y normalmente solo debe mostrarse a super administradores. No envies `X-Company-Id` en estos endpoints.
 

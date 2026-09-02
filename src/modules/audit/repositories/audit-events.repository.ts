@@ -6,6 +6,7 @@ import type { AuditEventDetail, AuditEventListItem } from '@/modules/audit/respo
 
 type AuditQueryScope = {
     companyId?: string;
+    subCompanyId?: string | Prisma.StringNullableFilter;
     empty?: boolean;
 };
 
@@ -150,6 +151,7 @@ export class AuditEventsRepository {
     }
 
     private requestWhere(dto: FindAuditEventsDto, scope: AuditQueryScope): Prisma.RequestLogWhereInput {
+        if (scope.subCompanyId) return { id: '__never__' };
         if (dto.action || dto.resourceType || dto.resourceId) return { id: '__never__' };
         return {
             ...this.companyWhere(scope),
@@ -236,6 +238,7 @@ export class AuditEventsRepository {
     private sharedAuditWhere(dto: FindAuditEventsDto, scope: AuditQueryScope) {
         return {
             ...this.companyWhere(scope),
+            ...this.subCompanyWhere(scope),
             action: this.containsRequired(dto.action),
             result: dto.result,
             actorUserId: dto.actorUserId,
@@ -246,6 +249,10 @@ export class AuditEventsRepository {
 
     private companyWhere(scope: AuditQueryScope): { companyId?: string } {
         return scope.companyId ? { companyId: scope.companyId } : {};
+    }
+
+    private subCompanyWhere(scope: AuditQueryScope): { scopeKey?: string; scopeId?: string | Prisma.StringNullableFilter } {
+        return scope.subCompanyId ? { scopeKey: 'subCompanyId', scopeId: scope.subCompanyId } : {};
     }
 
     private dateWhere(dto: FindAuditEventsDto): AuditDateRange | undefined {

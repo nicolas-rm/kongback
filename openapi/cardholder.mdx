@@ -251,11 +251,11 @@ Response `200`:
 
 `POST /api/cardholder/cards/:cardId/off`
 
-Bloquea en Cardcloud una tarjeta propia. Responde `200` con la respuesta del proveedor mas `message`. Tambien genera una notificacion para el usuario autenticado.
+Bloquea en Cardcloud una tarjeta propia. Responde `200` con `message` y la tarjeta local saneada, actualiza el espejo local `stock.providerStatus` con el estado devuelto por Cardcloud y genera una notificacion para el usuario autenticado.
 
 `POST /api/cardholder/cards/:cardId/on`
 
-Desbloquea en Cardcloud una tarjeta propia. Responde `200` con la respuesta del proveedor mas `message`. Tambien genera una notificacion para el usuario autenticado.
+Desbloquea en Cardcloud una tarjeta propia. Responde `200` con `message` y la tarjeta local saneada, actualiza el espejo local `stock.providerStatus` con el estado devuelto por Cardcloud y genera una notificacion para el usuario autenticado.
 
 `GET /api/cardholder/cards/:cardId/movements`
 
@@ -283,10 +283,12 @@ Body:
 - Requiere JWT y permisos `cardholder.*`.
 - No requiere ni debe enviar `X-Company-Id`; el backend deriva el contexto desde el conductor vinculado al usuario.
 - Si el usuario no tiene un `Driver` activo vinculado, responde `403`.
+- El usuario debe tener acceso activo con permisos `cardholder.*` dentro de la misma compania y subcompania del conductor.
 - Solo se consultan tarjetas activas en modo `vehicle` cuyo vehiculo activo tenga `driverId` igual al conductor del usuario.
 - Las rutas por `cardId` responden `404` cuando la tarjeta no pertenece al conductor autenticado, aunque la tarjeta exista en otra subcompania o vehiculo.
 - Para operar contra Cardcloud, la tarjeta debe tener `externalId` local o `stock.externalId`.
 - Las rutas `sensitive`, `nip`, `on` y `off` llaman Cardcloud despues de validar propiedad local.
+- Las rutas `on` y `off` no cambian `Card.status`; ese campo sigue representando alta/baja operativa local. El bloqueo/desbloqueo del proveedor se refleja en `stock.providerStatus`.
 - `POST /api/cardholder/cards/validate` no asigna ni crea tarjetas; solo valida una tarjeta ya asignada al conductor por medio del vehiculo.
 - Evidencias de movimientos e historial de odometro no estan incluidos porque el modelo Prisma actual no tiene tablas de evidencias ni historial historico.
 

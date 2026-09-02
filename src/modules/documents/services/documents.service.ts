@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AppConfigService } from '@/configurations/app-config.service';
 import { I18N_KEYS, I18nBadRequestException, I18nNotFoundException } from '@/i18n';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
-import { SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { scopedSubCompanyIdFilter, SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive } from '@/modules/business/business.helpers';
 import { BusinessRelationsRepository } from '@/modules/business/repositories/business-relations.repository';
 import { CreateDocumentDto, FindDocumentsDto, UpdateDocumentDto } from '@/modules/documents/dto';
@@ -12,6 +13,11 @@ import { DocumentResponse } from '@/modules/documents/responses';
 import { DocumentsStorageService } from '@/modules/documents/services/documents-storage.service';
 import type { UploadedFile } from '@/modules/documents/types/uploaded-file.type';
 import { AuditService } from '@/modules/audit/audit.service';
+
+function joinScope(scopeKey?: string | null, scopeId?: string | null): string {
+    if (!scopeKey && !scopeId) return '-';
+    return [scopeKey, scopeId].filter(Boolean).join(':');
+}
 
 @Injectable()
 export class DocumentsService {
@@ -54,7 +60,55 @@ export class DocumentsService {
     }
 
     async findAll(dto: FindDocumentsDto, scope?: CompanyScope) {
+        const where = this.buildWhere(dto, scope);
+        const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
+        return paginate(
+            data.map((document) => DocumentResponse.from(document)),
+            total,
+            dto
+        );
+    }
+
+    async exportList(dto: FindDocumentsDto, scope?: CompanyScope) {
+        const where = this.buildWhere(dto, scope);
+        const documents = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordBusiness({
+            action: 'documents_exported',
+            resourceType: 'Document',
+            metadata: {
+                rows: documents.length,
+                category: dto.category,
+                entityType: dto.entityType,
+                entityId: dto.entityId,
+                search: dto.search,
+                companyId: scope?.companyId,
+                format: dto.format ?? 'xlsx',
+            },
+        });
+
+        return createExcelExport(
+            'documentos.xlsx',
+            'Documentos',
+            [
+                { header: 'ID', value: (document) => document.id },
+                { header: 'Titulo', value: (document) => document.title },
+                { header: 'Descripcion', value: (document) => valueOrDash(document.description) },
+                { header: 'Categoria', value: (document) => valueOrDash(document.category) },
+                { header: 'Empresa', value: (document) => valueOrDash(document.companyId) },
+                { header: 'Alcance', value: (document) => joinScope(document.scopeKey, document.scopeId) },
+                { header: 'Entidad', value: (document) => joinScope(document.entityType, document.entityId) },
+                { header: 'Archivo', value: (document) => document.originalName },
+                { header: 'MIME', value: (document) => document.mimeType },
+                { header: 'Tamano bytes', value: (document) => document.sizeBytes },
+            ],
+            documents,
+            dto.format
+        );
+    }
+
+    private buildWhere(dto: FindDocumentsDto, scope?: CompanyScope): Prisma.DocumentWhereInput {
         const and: Prisma.DocumentWhereInput[] = [];
+        const subCompanyId = scopedSubCompanyIdFilter(dto.subCompanyId, scope);
         if (dto.search) {
             and.push({
                 OR: [
@@ -65,21 +119,15 @@ export class DocumentsService {
             });
         }
 
-        const where: Prisma.DocumentWhereInput = {
+        return {
             deletedAt: null,
             category: dto.category,
             companyId: scope?.companyId,
-            ...(scope?.subCompanyIds ? { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: { in: scope.subCompanyIds } } : {}),
+            ...(subCompanyId ? { scopeKey: SUB_COMPANY_SCOPE_KEY, scopeId: subCompanyId } : {}),
             entityType: dto.entityType,
             entityId: dto.entityId,
             ...(and.length ? { AND: and } : {}),
         };
-        const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
-        return paginate(
-            data.map((document) => DocumentResponse.from(document)),
-            total,
-            dto
-        );
     }
 
     async findOne(id: string, scope?: CompanyScope) {

@@ -38,6 +38,7 @@ Requiere header `X-Company-Id: <companyId>`. Crear, listar, descargar, actualiza
 | -------- | ----------------------------- | --------------------- | --------------------------------- |
 | `POST`   | `/api/documents`              | `documents.create`    | Sube y registra un documento.     |
 | `GET`    | `/api/documents`              | `documents.read-list` | Lista documentos activos.         |
+| `GET`    | `/api/documents/export`       | `documents.read-list` | Exporta metadata de documentos.   |
 | `GET`    | `/api/documents/:id/download` | `documents.download`  | Descarga el archivo.              |
 | `GET`    | `/api/documents/:id`          | `documents.read-one`  | Obtiene metadata de un documento. |
 | `PATCH`  | `/api/documents/:id`          | `documents.update`    | Actualiza metadata editable.      |
@@ -47,11 +48,25 @@ Requiere header `X-Company-Id: <companyId>`. Crear, listar, descargar, actualiza
 
 `GET /api/documents`
 
-Query params: `page`, `limit`, `search`, `all`, `category`, `entityType`, `entityId`.
+Query params: `page`, `limit`, `search`, `all`, `category`, `subCompanyId`, `entityType`, `entityId`.
 
 `search` busca por `title`, `originalName` y `description`.
 
+`subCompanyId` filtra documentos guardados con alcance `scopeKey: "subCompanyId"` y `scopeId` igual al UUID enviado. Si el usuario autenticado ya esta limitado por subcompania, el filtro se intersecta con su alcance permitido.
+
 Response `200`: resultado paginado de `Document`.
+
+## Exportar documentos
+
+`GET /api/documents/export`
+
+Requiere `documents.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/documents` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable con metadata del listado. No descarga ni empaqueta los archivos originales; para un documento puntual usa `GET /api/documents/:id/download`. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -144,7 +159,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu, entrada
 | Pantalla `Documentos`             | `modules.documents.canEnter`                                                                                                            | `documents.module`        |
 | Busqueda/listado/refrescar tabla  | `modules.documents.actions.readList` o `modules.documents.actions.refreshList`                                                          | `documents.read-list`     |
 | Configurar columnas               | `modules.documents.actions.configureColumns`                                                                                            | `documents.read-list`     |
-| Exportar listado local            | `modules.documents.actions.exportList`                                                                                                  | `documents.read-list`     |
+| Exportar metadata del listado     | `modules.documents.actions.exportList`                                                                                                  | `documents.read-list`     |
 | Abrir modal de alta               | `modules.documents.actions.openCreate`                                                                                                  | `documents.create`        |
 | Subir documento                   | `modules.documents.actions.create`                                                                                                      | `documents.create`        |
 | Selector `Subcompania`            | `modules.documents.actions.openSubCompanySelect` y `modules.subCompanies.actions.readList` o `modules.subCompanies.actions.refreshList` | `sub-companies.read-list` |
@@ -155,7 +170,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu, entrada
 | Abrir confirmacion de eliminacion | `modules.documents.actions.openDelete` u `modules.documents.actions.openDeleteDialog`                                                   | `documents.delete`        |
 | Eliminar documento                | `modules.documents.actions.delete`                                                                                                      | `documents.delete`        |
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. Si el alta usa alcance por subcompania, la visibilidad del selector debe depender tambien del modulo propietario del catalogo: `modules.subCompanies.actions.readList` o `modules.subCompanies.actions.refreshList`.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/documents/export` y exporta metadata, no archivos adjuntos. Si el alta usa alcance por subcompania, la visibilidad del selector debe depender tambien del modulo propietario del catalogo: `modules.subCompanies.actions.readList` o `modules.subCompanies.actions.refreshList`.
 
 El front debe enviar `X-Company-Id`. `companyId` se toma del header y no debe pedirse como campo visible.
 
@@ -175,7 +190,7 @@ Campos tecnicos:
 - Para toda la compania, omite `scopeKey` y `scopeId`; backend guardara `scopeKey: "companyId"` y `scopeId: <companyId>`.
 - Para subcompania, envia `scopeKey: "subCompanyId"` y `scopeId` con el UUID seleccionado.
 
-En listados, muestra `title`, `category`, `originalName`, `mimeType` y un tamano formateado desde `sizeBytes`. Usa `id` solo para acciones como ver, descargar, editar o eliminar.
+En listados, muestra `title`, `category`, `originalName`, `mimeType`, alcance legible y un tamano formateado desde `sizeBytes`. Usa `id` solo para acciones como ver, descargar, editar o eliminar. Si la pantalla necesita segmentar por subcompania, envia `subCompanyId` como filtro query.
 
 Cuando el documento pertenece a una compania, subcompania, vehiculo, conductor, estacion, tarjeta u otra entidad, prefiere abrir el alta desde el detalle de esa entidad. Asi el front deriva `entityType`, `entityId`, `scopeKey` y `scopeId` sin pedirlos como texto libre.
 

@@ -2,6 +2,8 @@ import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Query, Res, Stre
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { CurrentCompanyScope, CurrentUser, Permissions, RequestConfig, RequireSystemAccess, RequireSystemOrCompanyAccess } from '@/decorators';
+import { ExportQueryDto } from '@/utilities/export/export-query.dto';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CardcloudService } from '@/modules/cardcloud/cardcloud.service';
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
@@ -43,6 +45,15 @@ export class CardcloudController {
     @Permissions('cardcloud.cards.movements.read-list')
     getCardMovements(@Param('uuid') uuid: string, @Query() query: CardcloudDateRangeQueryDto) {
         return this.cardcloudService.getCardMovements(uuid, query);
+    }
+
+    @Get('cards/:uuid/movements/export')
+    @RequireSystemAccess()
+    @Permissions('cardcloud.cards.movements.read-list')
+    async exportCardMovements(@Param('uuid') uuid: string, @Query() query: CardcloudDateRangeQueryDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardcloudService.exportCardMovements(uuid, query);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get('cards/:uuid/sensitive')
@@ -98,6 +109,15 @@ export class CardcloudController {
         return this.cardcloudService.getSubaccounts(scope);
     }
 
+    @Get('subaccounts/export')
+    @RequireSystemOrCompanyAccess()
+    @Permissions('cardcloud.subaccounts.read-list')
+    async exportSubaccounts(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: ExportQueryDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardcloudService.exportSubaccounts(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get('subaccounts/:uuid')
     @RequireSystemOrCompanyAccess()
     @Permissions('cardcloud.subaccounts.read-one')
@@ -112,6 +132,20 @@ export class CardcloudController {
         return this.cardcloudService.getSubaccountCards(uuid, query, scope);
     }
 
+    @Get('subaccounts/:uuid/cards/export')
+    @RequireSystemOrCompanyAccess()
+    @Permissions('cardcloud.subaccounts.cards.read-list')
+    async exportSubaccountCards(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Param('uuid') uuid: string,
+        @Query() query: CardcloudPageQueryDto,
+        @Res({ passthrough: true }) response: Response
+    ) {
+        const file = await this.cardcloudService.exportSubaccountCards(uuid, query, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Post('subaccounts')
     @RequireSystemAccess()
     @Permissions('cardcloud.subaccounts.create')
@@ -124,6 +158,20 @@ export class CardcloudController {
     @Permissions('cardcloud.subaccounts.movements.read-list')
     getSubaccountMovements(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('uuid') uuid: string, @Query() query: CardcloudDateRangeQueryDto) {
         return this.cardcloudService.getSubaccountMovements(uuid, query, scope);
+    }
+
+    @Get('subaccounts/:uuid/movements/export')
+    @RequireSystemOrCompanyAccess()
+    @Permissions('cardcloud.subaccounts.movements.read-list')
+    async exportSubaccountMovements(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Param('uuid') uuid: string,
+        @Query() query: CardcloudDateRangeQueryDto,
+        @Res({ passthrough: true }) response: Response
+    ) {
+        const file = await this.cardcloudService.exportSubaccountMovements(uuid, query, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Post('account/cards/assign')
@@ -164,9 +212,7 @@ export class CardcloudController {
     @RequestConfig({ statusCode: HttpStatus.OK })
     async downloadTransferFundsBulkExcelTemplate(@Query() dto: DownloadCardcloudTransferBulkExcelDto, @Res({ passthrough: true }) response: Response) {
         const file = await this.cardcloudService.downloadTransferFundsBulkExcelTemplate(dto);
-        response.setHeader('Content-Type', file.mimeType);
-        response.setHeader('Content-Disposition', this.buildAttachmentDisposition(file.filename));
-        response.setHeader('Content-Length', String(file.buffer.length));
+        setExcelAttachmentHeaders(response, file);
         return new StreamableFile(file.buffer);
     }
 
@@ -193,8 +239,12 @@ export class CardcloudController {
         return this.cardcloudService.getAccountMovements(query);
     }
 
-    private buildAttachmentDisposition(filename: string): string {
-        const fallback = filename.replace(/["\\\r\n]/g, '_');
-        return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+    @Get('account/movements/export')
+    @RequireSystemAccess()
+    @Permissions('cardcloud.account.movements.read-list')
+    async exportAccountMovements(@Query() query: CardcloudDateRangeQueryDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.cardcloudService.exportAccountMovements(query);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 }

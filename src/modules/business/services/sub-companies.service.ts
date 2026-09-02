@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { ERROR_CODES } from '@/errors/error-codes';
 import { I18N_KEYS, I18nHttpException } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
+import { createExcelExport, EXCEL_EXPORT_MAX_ROWS } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
 import { hasCompanyWideScope, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { invalidRelation, notFound, toAddressData } from '@/modules/business/business.helpers';
@@ -84,12 +85,35 @@ export class SubCompaniesService {
     }
 
     async findAll(dto: FindSubCompaniesDto, scope?: CompanyScope) {
-        const where: Prisma.SubCompanyWhereInput = {
-            AND: [{ ...(dto.companyId ? { companyId: dto.companyId } : {}) }, subCompanyScopeWhere(scope), { ...(dto.status ? { status: dto.status } : {}) }],
-            ...(dto.search ? { OR: this.subCompanySearch(dto.search) } : {}),
-        };
+        const where = this.buildWhere(dto, scope);
         const [data, total] = await Promise.all([this.repository.findMany(where, dto.skip, dto.actualLimit), this.repository.count(where)]);
         return paginate(data, total, dto);
+    }
+
+    async exportList(dto: FindSubCompaniesDto, scope?: CompanyScope): Promise<ExcelDownload> {
+        const where = this.buildWhere(dto, scope);
+        const subCompanies = await this.repository.findMany(where, 0, EXCEL_EXPORT_MAX_ROWS);
+        void this.audit.recordBusiness({
+            action: 'sub_companies_exported',
+            resourceType: 'SubCompany',
+            metadata: { rows: subCompanies.length, companyId: dto.companyId, status: dto.status, search: dto.search, format: dto.format ?? 'xlsx' },
+        });
+
+        return createExcelExport(
+            'subcompanias.xlsx',
+            'Subcompanias',
+            [
+                { header: 'ID', value: (subCompany) => subCompany.id },
+                { header: 'Clave', value: (subCompany) => subCompany.key },
+                { header: 'Subcuenta Cardcloud', value: (subCompany) => this.valueOrDash(subCompany.cardcloudSubaccountId) },
+                { header: 'Nombre', value: (subCompany) => subCompany.name },
+                { header: 'Compania', value: (subCompany) => `${subCompany.company.key} - ${subCompany.company.name}` },
+                { header: 'Predeterminada', value: (subCompany) => this.formatBoolean(subCompany.isDefault) },
+                { header: 'Estado', value: (subCompany) => this.mapStatus(subCompany.status) },
+            ],
+            subCompanies,
+            dto.format
+        );
     }
 
     async findOne(id: string, scope?: CompanyScope) {
@@ -185,6 +209,13 @@ export class SubCompaniesService {
         if (!subCompany) throw notFound();
         void this.audit.recordBusiness({ action: 'sub_company_deactivated', resourceType: 'SubCompany', resourceId: subCompany.id, after: { id: subCompany.id, status: subCompany.status } });
         return { id: subCompany.id, status: subCompany.status };
+    }
+
+    private buildWhere(dto: FindSubCompaniesDto, scope?: CompanyScope): Prisma.SubCompanyWhereInput {
+        return {
+            AND: [{ ...(dto.companyId ? { companyId: dto.companyId } : {}) }, subCompanyScopeWhere(scope), { ...(dto.status ? { status: dto.status } : {}) }],
+            ...(dto.search ? { OR: this.subCompanySearch(dto.search) } : {}),
+        };
     }
 
     private async buildWorkbook(subCompanyKey: string, suffix: string, sheetName: string, headers: string[], rows: ExcelCellValue[][]): Promise<ExcelDownload> {

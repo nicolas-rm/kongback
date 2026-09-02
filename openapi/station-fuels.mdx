@@ -52,11 +52,11 @@ Las relaciones se devuelven como summaries controlados: `station` y `fuel`.
 
 `GET /api/station-fuels`
 
-Query params: `page`, `limit`, `search`, `all`, `status`, `stationId`, `fuelId`.
+Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `stationId`, `fuelId`.
 
 `search` busca por `station.stationNumber`, `station.name`, `fuel.code` y `fuel.name`.
 
-Para columnas visibles, usa `station.name` y `fuel.name`; conserva IDs para filtros y acciones.
+Para columnas visibles, usa `station.name`, `station.subCompany.name` y `fuel.name`; conserva IDs para filtros y acciones.
 
 Response `200`: resultado paginado de `StationFuel`.
 

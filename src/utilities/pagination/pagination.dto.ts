@@ -1,6 +1,7 @@
 import { ValidatorBoolean, ValidatorNumber, ValidatorString } from '@/decorators';
+import { ExportQueryDto } from '@/utilities/export/export-query.dto';
 
-export class PaginationDto {
+export class PaginationDto extends ExportQueryDto {
     @ValidatorNumber({ optional: true, min: 1 })
     page?: number;
 

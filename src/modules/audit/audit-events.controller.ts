@@ -1,6 +1,8 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequireSystemOrCompanyAccess } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { AuditEventsService } from '@/modules/audit/audit-events.service';
 import { FindAuditEventsDto } from '@/modules/audit/dto/find-audit-events.dto';
 
@@ -15,6 +17,14 @@ export class AuditEventsController {
         return this.auditEventsService.findBySource('request', dto, scope);
     }
 
+    @Get('requests/export')
+    @Permissions('audit.read-list')
+    async exportRequests(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('request', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get('requests/:id')
     @Permissions('audit.read-one')
     findRequest(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
@@ -25,6 +35,14 @@ export class AuditEventsController {
     @Permissions('audit.read-list')
     findSecurity(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto) {
         return this.auditEventsService.findBySource('security', dto, scope);
+    }
+
+    @Get('security/export')
+    @Permissions('audit.read-list')
+    async exportSecurity(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('security', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get('security/:id')
@@ -39,6 +57,14 @@ export class AuditEventsController {
         return this.auditEventsService.findBySource('access', dto, scope);
     }
 
+    @Get('access/export')
+    @Permissions('audit.read-list')
+    async exportAccess(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('access', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get('access/:id')
     @Permissions('audit.read-one')
     findAccessEvent(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
@@ -49,6 +75,14 @@ export class AuditEventsController {
     @Permissions('audit.read-list')
     findBusiness(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto) {
         return this.auditEventsService.findBySource('business', dto, scope);
+    }
+
+    @Get('business/export')
+    @Permissions('audit.read-list')
+    async exportBusiness(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('business', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get('business/:id')
@@ -63,6 +97,14 @@ export class AuditEventsController {
         return this.auditEventsService.findBySource('card', dto, scope);
     }
 
+    @Get('cards/export')
+    @Permissions('audit.read-list')
+    async exportCards(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('card', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get('cards/:id')
     @Permissions('audit.read-one')
     findCardEvent(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
@@ -73,6 +115,14 @@ export class AuditEventsController {
     @Permissions('audit.read-list')
     findCardcloud(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto) {
         return this.auditEventsService.findBySource('cardcloud', dto, scope);
+    }
+
+    @Get('cardcloud/export')
+    @Permissions('audit.read-list')
+    async exportCardcloud(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportBySource('cardcloud', dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get('cardcloud/:id')
@@ -87,6 +137,14 @@ export class AuditEventsController {
         return this.auditEventsService.findTransfers(dto, scope);
     }
 
+    @Get('transfers/export')
+    @Permissions('audit.read-list')
+    async exportTransfers(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportTransfers(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get('transfers/:id')
     @Permissions('audit.read-one')
     findTransfer(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
@@ -97,6 +155,14 @@ export class AuditEventsController {
     @Permissions('audit.read-list')
     findCardAssignments(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto) {
         return this.auditEventsService.findCardAssignments(dto, scope);
+    }
+
+    @Get('card-assignments/export')
+    @Permissions('audit.read-list')
+    async exportCardAssignments(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindAuditEventsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.auditEventsService.exportCardAssignments(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get('card-assignments/cards/:id')

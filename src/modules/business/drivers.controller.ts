@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateDriverDto, FindDriversDto, FindStatusRecordsDto, UpdateDriverDto } from '@/modules/business/dto';
 import { DriversService } from '@/modules/business/services/drivers.service';
 
@@ -21,10 +23,31 @@ export class DriversController {
         return this.driversService.findAll(dto, scope);
     }
 
+    @Get('export')
+    @Permissions('drivers.read-list')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindDriversDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.driversService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
+    }
+
     @Get(':id/vehicles')
     @Permissions('drivers.vehicles.read-list')
     findVehicles(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string, @Query() dto: FindStatusRecordsDto) {
         return this.driversService.findVehicles(id, dto, scope);
+    }
+
+    @Get(':id/vehicles/export')
+    @Permissions('drivers.vehicles.read-list')
+    async exportVehicles(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Param('id', ParseUUIDPipe) id: string,
+        @Query() dto: FindStatusRecordsDto,
+        @Res({ passthrough: true }) response: Response
+    ) {
+        const file = await this.driversService.exportVehicles(id, dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

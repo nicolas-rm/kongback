@@ -83,6 +83,26 @@ export class CardsRepository {
         });
     }
 
+    findAssignableStockForSubCompanyAssignment(scope?: CompanyScope) {
+        return this.prisma.cardcloud.findMany({
+            where: this.assignableStockWhere(scope),
+            orderBy: [{ clientId: 'asc' }, { externalId: 'asc' }],
+            select: this.assignableStockSelect(),
+        });
+    }
+
+    findAssignableStockByClientIdsForSubCompanyAssignment(clientIds: string[], scope?: CompanyScope) {
+        const uniqueClientIds = [...new Set(clientIds.map((clientId) => clientId.trim()).filter(Boolean))];
+        if (uniqueClientIds.length === 0) return Promise.resolve([]);
+
+        return this.prisma.cardcloud.findMany({
+            where: {
+                AND: [this.assignableStockWhere(scope), { clientId: { in: uniqueClientIds } }],
+            },
+            select: this.assignableStockSelect(),
+        });
+    }
+
     findMany(where: Prisma.CardWhereInput, skip: number, take?: number) {
         return this.prisma.card.findMany({ where, skip, take, orderBy: { assignedAt: 'desc' }, select: this.select() });
     }
@@ -191,6 +211,24 @@ export class CardsRepository {
             clientId: true,
             balance: true,
             providerStatus: true,
+        };
+    }
+
+    private assignableStockWhere(_scope?: CompanyScope): Prisma.CardcloudWhereInput {
+        return {
+            AND: [{ subCompanyId: null }, { assignedCardId: null }, { clientId: { not: null } }, { clientId: { not: '' } }],
+        };
+    }
+
+    private assignableStockSelect(): Prisma.CardcloudSelect {
+        return {
+            id: true,
+            externalId: true,
+            subCompanyId: true,
+            maskedPan: true,
+            clientId: true,
+            providerStatus: true,
+            subCompany: { select: this.subCompanySummarySelect() },
         };
     }
 }

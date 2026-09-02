@@ -23,6 +23,7 @@ Convenciones de contrato:
 | ------- | -------------------------------------------- | ------------------------------------------- | ---------------- | ----------------------------------- |
 | `GET`   | `/api/cardcloud/account`                     | `cardcloud.account.read-one`                | Sistema          | Consulta la cuenta Cardcloud.       |
 | `GET`   | `/api/cardcloud/account/movements`           | `cardcloud.account.movements.read-list`     | Sistema          | Lista movimientos de cuenta.        |
+| `GET`   | `/api/cardcloud/account/movements/export`    | `cardcloud.account.movements.read-list`     | Sistema          | Exporta movimientos de cuenta.      |
 | `POST`  | `/api/cardcloud/account/transfer`            | `cardcloud.account.transfer`                | Sistema          | Ejecuta una transferencia.          |
 | `POST`  | `/api/cardcloud/account/transfer-bulk`       | `cardcloud.account.transfer.bulk`           | Sistema          | Ejecuta transferencias en lote.     |
 | `GET`   | `/api/cardcloud/account/transfer-bulk-excel` | `cardcloud.account.transfer.bulk`           | Sistema          | Descarga plantilla Excel de fondeo. |
@@ -31,6 +32,7 @@ Convenciones de contrato:
 | `POST`  | `/api/cardcloud/account/cards/assign-bulk`   | `cardcloud.cards.assign.bulk`               | Sistema          | Asigna tarjetas especificas.        |
 | `GET`   | `/api/cardcloud/cards/:uuid`                 | `cardcloud.cards.read-one`                  | Sistema          | Consulta detalle externo.           |
 | `GET`   | `/api/cardcloud/cards/:uuid/movements`       | `cardcloud.cards.movements.read-list`       | Sistema          | Lista movimientos de tarjeta.       |
+| `GET`   | `/api/cardcloud/cards/:uuid/movements/export` | `cardcloud.cards.movements.read-list`      | Sistema          | Exporta movimientos de tarjeta.     |
 | `GET`   | `/api/cardcloud/cards/movement/:uuid`        | `cardcloud.cards.movements.read-one`        | Sistema          | Consulta detalle de movimiento.     |
 | `GET`   | `/api/cardcloud/cards/:uuid/sensitive`       | `cardcloud.cards.sensitive.read-one`        | Sistema          | Consulta datos sensibles.           |
 | `GET`   | `/api/cardcloud/cards/:uuid/cvv`             | `cardcloud.cards.cvv.read`                  | Sistema          | Consulta CVV temporal.              |
@@ -39,10 +41,13 @@ Convenciones de contrato:
 | `POST`  | `/api/cardcloud/cards/:uuid/block`           | `cardcloud.cards.block`                     | Sistema          | Bloquea tarjeta.                    |
 | `POST`  | `/api/cardcloud/cards/:uuid/unblock`         | `cardcloud.cards.unblock`                   | Sistema          | Desbloquea tarjeta.                 |
 | `GET`   | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.read-list`           | Sistema/compania | Lista subcuentas.                   |
+| `GET`   | `/api/cardcloud/subaccounts/export`          | `cardcloud.subaccounts.read-list`           | Sistema/compania | Exporta subcuentas visibles.        |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid`           | `cardcloud.subaccounts.read-one`            | Sistema/compania | Consulta subcuenta.                 |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/cards`     | `cardcloud.subaccounts.cards.read-list`     | Sistema/compania | Lista tarjetas de subcuenta.        |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/cards/export` | `cardcloud.subaccounts.cards.read-list`  | Sistema/compania | Exporta tarjetas de subcuenta.      |
 | `POST`  | `/api/cardcloud/subaccounts`                 | `cardcloud.subaccounts.create`              | Sistema          | Crea subcuenta.                     |
 | `GET`   | `/api/cardcloud/subaccounts/:uuid/movements` | `cardcloud.subaccounts.movements.read-list` | Sistema/compania | Lista movimientos de subcuenta.     |
+| `GET`   | `/api/cardcloud/subaccounts/:uuid/movements/export` | `cardcloud.subaccounts.movements.read-list` | Sistema/compania | Exporta movimientos de subcuenta.   |
 
 ## Contratos de respuesta
 
@@ -52,12 +57,14 @@ Los nombres de contrato corresponden a `src/modules/cardcloud/types/cardcloud-pr
 | ------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `GET /api/cardcloud/account`                      | `CardcloudAccountResponse`                                             | `account`, `wallet.wallet_id`, `wallet.balance`, `wallet.clabe`, `wallet.last_movements[]`    |
 | `GET /api/cardcloud/account/movements`            | `CardcloudAccountMovementsResponse`                                    | `movements[]` con `movement_id`, `card`, `type`, `description`, `reference`, `amount`         |
+| `GET /api/cardcloud/account/movements/export`     | Archivo descargable                                                    | Exporta movimientos de cuenta en `xlsx`, `csv`, `txt` o `pdf`                                 |
 | `POST /api/cardcloud/account/transfer`            | `CardcloudTransferFundsResponse`                                       | `new_balance`, `movement.movement_id`, `movement.amount`, `movement.balance`, `movement.card` |
 | `POST /api/cardcloud/account/transfer-bulk`       | `CardcloudTransferFundsBulkResponse`                                   | `results[]`, `summary.total`, `summary.succeeded`, `summary.failed`                           |
 | `GET /api/cardcloud/account/transfer-bulk-excel`  | `CardcloudTransferBulkExcelTemplateResponse`                           | `filename`, `mimeType`, `buffer`; se entrega como archivo `.xlsx`                             |
 | `POST /api/cardcloud/account/transfer-bulk-excel` | `CardcloudTransferFundsBulkExcelResponse`                              | `subCompanyId`, `results[]`, `summary`                                                        |
 | `GET /api/cardcloud/cards/:uuid`                  | `CardcloudCardDetail`                                                  | `card_id`, `masked_pan`, `balance`, `status`, `setups`, `subaccount_id`                       |
 | `GET /api/cardcloud/cards/:uuid/movements`        | `CardcloudCardMovementsResponse`                                       | `movements[]`, `total_records`, `from`, `to`                                                  |
+| `GET /api/cardcloud/cards/:uuid/movements/export` | Archivo descargable                                                    | Exporta movimientos de tarjeta en `xlsx`, `csv`, `txt` o `pdf`                                |
 | `GET /api/cardcloud/cards/movement/:uuid`         | `CardcloudCardMovementDetail`                                          | `movement_id`, `date`, `type`, `amount`, `balance`, `client_id`, `status`                     |
 | `GET /api/cardcloud/cards/:uuid/sensitive`        | `CardcloudCardSensitiveDataResponse`                                   | `sensitive_data`, `sensitive_data_raw.pan`, `expiration_date`, `pin`                          |
 | `GET /api/cardcloud/cards/:uuid/cvv`              | `CardcloudCardCvvResponse`                                             | `cvv`, `expiration`                                                                           |
@@ -68,10 +75,13 @@ Los nombres de contrato corresponden a `src/modules/cardcloud/types/cardcloud-pr
 | `POST /api/cardcloud/account/cards/assign`        | `CardcloudAssignCardsResponse`                                         | `cards[]`, `page`, `total_pages`, `total_records`                                             |
 | `POST /api/cardcloud/account/cards/assign-bulk`   | `CardcloudAssignCardsResponse`                                         | `cards[]`, `page`, `total_pages`, `total_records`                                             |
 | `GET /api/cardcloud/subaccounts`                  | `CardcloudSubaccountsResponse` o `CardcloudVisibleSubaccountsResponse` | `subaccounts[]`; con `X-Company-Id` agrega `localSubCompany`                                  |
+| `GET /api/cardcloud/subaccounts/export`           | Archivo descargable                                                    | Exporta subcuentas visibles en `xlsx`, `csv`, `txt` o `pdf`                                   |
 | `GET /api/cardcloud/subaccounts/:uuid`            | `CardcloudSubaccountDetail`                                            | `subaccount_id`, `external_id`, `description`, `wallet`                                       |
 | `GET /api/cardcloud/subaccounts/:uuid/cards`      | `CardcloudSubaccountCardsResponse`                                     | `cards[]`, `page`, `total_pages`, `total_records`                                             |
+| `GET /api/cardcloud/subaccounts/:uuid/cards/export` | Archivo descargable                                                  | Exporta tarjetas de subcuenta en `xlsx`, `csv`, `txt` o `pdf`                                 |
 | `POST /api/cardcloud/subaccounts`                 | `CardcloudCreatedSubaccount`                                           | `subaccount_id`, `external_id`, `description`                                                 |
 | `GET /api/cardcloud/subaccounts/:uuid/movements`  | `CardcloudSubaccountMovementsResponse`                                 | `movements[]`, `total_records`, `from`, `to`                                                  |
+| `GET /api/cardcloud/subaccounts/:uuid/movements/export` | Archivo descargable                                             | Exporta movimientos de subcuenta en `xlsx`, `csv`, `txt` o `pdf`                              |
 
 ## Cuenta
 
@@ -123,6 +133,14 @@ Query params opcionales:
 Response `200`: `CardcloudAccountMovementsResponse` con `movements[]`.
 
 Uso frontend: alimenta la pestana `Movimientos` de `/cardcloud/account`. El boton `Consultar` debe llamar este endpoint con `from` y `to` cuando existan filtros. El boton `Limpiar` es accion local de UI: limpia fechas y vuelve al rango default que defina el producto, no requiere endpoint dedicado.
+
+`GET /api/cardcloud/account/movements/export`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.account.movements.read-list`.
+
+Query params opcionales: `from`, `to`, `format`.
+
+Response `200`: archivo descargable. `format` acepta `xlsx`, `excel`, `csv`, `txt` o `pdf`; default `xlsx`. Exporta hasta `5000` movimientos de cuenta devueltos por Cardcloud para el rango consultado.
 
 ## Transferencias
 
@@ -305,6 +323,14 @@ Query params opcionales: `from`, `to`.
 
 Response `200`: `CardcloudCardMovementsResponse`.
 
+`GET /api/cardcloud/cards/:uuid/movements/export`
+
+Requiere `RequireSystemAccess` y permiso `cardcloud.cards.movements.read-list`.
+
+Query params opcionales: `from`, `to`, `format`.
+
+Response `200`: archivo descargable. `format` acepta `xlsx`, `excel`, `csv`, `txt` o `pdf`; default `xlsx`. Exporta hasta `5000` movimientos externos de la tarjeta.
+
 `GET /api/cardcloud/cards/movement/:uuid`
 
 Requiere `RequireSystemAccess` y permiso `cardcloud.cards.movements.read-one`.
@@ -364,7 +390,7 @@ Response `200`: `CardcloudCardStatusChangeResponse` con `message` y `card`.
 
 ## Asignacion de tarjetas
 
-Estos endpoints son proxy tecnico a Cardcloud y reciben `subaccount_id` externo. Para el flujo normal de asignar tarjetas a una subcompania local, usa `POST /api/cards/assign-sub-company`; ese endpoint resuelve `subaccount_id` desde `subCompany.cardcloudSubaccountId`.
+Estos endpoints son proxy tecnico a Cardcloud y reciben `subaccount_id` externo. Para el flujo normal de asignar tarjetas a una subcompania local, usa `POST /api/cards/assign-sub-company`; ese endpoint resuelve `subaccount_id` desde `subCompany.cardcloudSubaccountId`. Para asignacion masiva por archivo, usa `GET /api/cards/assign-sub-company-excel` y `POST /api/cards/assign-sub-company-excel`; ese flujo procesa `clientId` del Excel y resuelve internamente la tarjeta externa.
 
 `POST /api/cardcloud/account/cards/assign`
 
@@ -429,6 +455,18 @@ Ejemplo con `X-Company-Id`:
 }
 ```
 
+`GET /api/cardcloud/subaccounts/export`
+
+Requiere `RequireSystemOrCompanyAccess` y permiso `cardcloud.subaccounts.read-list`.
+
+Query params:
+
+| Campo    | Tipo                         | Requerido | Descripcion                                                    |
+| -------- | ---------------------------- | --------- | -------------------------------------------------------------- |
+| `format` | `xlsx \| excel \| csv \| txt \| pdf` | No        | Formato de salida. Default `xlsx`; `excel` es alias de `xlsx`. |
+
+Response `200`: archivo descargable. Sin `X-Company-Id` exporta las subcuentas que devuelve Cardcloud; con `X-Company-Id` exporta solo subcuentas vinculadas a subcompanias locales visibles. Limite operativo: `5000` filas.
+
 `GET /api/cardcloud/subaccounts/:uuid`
 
 Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, solo permite consultar `uuid` si existe una subcompania local activa y visible para el usuario con `cardcloudSubaccountId = uuid`; si no existe relacion local, responde `404`.
@@ -446,6 +484,14 @@ Query params opcionales:
 | `page` | `string` | Pagina.     |
 
 Response `200`: `CardcloudSubaccountCardsResponse`.
+
+`GET /api/cardcloud/subaccounts/:uuid/cards/export`
+
+Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa y visible para el usuario.
+
+Query params opcionales: `page`, `format`.
+
+Response `200`: archivo descargable. `format` acepta `xlsx`, `excel`, `csv`, `txt` o `pdf`; default `xlsx`. Exporta hasta `5000` tarjetas de la pagina de subcuenta devuelta por Cardcloud.
 
 `POST /api/cardcloud/subaccounts`
 
@@ -467,6 +513,14 @@ Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uui
 Query params opcionales: `from`, `to`.
 
 Response `200`: `CardcloudSubaccountMovementsResponse`.
+
+`GET /api/cardcloud/subaccounts/:uuid/movements/export`
+
+Sin `X-Company-Id`, requiere acceso sistema. Con `X-Company-Id`, valida que `uuid` pertenezca a una subcompania local activa y visible para el usuario.
+
+Query params opcionales: `from`, `to`, `format`.
+
+Response `200`: archivo descargable. `format` acepta `xlsx`, `excel`, `csv`, `txt` o `pdf`; default `xlsx`. Exporta hasta `5000` movimientos de la subcuenta devueltos por Cardcloud para el rango consultado.
 
 ## Reglas y seguridad
 
@@ -493,8 +547,9 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Filtros `Desde` y `Hasta`: `modules.cardcloudAccount.actions.filterMovements`.
 - Boton `Limpiar`: `modules.cardcloudAccount.actions.clearMovementFilters`.
 - Boton `Consultar`: `modules.cardcloudAccount.actions.consultMovements`.
+- Boton `Exportar movimientos`: `modules.cardcloudAccount.actions.exportMovements`.
 
-`refreshAccount`, `openAccountTab` y `readOne` usan `cardcloud.account.read-one`. `openMovementsTab`, `readMovements`, `filterMovements`, `clearMovementFilters` y `consultMovements` usan `cardcloud.account.movements.read-list`.
+`refreshAccount`, `openAccountTab` y `readOne` usan `cardcloud.account.read-one`. `openMovementsTab`, `readMovements`, `filterMovements`, `clearMovementFilters`, `consultMovements` y `exportMovements` usan `cardcloud.account.movements.read-list`. `exportMovements` descarga `GET /api/cardcloud/account/movements/export`.
 
 Esta pantalla no debe mostrar acciones de transferencia. Las transferencias se exponen como accion contextual de Fondeos dentro de Subcompanias y usan `cardcloud.account.transfer` o `cardcloud.account.transfer.bulk`.
 
@@ -519,20 +574,20 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.cardcloudSubaccounts.actions.readList`.
 - Refrescar listado: `modules.cardcloudSubaccounts.actions.refreshList`.
 - Configurar columnas: `modules.cardcloudSubaccounts.actions.configureColumns`.
-- Exportar listado desde el front: `modules.cardcloudSubaccounts.actions.exportList`.
+- Exportar listado: `modules.cardcloudSubaccounts.actions.exportList`.
 - Abrir drawer de detalle: `modules.cardcloudSubaccounts.actions.openDetail` u `modules.cardcloudSubaccounts.actions.openDetailDrawer`.
 - Pestaña `Detalle`: `modules.cardcloudSubaccounts.actions.openDetailTab` y `modules.cardcloudSubaccounts.actions.readOne`.
 - Pestaña `Tarjetas`: `modules.cardcloudSubaccounts.actions.openCardsTab` y `modules.cardcloudSubaccounts.actions.readCards`.
 - Buscar tarjetas de subcuenta: `modules.cardcloudSubaccounts.actions.searchCards`.
-- Exportar tarjetas desde el front: `modules.cardcloudSubaccounts.actions.exportCards`.
+- Exportar tarjetas de subcuenta: `modules.cardcloudSubaccounts.actions.exportCards`.
 - Pestaña `Movimientos`: `modules.cardcloudSubaccounts.actions.openMovementsTab` y `modules.cardcloudSubaccounts.actions.readMovements`.
 - Filtrar movimientos por fecha: `modules.cardcloudSubaccounts.actions.filterMovements`.
 - Limpiar filtros de movimientos: `modules.cardcloudSubaccounts.actions.clearMovementFilters`.
-- Exportar movimientos desde el front: `modules.cardcloudSubaccounts.actions.exportMovements`.
+- Exportar movimientos de subcuenta: `modules.cardcloudSubaccounts.actions.exportMovements`.
 
-`configureColumns`, `exportList`, `exportCards`, `searchCards` y `exportMovements` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar los datos correspondientes. `searchCards` debe filtrar en frontend sobre las tarjetas ya cargadas de la subcuenta porque `GET /api/cardcloud/subaccounts/:uuid/cards` solo acepta `page`. Con `X-Company-Id`, el listado y detalle de subcuentas deben mostrar solo subcuentas Cardcloud cerradas contra subcompanias locales activas de la compania seleccionada.
+`configureColumns` y `searchCards` son acciones locales de interfaz. `exportList` usa `GET /api/cardcloud/subaccounts/export`; `exportCards` usa `GET /api/cardcloud/subaccounts/:uuid/cards/export`; `exportMovements` usa `GET /api/cardcloud/subaccounts/:uuid/movements/export`. `searchCards` debe filtrar en frontend sobre las tarjetas ya cargadas de la subcuenta porque `GET /api/cardcloud/subaccounts/:uuid/cards` solo acepta `page`. Con `X-Company-Id`, el listado y detalle de subcuentas deben mostrar solo subcuentas Cardcloud cerradas contra subcompanias locales activas de la compania seleccionada.
 
-Para asignar tarjetas Cardcloud a una subcompania operativa, usa `POST /api/cards/assign-sub-company` en lugar del proxy crudo `POST /api/cardcloud/account/cards/assign-bulk`.
+Para asignar tarjetas Cardcloud a una subcompania operativa, usa `POST /api/cards/assign-sub-company` en lugar del proxy crudo `POST /api/cardcloud/account/cards/assign-bulk`. Para carga masiva por Excel, usa `GET /api/cards/assign-sub-company-excel` para plantilla precargada con `clientId` disponibles y `POST /api/cards/assign-sub-company-excel` con `multipart/form-data`.
 
 Para mostrar o administrar el stock local sincronizado, usa la pagina `cardcloud-stock`.
 
@@ -549,6 +604,7 @@ Acciones esperadas:
 | ---------------------- | ---------------------------------------------- | ------------------------------------- |
 | Detalle de tarjeta     | `modules.cardcloudCards.actions.readOne`       | `cardcloud.cards.read-one`            |
 | Movimientos de tarjeta | `modules.cardcloudCards.actions.readMovements` | `cardcloud.cards.movements.read-list` |
+| Exportar movimientos   | `modules.cardcloudCards.actions.exportMovements` | `cardcloud.cards.movements.read-list` |
 | Detalle de movimiento  | `modules.cardcloudCards.actions.readMovement`  | `cardcloud.cards.movements.read-one`  |
 | Datos sensibles        | `modules.cardcloudCards.actions.readSensitive` | `cardcloud.cards.sensitive.read-one`  |
 | CVV temporal           | `modules.cardcloudCards.actions.readCvv`       | `cardcloud.cards.cvv.read`            |
@@ -556,5 +612,9 @@ Acciones esperadas:
 | Validar tarjeta        | `modules.cardcloudCards.actions.validate`      | `cardcloud.cards.validate`            |
 | Bloquear tarjeta       | `modules.cardcloudCards.actions.block`         | `cardcloud.cards.block`               |
 | Desbloquear tarjeta    | `modules.cardcloudCards.actions.unblock`       | `cardcloud.cards.unblock`             |
+| Asignar por tipo       | `modules.cardcloudCards.actions.assign`        | `cardcloud.cards.assign`              |
+| Asignar en lote crudo  | `modules.cardcloudCards.actions.assignBulk`    | `cardcloud.cards.assign.bulk`         |
+
+`modules.cardcloudCards.actions.exportMovements` descarga `GET /api/cardcloud/cards/:uuid/movements/export`.
 
 No reutilices `modules.cards` ni `modules.cardholderCards`: `cards` pertenece a tarjeta local operativa y `cardholderCards` al portal del tarjetahabiente.

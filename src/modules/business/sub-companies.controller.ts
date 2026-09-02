@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import type { Response } from 'express';
 import { CurrentCompanyScope, Permissions, RequireCompany } from '@/decorators';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateSubCompanyDto, FindSubCompaniesDto, UpdateSubCompanyDto } from '@/modules/business/dto';
 import { SubCompaniesService } from '@/modules/business/services/sub-companies.service';
 
@@ -20,6 +21,14 @@ export class SubCompaniesController {
     @Permissions('sub-companies.read-list')
     findAll(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindSubCompaniesDto) {
         return this.subCompaniesService.findAll(dto, scope);
+    }
+
+    @Get('export')
+    @Permissions('sub-companies.read-list')
+    async exportList(@CurrentCompanyScope() scope: CompanyScope | undefined, @Query() dto: FindSubCompaniesDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.subCompaniesService.exportList(dto, scope);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id/drivers/download')
@@ -65,13 +74,6 @@ export class SubCompaniesController {
     }
 
     private setDownloadHeaders(response: Response, file: { filename: string; mimeType: string; buffer: Buffer }): void {
-        response.setHeader('Content-Type', file.mimeType);
-        response.setHeader('Content-Disposition', this.buildAttachmentDisposition(file.filename));
-        response.setHeader('Content-Length', String(file.buffer.length));
-    }
-
-    private buildAttachmentDisposition(filename: string): string {
-        const fallback = filename.replace(/["\\\r\n]/g, '_');
-        return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+        setExcelAttachmentHeaders(response, file);
     }
 }

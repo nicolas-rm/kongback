@@ -52,6 +52,7 @@ En listados, `company` se devuelve como summary y `address` no se devuelve. `add
 | -------- | ------------------------------------------ | ------------------------- | ---------------------------------------- |
 | `POST`   | `/api/sub-companies`                       | `sub-companies.create`    | Crea una sub-compania.                   |
 | `GET`    | `/api/sub-companies`                       | `sub-companies.read-list` | Lista sub-companias.                     |
+| `GET`    | `/api/sub-companies/export`                | `sub-companies.read-list` | Exporta subcompanias filtradas.          |
 | `GET`    | `/api/sub-companies/:id/drivers/download`  | `drivers.download`        | Descarga conductores de la sub-compania. |
 | `GET`    | `/api/sub-companies/:id/vehicles/download` | `vehicles.download`       | Descarga vehiculos de la sub-compania.   |
 | `GET`    | `/api/sub-companies/:id/cards/download`    | `cards.download`          | Descarga tarjetas de la sub-compania.    |
@@ -70,6 +71,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`, `companyId`.
 Para la columna Compania en front, usa `company.name` o `company.key + " · " + company.name`; no muestres `companyId` salvo en vistas tecnicas.
 
 Response `200`: resultado paginado de `SubCompany` con `company` summary y sin `address`.
+
+## Exportar subcompanias
+
+`GET /api/sub-companies/export`
+
+Requiere `sub-companies.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/sub-companies` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -170,7 +183,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.subCompanies.actions.readList`.
 - Refrescar listado: `modules.subCompanies.actions.refreshList`.
 - Configurar columnas: `modules.subCompanies.actions.configureColumns`.
-- Exportar listado desde el front: `modules.subCompanies.actions.exportList`.
+- Exportar listado: `modules.subCompanies.actions.exportList`.
 - Abrir detalle: `modules.subCompanies.actions.openDetail` u `modules.subCompanies.actions.openDetailDrawer`.
 - Pestañas de detalle `Formulario` y `Direccion`: `modules.subCompanies.actions.openDetailForm` y `modules.subCompanies.actions.openDetailAddress`.
 - Editar subcompania: `modules.subCompanies.actions.openEdit` u `modules.subCompanies.actions.openEditDrawer`.
@@ -188,7 +201,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Buscar tarjetas relacionadas: `modules.subCompanies.actions.searchRelatedCards`.
 - Descargar tarjetas: `modules.subCompanies.actions.downloadCards`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la subcompania, no borrado fisico. El drawer de datos relacionados solo tiene endpoints de descarga; si el front muestra busqueda/lista previa, debe alimentarla con datos ya cargados por el cliente o mantener estado vacio hasta implementar endpoints de consulta dedicados.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/sub-companies/export` y se habilita cuando el usuario puede consultar el listado. `delete` en este modulo significa desactivar la subcompania, no borrado fisico. El drawer de datos relacionados solo tiene endpoints de descarga; si el front muestra busqueda/lista previa, debe alimentarla con datos ya cargados por el cliente o mantener estado vacio hasta implementar endpoints de consulta dedicados.
 
 Si la pantalla muestra `Fondeos` desde una subcompania, tratalo como accion contextual de Cardcloud Transfers. La subcompania solo aporta `subCompanyId`; la autorizacion sale de `modules.cardcloudTransfers.actions.transfer`, `modules.cardcloudTransfers.actions.transferBulk`, `modules.cardcloudTransfers.actions.downloadTemplate` y `modules.cardcloudTransfers.actions.uploadExcel`. No uses permisos `sub-companies.*` para habilitar acciones que mueven fondos.
 

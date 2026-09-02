@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { Permissions, RequireSystemAccess } from '@/decorators';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { AccessControlService } from '@/modules/access-control/services/access-control.service';
 import { AssignRolePermissionsDto, CreateRoleDto, FindAccessControlDto, UpdateRoleDto } from '@/modules/access-control/dto';
 
@@ -18,6 +20,14 @@ export class RolesController {
     @Permissions('roles.read-list')
     findAll(@Query() dto: FindAccessControlDto) {
         return this.accessControlService.findRoles(dto);
+    }
+
+    @Get('export')
+    @Permissions('roles.read-list')
+    async exportList(@Query() dto: FindAccessControlDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.accessControlService.exportRoles(dto);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Patch(':id')

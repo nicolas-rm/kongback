@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { Permissions, RequireSystemAccess } from '@/decorators';
+import { setExcelAttachmentHeaders } from '@/utilities/export/excel-export';
 import { CreateFuelDto, FindStatusRecordsDto, UpdateFuelDto } from '@/modules/business/dto';
 import { FuelsService } from '@/modules/business/services/fuels.service';
 
@@ -18,6 +20,14 @@ export class FuelsController {
     @Permissions('fuels.read-list')
     findAll(@Query() dto: FindStatusRecordsDto) {
         return this.fuelsService.findAll(dto);
+    }
+
+    @Get('export')
+    @Permissions('fuels.read-list')
+    async exportList(@Query() dto: FindStatusRecordsDto, @Res({ passthrough: true }) response: Response) {
+        const file = await this.fuelsService.exportList(dto);
+        setExcelAttachmentHeaders(response, file);
+        return new StreamableFile(file.buffer);
     }
 
     @Get(':id')

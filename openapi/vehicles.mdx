@@ -53,6 +53,7 @@ Las relaciones se devuelven como summaries controlados: `subCompany`, `fuel` y `
 | -------- | --------------------------- | ---------------------------- | ---------------------------------------- |
 | `POST`   | `/api/vehicles`             | `vehicles.create`            | Crea un vehiculo.                        |
 | `GET`    | `/api/vehicles`             | `vehicles.read-list`         | Lista vehiculos.                         |
+| `GET`    | `/api/vehicles/export`      | `vehicles.read-list`         | Exporta vehiculos filtrados.             |
 | `GET`    | `/api/vehicles/:id/drivers` | `vehicles.drivers.read-list` | Lista conductores asignados al vehiculo. |
 | `GET`    | `/api/vehicles/:id`         | `vehicles.read-one`          | Obtiene un vehiculo.                     |
 | `PATCH`  | `/api/vehicles/:id/driver`  | `vehicles.driver.assign`     | Asigna o quita conductor.                |
@@ -70,6 +71,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `fuelI
 Para columnas visibles, usa `fuel.name`, `driver.name` y `subCompany.name`; conserva los IDs para filtros y acciones.
 
 Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driver` summaries.
+
+## Exportar vehiculos
+
+`GET /api/vehicles/export`
+
+Requiere `vehicles.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/vehicles` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -177,7 +190,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.vehicles.actions.readList`.
 - Refrescar listado: `modules.vehicles.actions.refreshList`.
 - Configurar columnas: `modules.vehicles.actions.configureColumns`.
-- Exportar listado desde el front: `modules.vehicles.actions.exportList`.
+- Exportar listado: `modules.vehicles.actions.exportList`.
 - Abrir detalle: `modules.vehicles.actions.openDetail` u `modules.vehicles.actions.openDetailDialog`.
 - Editar vehiculo: `modules.vehicles.actions.openEdit` u `modules.vehicles.actions.openEditDialog`.
 - Actualizar vehiculo: `modules.vehicles.actions.update`.
@@ -189,7 +202,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Buscar conductores relacionados: `modules.vehicles.actions.searchDrivers`.
 - Desactivar vehiculo: `modules.vehicles.actions.openDeactivate`, `modules.vehicles.actions.openDeactivateDialog` o `modules.vehicles.actions.deactivate`.
 
-`configureColumns` y `exportList` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar el listado. `download` existe como capability de compatibilidad para el permiso `vehicles.download`, pero este documento no define un endpoint `/api/vehicles/download`; si la pantalla descarga el listado general, debe exportar los datos cargados por el front o requerir un endpoint dedicado. `delete` en este modulo significa desactivar el vehiculo, no borrado fisico.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/vehicles/export` y se habilita cuando el usuario puede consultar el listado. `download` existe como capability de compatibilidad para el permiso `vehicles.download`, pero este documento no define un endpoint `/api/vehicles/download`; la descarga contextual por subcompania vive en `GET /api/sub-companies/:id/vehicles/download`. `delete` en este modulo significa desactivar el vehiculo, no borrado fisico.
 
 El front debe enviar `X-Company-Id`. `subCompanyId`, `fuelId` y `driverId` deben venir de selects filtrados por la compania seleccionada y por el alcance del usuario.
 

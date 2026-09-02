@@ -52,14 +52,16 @@ En listados, `subCompany` y `user` se devuelven como summaries y `address` no se
 
 ## Endpoints
 
-| Metodo   | Ruta                        | Permiso                      | Descripcion                             |
-| -------- | --------------------------- | ---------------------------- | --------------------------------------- |
-| `POST`   | `/api/drivers`              | `drivers.create`             | Crea un conductor.                      |
-| `GET`    | `/api/drivers`              | `drivers.read-list`          | Lista conductores.                      |
-| `GET`    | `/api/drivers/:id/vehicles` | `drivers.vehicles.read-list` | Lista vehiculos asignados al conductor. |
-| `GET`    | `/api/drivers/:id`          | `drivers.read-one`           | Obtiene un conductor.                   |
-| `PATCH`  | `/api/drivers/:id`          | `drivers.update`             | Actualiza un conductor.                 |
-| `DELETE` | `/api/drivers/:id`          | `drivers.delete`             | Desactiva un conductor.                 |
+| Metodo   | Ruta                               | Permiso                      | Descripcion                             |
+| -------- | ---------------------------------- | ---------------------------- | --------------------------------------- |
+| `POST`   | `/api/drivers`                     | `drivers.create`             | Crea un conductor.                      |
+| `GET`    | `/api/drivers`                     | `drivers.read-list`          | Lista conductores.                      |
+| `GET`    | `/api/drivers/export`              | `drivers.read-list`          | Exporta conductores filtrados.          |
+| `GET`    | `/api/drivers/:id/vehicles`        | `drivers.vehicles.read-list` | Lista vehiculos asignados al conductor. |
+| `GET`    | `/api/drivers/:id/vehicles/export` | `drivers.vehicles.read-list` | Exporta vehiculos del conductor.        |
+| `GET`    | `/api/drivers/:id`                 | `drivers.read-one`           | Obtiene un conductor.                   |
+| `PATCH`  | `/api/drivers/:id`                 | `drivers.update`             | Actualiza un conductor.                 |
+| `DELETE` | `/api/drivers/:id`                 | `drivers.delete`             | Desactiva un conductor.                 |
 
 ## Listado
 
@@ -72,6 +74,18 @@ Query params: `page`, `limit`, `search`, `all`, `status`, `subCompanyId`, `userI
 Para columnas relacionadas, usa `subCompany.name` y `user.fullName`; conserva `subCompanyId` y `userId` para acciones y formularios.
 
 Response `200`: resultado paginado de `Driver` con `subCompany` y `user` summaries, sin `address`.
+
+## Exportar conductores
+
+`GET /api/drivers/export`
+
+Requiere `drivers.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/drivers` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
 
 ## Crear
 
@@ -89,7 +103,9 @@ Response `200`: resultado paginado de `Driver` con `subCompany` y `user` summari
 
 Requeridos: `subCompanyId`, `name`. `subCompanyId` debe estar activo y pertenecer a la compania enviada en `X-Company-Id`.
 
-Opcionales: `userId`, `externalReference`, `status`, `address`. Si `userId` se envia, debe ser un usuario activo.
+Opcionales: `userId`, `externalReference`, `status`, `address`. Si `userId` se envia, debe ser un usuario activo con perfil exclusivamente tarjetahabiente.
+
+El usuario vinculado como conductor debe tener solo rol/permisos `cardholder.*`, sin roles ni permisos administrativos. Su acceso debe estar limitado a la misma `subCompanyId` del conductor. Si no es tarjetahabiente, mezcla perfiles o esta asignado a otra subcompania, responde `400`.
 
 Response `201`: `Driver` con `subCompany`, `user` y `address`.
 
@@ -115,11 +131,25 @@ Response `200`: resultado paginado de `Vehicle` con `subCompany`, `fuel` y `driv
 
 Nota: el modelo actual guarda solo la relacion vigente `vehicle.driverId`; este endpoint no devuelve historial de asignaciones anteriores.
 
+## Exportar vehiculos del conductor
+
+`GET /api/drivers/:id/vehicles/export`
+
+Permiso: `drivers.vehicles.read-list`.
+
+Query params: acepta los mismos filtros de `GET /api/drivers/:id/vehicles` mas `format`.
+
+`format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
+
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
+
 ## Actualizar
 
 `PATCH /api/drivers/:id`
 
 Acepta `userId`, `name`, `externalReference`, `status` y `address`, todos opcionales. `userId` puede enviarse como `null` para desvincular.
+
+No acepta `subCompanyId`; este endpoint no mueve conductores entre subcompanias. Si se envia un nuevo `userId`, debe ser exclusivamente tarjetahabiente y su acceso debe coincidir con la subcompania actual del conductor o responde `400`.
 
 Response `200`: `Driver` actualizado con `subCompany`, `user` y `address`.
 
@@ -153,7 +183,7 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Consultar listado: `modules.drivers.actions.readList`.
 - Refrescar listado: `modules.drivers.actions.refreshList`.
 - Configurar columnas: `modules.drivers.actions.configureColumns`.
-- Exportar listado desde el front: `modules.drivers.actions.exportList`.
+- Exportar listado: `modules.drivers.actions.exportList`.
 - Abrir detalle: `modules.drivers.actions.openDetail` u `modules.drivers.actions.openDetailDrawer`.
 - Consultar detalle: `modules.drivers.actions.readOne`.
 - Pestañas de detalle `Formulario` y `Direccion`: `modules.drivers.actions.openDetailForm` y `modules.drivers.actions.openDetailAddress`.
@@ -164,9 +194,9 @@ Usa `GET /api/authentication/capabilities` para decidir entrada al menu y accion
 - Abrir drawer `Vehiculos del conductor`: `modules.drivers.actions.openVehicles` u `modules.drivers.actions.openVehiclesDrawer`.
 - Consultar vehiculos del conductor: `modules.drivers.actions.readVehicles`.
 - Buscar vehiculos del conductor: `modules.drivers.actions.searchVehicles`.
-- Exportar vehiculos desde el front: `modules.drivers.actions.exportVehicles`.
+- Exportar vehiculos del conductor: `modules.drivers.actions.exportVehicles`.
 
-`configureColumns`, `exportList` y `exportVehicles` no representan endpoints dedicados; son acciones de interfaz permitidas cuando el usuario puede consultar los datos correspondientes. `delete` en este modulo significa desactivar el conductor, no borrado fisico. El selector de subcompania requiere permiso de lectura de subcompanias y el selector de usuario vinculado requiere permiso de lectura de usuarios.
+`configureColumns` es accion local de interfaz. `exportList` usa `GET /api/drivers/export` y se habilita cuando el usuario puede consultar el listado. `exportVehicles` usa `GET /api/drivers/:id/vehicles/export`. `delete` en este modulo significa desactivar el conductor, no borrado fisico. El selector de subcompania requiere permiso de lectura de subcompanias y el selector de usuario vinculado requiere permiso de lectura de usuarios.
 
 El front debe enviar `X-Company-Id` y poblar `subCompanyId` desde un select de subcompanias disponibles para la compania seleccionada. Si el usuario autenticado esta limitado a subcompanias, ese select solo debe contener las que devuelve el backend.
 
@@ -181,16 +211,18 @@ Campos recomendados para formularios:
 
 No muestres `userId` ni `subCompanyId` como texto libre. Deben ser selects. Para desvincular usuario en editar, envia `userId: null`.
 
-Para tarjetahabientes, `userId` es la relacion que habilita `/api/cardholder/*`. El usuario debe tener rol/permisos `cardholder.*` y el conductor debe estar activo en la misma subcompania usada como alcance del acceso del usuario. Si el conductor se desactiva o se desvincula con `userId: null`, el usuario ya no podra entrar al modulo propio de tarjetahabiente.
+Para tarjetahabientes, `userId` es la relacion que habilita `/api/cardholder/*`. El usuario debe tener solo rol/permisos `cardholder.*` y el conductor debe estar activo en la misma subcompania usada como alcance del acceso del usuario. Si el conductor se desactiva o se desvincula con `userId: null`, el usuario ya no podra entrar al modulo propio de tarjetahabiente.
+
+Si necesitas cambiar un tarjetahabiente de contexto operativo, no basta con cambiar el acceso del usuario. La subcompania del conductor es la referencia operativa actual y debe seguir coincidiendo con el acceso cardholder.
 
 Para consultar vehiculos relacionados desde el detalle del conductor usa `GET /api/drivers/:id/vehicles`. No lo uses como historial; hoy representa la asignacion actual.
 
 ## Errores comunes
 
-| Estado | Caso                                                  |
-| ------ | ----------------------------------------------------- |
-| `400`  | Datos relacionados no validos o parametros invalidos. |
-| `401`  | Request sin autenticacion valida.                     |
-| `403`  | Usuario autenticado sin el permiso requerido.         |
-| `404`  | Conductor no encontrado.                              |
-| `409`  | Conflictos de unicidad segun constraints Prisma.      |
+| Estado | Caso                                                                                                                   |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `400`  | Datos relacionados no validos, parametros invalidos, `userId` sin perfil exclusivamente tarjetahabiente o subcompania distinta a la del conductor. |
+| `401`  | Request sin autenticacion valida.                                                                                      |
+| `403`  | Usuario autenticado sin el permiso requerido.                                                                          |
+| `404`  | Conductor no encontrado.                                                                                               |
+| `409`  | Conflictos de unicidad segun constraints Prisma.                                                                       |
