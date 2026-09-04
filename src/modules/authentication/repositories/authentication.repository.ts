@@ -202,6 +202,15 @@ export class AuthenticationRepository {
                 twoFactorSecret: true,
                 requiresEmailVerification: true,
                 emailVerifiedAt: true,
+                accesses: {
+                    where: buildActiveUserAccessWhere({}),
+                    orderBy: { assignedAt: 'asc' },
+                    select: {
+                        companyId: true,
+                        scopeKey: true,
+                        scopeId: true,
+                    },
+                },
             },
         });
     }
@@ -230,7 +239,24 @@ export class AuthenticationRepository {
                 expiresAt: true,
                 idleExpiresAt: true,
                 revokedAt: true,
-                user: { select: { id: true, username: true, email: true, fullName: true, status: true } },
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        email: true,
+                        fullName: true,
+                        status: true,
+                        accesses: {
+                            where: buildActiveUserAccessWhere({}),
+                            orderBy: { assignedAt: 'asc' },
+                            select: {
+                                companyId: true,
+                                scopeKey: true,
+                                scopeId: true,
+                            },
+                        },
+                    },
+                },
                 session: { select: { id: true, revokedAt: true, expiresAt: true, idleExpiresAt: true } },
             },
         });
@@ -564,6 +590,15 @@ export class AuthenticationRepository {
                         twoFactorEnabled: true,
                         twoFactorSecret: true,
                         status: true,
+                        accesses: {
+                            where: buildActiveUserAccessWhere({}),
+                            orderBy: { assignedAt: 'asc' },
+                            select: {
+                                companyId: true,
+                                scopeKey: true,
+                                scopeId: true,
+                            },
+                        },
                     },
                 },
             },

@@ -8,6 +8,34 @@ import { RefreshTokenDto } from '@/modules/authentication/dto';
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
+import { SUB_COMPANY_SCOPE_KEY } from '@/utilities/tenancy/company-scope';
+
+type RefreshAuditAccess = {
+    companyId: string | null;
+    scopeKey: string | null;
+    scopeId: string | null;
+};
+
+type RefreshAuditToken = {
+    id: string;
+    userId: string;
+    sessionId: string;
+    user: {
+        id: string;
+        username: string;
+        accesses?: RefreshAuditAccess[] | null;
+    };
+};
+
+type RefreshAuditContext = {
+    actorUserId: string;
+    actorUsername: string;
+    companyId?: string | null;
+    scopeKey?: string | null;
+    scopeId?: string | null;
+    resourceType: 'Session';
+    resourceId: string;
+};
 
 @Injectable()
 export class RefreshUseCase {
@@ -35,14 +63,16 @@ export class RefreshUseCase {
             });
         }
 
+        const auditContext = this.storedTokenAuditContext(storedToken);
         if (storedToken.revokedAt) {
             await this.repository.revokeSession(storedToken.userId, storedToken.sessionId);
             void this.audit.recordSecurity({
+                ...auditContext,
                 action: 'refresh_token_reused',
                 result: 'denied',
                 statusCode: 401,
                 reason: 'refresh_token_reused',
-                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId },
+                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId, refreshTokenId: storedToken.id },
             });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.reusedRefreshToken, 'Por seguridad cerramos tu sesion. Inicia sesion nuevamente.', {
                 extra: { reason: 'refresh_token_reused' },
@@ -50,16 +80,24 @@ export class RefreshUseCase {
         }
 
         if (storedToken.user.status !== Status.active) {
-            void this.audit.recordSecurity({ action: 'refresh_token_invalid', result: 'denied', statusCode: 401, reason: 'user_inactive', metadata: { userId: storedToken.userId } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'refresh_token_invalid',
+                result: 'denied',
+                statusCode: 401,
+                reason: 'user_inactive',
+                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId, refreshTokenId: storedToken.id },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'user_inactive' } });
         }
         if (storedToken.session.revokedAt) {
             void this.audit.recordSecurity({
+                ...auditContext,
                 action: 'refresh_token_invalid',
                 result: 'denied',
                 statusCode: 401,
                 reason: 'session_revoked',
-                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId },
+                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId, refreshTokenId: storedToken.id },
             });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidRefreshToken, 'Tu sesion no es valida. Inicia sesion nuevamente.', { extra: { reason: 'session_revoked' } });
         }
@@ -69,11 +107,12 @@ export class RefreshUseCase {
             await this.repository.revokeRefreshToken(storedToken.id, now);
             const error = this.resolveExpiredRefreshError(storedToken, now);
             void this.audit.recordSecurity({
+                ...auditContext,
                 action: error.reason,
                 result: 'denied',
                 statusCode: 401,
                 reason: error.reason,
-                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId },
+                metadata: { userId: storedToken.userId, sessionId: storedToken.sessionId, refreshTokenId: storedToken.id },
             });
             throw new I18nUnauthorizedException(error.key, error.message, { extra: { reason: error.reason } });
         }
@@ -83,9 +122,10 @@ export class RefreshUseCase {
         await this.repository.touchSession(storedToken.sessionId, idleExpiresAt, now);
 
         void this.audit.recordSecurity({
+            ...auditContext,
             action: 'refresh_token_used',
             result: 'success',
-            metadata: { userId: storedToken.user.id, sessionId: storedToken.sessionId, idleExpiresAt },
+            metadata: { userId: storedToken.user.id, sessionId: storedToken.sessionId, refreshTokenId: storedToken.id, idleExpiresAt },
         });
         return this.authenticationTokensService.issueTokensForSession(
             { id: storedToken.user.id, username: storedToken.user.username },
@@ -122,5 +162,40 @@ export class RefreshUseCase {
             };
         }
         return { key: I18N_KEYS.errors.authentication.sessionExpired, message: 'Tu sesion expiro. Inicia sesion nuevamente.', reason: 'session_expired' };
+    }
+
+    private storedTokenAuditContext(storedToken: RefreshAuditToken): RefreshAuditContext {
+        const context: RefreshAuditContext = {
+            actorUserId: storedToken.user.id,
+            actorUsername: storedToken.user.username,
+            resourceType: 'Session',
+            resourceId: storedToken.sessionId,
+        };
+        const accesses = storedToken.user.accesses ?? [];
+        const companyIds = [...new Set(accesses.map((access) => access.companyId).filter((companyId): companyId is string => Boolean(companyId)))];
+
+        if (companyIds.length !== 1) return context;
+
+        const companyId = companyIds[0];
+        context.companyId = companyId;
+
+        const companyAccesses = accesses.filter((access) => access.companyId === companyId);
+        const hasCompanyWideAccess = companyAccesses.some((access) => !access.scopeKey && !access.scopeId);
+        if (hasCompanyWideAccess) return context;
+
+        const subCompanyIds = [
+            ...new Set(
+                companyAccesses
+                    .filter((access) => access.scopeKey === SUB_COMPANY_SCOPE_KEY && Boolean(access.scopeId))
+                    .map((access) => access.scopeId!)
+            ),
+        ];
+
+        if (subCompanyIds.length === 1) {
+            context.scopeKey = SUB_COMPANY_SCOPE_KEY;
+            context.scopeId = subCompanyIds[0];
+        }
+
+        return context;
     }
 }

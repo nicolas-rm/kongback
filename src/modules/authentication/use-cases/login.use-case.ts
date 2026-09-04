@@ -8,9 +8,30 @@ import { LoginDto, VerifyTwoFactorLoginDto } from '@/modules/authentication/dto'
 import { AuthenticationRepository } from '@/modules/authentication/repositories/authentication.repository';
 import { AuthenticationTokensService } from '@/modules/authentication/services/authentication-tokens.service';
 import type { SessionContext } from '@/modules/authentication/types/session-context.interface';
+import { SUB_COMPANY_SCOPE_KEY } from '@/utilities/tenancy/company-scope';
 import { normalizeRecoveryCode, verifyTotpCode } from '@/utilities/authentication/totp.util';
 
 const TRUSTED_DEVICE_TOKEN_BYTES = 32;
+
+type LoginAuditAccess = {
+    companyId: string | null;
+    scopeKey: string | null;
+    scopeId: string | null;
+};
+
+type LoginAuditUser = {
+    id: string;
+    username: string;
+    accesses?: LoginAuditAccess[] | null;
+};
+
+type LoginAuditContext = {
+    actorUserId: string;
+    actorUsername: string;
+    companyId?: string | null;
+    scopeKey?: string | null;
+    scopeId?: string | null;
+};
 
 @Injectable()
 export class LoginUseCase {
@@ -25,40 +46,70 @@ export class LoginUseCase {
     async execute(dto: LoginDto, sessionContext: SessionContext = {}) {
         const user = await this.repository.findLoginUser(dto.username);
         if (!user || user.status !== 'active') {
-            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'invalid_credentials', metadata: { username: dto.username } });
+            void this.audit.recordSecurity({
+                ...(user ? this.userAuditContext(user) : {}),
+                action: 'login_failed',
+                result: 'denied',
+                resourceType: user ? 'User' : null,
+                resourceId: user?.id ?? null,
+                statusCode: 401,
+                reason: 'invalid_credentials',
+                metadata: { username: dto.username, userId: user?.id ?? null, status: user?.status ?? null },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
         }
 
+        const auditContext = this.userAuditContext(user);
         if (user.lockedUntil && user.lockedUntil > new Date()) {
-            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'account_locked', metadata: { userId: user.id, lockedUntil: user.lockedUntil } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: user.id,
+                statusCode: 401,
+                reason: 'account_locked',
+                metadata: { userId: user.id, lockedUntil: user.lockedUntil },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.accountLocked, 'Tu cuenta esta bloqueada temporalmente. Intenta mas tarde.');
         }
 
         const validPassword = await this.cryptoService.verifyPassword(user.passwordHash, dto.password);
         if (!validPassword) {
             await this.registerFailedAttempt(user.id, user.failedLoginAttempts);
-            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'invalid_password', metadata: { userId: user.id } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: user.id,
+                statusCode: 401,
+                reason: 'invalid_password',
+                metadata: { userId: user.id },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidCredentials, 'El usuario o la contrasena no son correctos.');
         }
 
         await this.repository.resetLoginState(user.id);
 
         if (user.requiresEmailVerification && !user.emailVerifiedAt) {
-            void this.audit.recordSecurity({ action: 'login_failed', result: 'denied', statusCode: 401, reason: 'email_verification_required', metadata: { userId: user.id } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: user.id,
+                statusCode: 401,
+                reason: 'email_verification_required',
+                metadata: { userId: user.id },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.emailVerificationRequired, 'Verifica tu correo para iniciar sesion.');
         }
 
         if (user.twoFactorEnabled) {
-            const trustedDevice = await this.validateTrustedDevice(user.id, dto.trustedDeviceToken);
+            const trustedDevice = await this.validateTrustedDevice(user.id, dto.trustedDeviceToken, auditContext);
             if (trustedDevice) {
-                void this.audit.recordSecurity({
-                    action: 'login_trusted_device_success',
-                    result: 'success',
-                    resourceType: 'TrustedDevice',
-                    resourceId: trustedDevice.id,
-                    metadata: { userId: user.id, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
-                });
-                return this.authenticationTokensService.issueTokens(
+                const tokens = await this.authenticationTokensService.issueTokens(
                     { id: user.id, username: user.username },
                     {
                         userAgent: sessionContext.userAgent,
@@ -66,6 +117,15 @@ export class LoginUseCase {
                         deviceName: sessionContext.deviceName,
                     }
                 );
+                void this.audit.recordSecurity({
+                    ...auditContext,
+                    action: 'login_trusted_device_success',
+                    result: 'success',
+                    resourceType: 'Session',
+                    resourceId: tokens.sessionId,
+                    metadata: { userId: user.id, sessionId: tokens.sessionId, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
+                });
+                return tokens;
             }
 
             const challengeToken = randomBytes(32).toString('hex');
@@ -79,12 +139,18 @@ export class LoginUseCase {
                 ipAddress: sessionContext.ipAddress,
             });
 
-            void this.audit.recordSecurity({ action: 'login_two_factor_required', result: 'success', metadata: { userId: user.id, expiresAt } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'login_two_factor_required',
+                result: 'success',
+                resourceType: 'User',
+                resourceId: user.id,
+                metadata: { userId: user.id, challengeExpiresAt: expiresAt },
+            });
             return { requiresTwoFactor: true, challengeToken, expiresInSeconds, expiresAt };
         }
 
-        void this.audit.recordSecurity({ action: 'login_success', result: 'success', metadata: { userId: user.id } });
-        return this.authenticationTokensService.issueTokens(
+        const tokens = await this.authenticationTokensService.issueTokens(
             { id: user.id, username: user.username },
             {
                 userAgent: sessionContext.userAgent,
@@ -92,6 +158,15 @@ export class LoginUseCase {
                 deviceName: sessionContext.deviceName,
             }
         );
+        void this.audit.recordSecurity({
+            ...auditContext,
+            action: 'login_success',
+            result: 'success',
+            resourceType: 'Session',
+            resourceId: tokens.sessionId,
+            metadata: { userId: user.id, sessionId: tokens.sessionId },
+        });
+        return tokens;
     }
 
     private async registerFailedAttempt(userId: string, currentAttempts: number): Promise<void> {
@@ -108,8 +183,18 @@ export class LoginUseCase {
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
+        const auditContext = this.userAuditContext(challenge.user);
         if (challenge.attemptCount >= this.config.twoFactor.loginChallengeMaxAttempts) {
-            void this.audit.recordSecurity({ action: 'two_factor_login_failed', result: 'denied', statusCode: 401, reason: 'max_attempts', metadata: { userId: challenge.user.id } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'two_factor_login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: challenge.user.id,
+                statusCode: 401,
+                reason: 'max_attempts',
+                metadata: { userId: challenge.user.id },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorChallenge, 'La verificacion de seguridad ya no es valida. Inicia sesion nuevamente.');
         }
 
@@ -117,12 +202,20 @@ export class LoginUseCase {
 
         if (!validCode) {
             await this.repository.incrementTwoFactorChallengeAttempt(challenge.id);
-            void this.audit.recordSecurity({ action: 'two_factor_login_failed', result: 'denied', statusCode: 401, reason: 'invalid_code', metadata: { userId: challenge.user.id } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'two_factor_login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: challenge.user.id,
+                statusCode: 401,
+                reason: 'invalid_code',
+                metadata: { userId: challenge.user.id },
+            });
             throw new I18nUnauthorizedException(I18N_KEYS.errors.authentication.invalidTwoFactorCode, 'El codigo de verificacion no es correcto.');
         }
 
         await this.repository.consumeTwoFactorChallenge(challenge.id);
-        void this.audit.recordSecurity({ action: 'two_factor_login_success', result: 'success', metadata: { userId: challenge.user.id } });
         const tokens = await this.authenticationTokensService.issueTokens(
             { id: challenge.user.id, username: challenge.user.username },
             {
@@ -131,15 +224,24 @@ export class LoginUseCase {
                 deviceName: sessionContext.deviceName,
             }
         );
+        void this.audit.recordSecurity({
+            ...auditContext,
+            action: 'two_factor_login_success',
+            result: 'success',
+            resourceType: 'Session',
+            resourceId: tokens.sessionId,
+            metadata: { userId: challenge.user.id, sessionId: tokens.sessionId },
+        });
         if (!dto.trustDevice) return tokens;
 
         const trustedDevice = await this.createTrustedDevice(challenge.user.id, sessionContext);
         void this.audit.recordSecurity({
+            ...auditContext,
             action: 'trusted_device_created',
             result: 'success',
             resourceType: 'TrustedDevice',
             resourceId: trustedDevice.id,
-            metadata: { userId: challenge.user.id, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
+            metadata: { userId: challenge.user.id, sessionId: tokens.sessionId, trustedDeviceId: trustedDevice.id, expiresAt: trustedDevice.expiresAt },
         });
 
         return {
@@ -151,12 +253,20 @@ export class LoginUseCase {
         };
     }
 
-    private async validateTrustedDevice(userId: string, trustedDeviceToken: string | undefined): Promise<{ id: string; expiresAt: Date } | null> {
+    private async validateTrustedDevice(userId: string, trustedDeviceToken: string | undefined, auditContext?: LoginAuditContext): Promise<{ id: string; expiresAt: Date } | null> {
         if (!trustedDeviceToken) return null;
 
         const trustedDevice = await this.repository.findActiveTrustedDevice(userId, this.cryptoService.hashToken(trustedDeviceToken));
         if (!trustedDevice) {
-            void this.audit.recordSecurity({ action: 'trusted_device_login_failed', result: 'denied', reason: 'invalid_or_expired_trusted_device', metadata: { userId } });
+            void this.audit.recordSecurity({
+                ...auditContext,
+                action: 'trusted_device_login_failed',
+                result: 'denied',
+                resourceType: 'User',
+                resourceId: userId,
+                reason: 'invalid_or_expired_trusted_device',
+                metadata: { userId },
+            });
             return null;
         }
 
@@ -206,5 +316,38 @@ export class LoginUseCase {
     private recoveryCodeHashCandidates(normalizedCode: string): string[] {
         const formattedCode = normalizedCode.length > 4 ? `${normalizedCode.slice(0, 4)}-${normalizedCode.slice(4)}` : normalizedCode;
         return [...new Set([normalizedCode, formattedCode].map((code) => this.cryptoService.hashToken(code)))];
+    }
+
+    private userAuditContext(user: LoginAuditUser): LoginAuditContext {
+        const context: LoginAuditContext = {
+            actorUserId: user.id,
+            actorUsername: user.username,
+        };
+        const accesses = user.accesses ?? [];
+        const companyIds = [...new Set(accesses.map((access) => access.companyId).filter((companyId): companyId is string => Boolean(companyId)))];
+
+        if (companyIds.length !== 1) return context;
+
+        const companyId = companyIds[0];
+        context.companyId = companyId;
+
+        const companyAccesses = accesses.filter((access) => access.companyId === companyId);
+        const hasCompanyWideAccess = companyAccesses.some((access) => !access.scopeKey && !access.scopeId);
+        if (hasCompanyWideAccess) return context;
+
+        const subCompanyIds = [
+            ...new Set(
+                companyAccesses
+                    .filter((access) => access.scopeKey === SUB_COMPANY_SCOPE_KEY && Boolean(access.scopeId))
+                    .map((access) => access.scopeId!)
+            ),
+        ];
+
+        if (subCompanyIds.length === 1) {
+            context.scopeKey = SUB_COMPANY_SCOPE_KEY;
+            context.scopeId = subCompanyIds[0];
+        }
+
+        return context;
     }
 }
