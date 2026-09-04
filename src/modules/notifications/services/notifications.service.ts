@@ -9,13 +9,15 @@ import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notificat
 import { NotificationsRepository } from '@/modules/notifications/repositories/notifications.repository';
 import { NotificationResponse } from '@/modules/notifications/responses';
 import { AuditService } from '@/modules/audit/audit.service';
+import { NotificationsRealtimeService } from '@/modules/notifications/services/notifications-realtime.service';
 
 @Injectable()
 export class NotificationsService {
     constructor(
         private readonly repository: NotificationsRepository,
         private readonly i18n: I18nService,
-        private readonly audit: AuditService
+        private readonly audit: AuditService,
+        private readonly realtime: NotificationsRealtimeService
     ) {}
 
     async createForUser(userId: string, data: { title: string; message: string; detail?: string | null; type?: NotificationType; link?: string | null }) {
@@ -23,6 +25,7 @@ export class NotificationsService {
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         void this.audit.recordBusiness({ action: 'notification_created_for_user', resourceType: 'Notification', resourceId: notification.id, metadata: { userId, type: notification.type } });
+        this.realtime.notifyCreated(notification);
         return notification;
     }
 
@@ -49,6 +52,7 @@ export class NotificationsService {
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         void this.audit.recordBusiness({ action: 'system_notification_created_for_user', resourceType: 'Notification', resourceId: notification.id, metadata: { userId, type: notification.type } });
+        this.realtime.notifyCreated(notification);
         return notification;
     }
 
@@ -61,6 +65,7 @@ export class NotificationsService {
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.users.notFound, 'No encontramos el usuario solicitado.');
 
         void this.audit.recordBusiness({ action: 'notification_created', resourceType: 'Notification', resourceId: notification.id, metadata: { userId: dto.userId, type: notification.type } });
+        this.realtime.notifyCreated(notification);
         return {
             notification,
             response: NotificationResponse.from(notification),
@@ -95,6 +100,7 @@ export class NotificationsService {
         if (!notification) throw new I18nNotFoundException(I18N_KEYS.errors.notifications.notFound, 'No encontramos la notificacion solicitada.');
 
         void this.audit.recordBusiness({ action: 'notification_marked_read', resourceType: 'Notification', resourceId: notification.id, metadata: { userId } });
+        this.realtime.notifyRead(notification);
         return {
             notification,
             response: NotificationResponse.from(notification),
@@ -104,6 +110,7 @@ export class NotificationsService {
     async markAllRead(userId: string) {
         const result = await this.repository.markAllRead(userId);
         void this.audit.recordBusiness({ action: 'notifications_marked_read_all', resourceType: 'Notification', metadata: { userId, updatedCount: result.count } });
+        this.realtime.notifyReadAll({ userId, updatedCount: result.count, readAt: result.readAt });
         return result;
     }
 

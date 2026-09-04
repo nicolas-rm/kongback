@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { I18nService } from 'nestjs-i18n';
 import type { Server, Socket } from 'socket.io';
+import { Subscription } from 'rxjs';
 import { I18N_KEYS } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
 import { NotificationsSerializerService, SerializableNotificationData } from '@/modules/notifications/services/notifications-serializer.service';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
+import { NotificationsRealtimeService } from '@/modules/notifications/services/notifications-realtime.service';
 import { NotificationsSocketAuthenticationService } from '@/modules/notifications/notifications-socket-authentication.service';
 
 type GatewayNotification = SerializableNotificationData & { userId: string };
@@ -19,19 +21,33 @@ type GatewayReadNotification = Pick<GatewayNotification, 'id' | 'userId' | 'read
         credentials: true,
     },
 })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleDestroy {
     @WebSocketServer()
     server!: Server;
 
     private readonly userRoomPrefix = 'user:';
+    private readonly realtimeSubscriptions = new Subscription();
 
     constructor(
         private readonly socketAuthenticationService: NotificationsSocketAuthenticationService,
         private readonly serializer: NotificationsSerializerService,
         private readonly notificationsService: NotificationsService,
         private readonly i18n: I18nService,
-        private readonly audit: AuditService
+        private readonly audit: AuditService,
+        private readonly realtime: NotificationsRealtimeService
     ) {}
+
+    afterInit(): void {
+        this.realtimeSubscriptions.add(this.realtime.created$.subscribe((notification) => void this.emitNotificationCreated(notification).catch(() => null)));
+        this.realtimeSubscriptions.add(this.realtime.read$.subscribe((notification) => void this.emitNotificationRead(notification).catch(() => null)));
+        this.realtimeSubscriptions.add(
+            this.realtime.readAll$.subscribe((event) => void this.emitNotificationsReadAll(event.userId, event.updatedCount, event.readAt).catch(() => null))
+        );
+    }
+
+    onModuleDestroy(): void {
+        this.realtimeSubscriptions.unsubscribe();
+    }
 
     async handleConnection(@ConnectedSocket() client: Socket) {
         try {

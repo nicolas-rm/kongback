@@ -58,12 +58,14 @@ export class NotificationsRepository {
         });
     }
 
-    markAllRead(userId: string) {
+    async markAllRead(userId: string) {
         const readAt = new Date();
-        return this.prisma.notification.updateMany({
+        const result = await this.prisma.notification.updateMany({
             where: { userId, isRead: false },
             data: { isRead: true, readAt },
         });
+
+        return { count: result.count, readAt };
     }
 
     findOne(where: Prisma.NotificationWhereInput) {
