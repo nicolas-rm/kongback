@@ -3,32 +3,24 @@ import { CurrentCompanyScope, CurrentUser, Permissions, RequireSystemOrCompanyAc
 import type { RequestUser } from '@/modules/authentication/types/request-user.interface';
 import type { CompanyScope } from '@/utilities/tenancy/company-scope';
 import { CreateNotificationDto, FindNotificationsDto } from '@/modules/notifications/dto';
-import { NotificationsGateway } from '@/modules/notifications/notifications.gateway';
 import { NotificationsService } from '@/modules/notifications/services/notifications.service';
 
 @Controller('notifications')
 export class NotificationsController {
-    constructor(
-        private readonly notificationsService: NotificationsService,
-        private readonly notificationsGateway: NotificationsGateway
-    ) {}
+    constructor(private readonly notificationsService: NotificationsService) {}
 
     @Post()
     @RequireSystemOrCompanyAccess()
     @Permissions('notifications.create')
     async create(@CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: CreateNotificationDto) {
-        const { notification, response } = await this.notificationsService.create(dto, scope);
-        await this.notificationsGateway.emitNotificationCreated(notification);
+        const { response } = await this.notificationsService.create(dto, scope);
         return response;
     }
 }
 
 @Controller('me/notifications')
 export class MyNotificationsController {
-    constructor(
-        private readonly notificationsService: NotificationsService,
-        private readonly notificationsGateway: NotificationsGateway
-    ) {}
+    constructor(private readonly notificationsService: NotificationsService) {}
 
     @Get()
     @Permissions('notifications.read-list')
@@ -47,16 +39,13 @@ export class MyNotificationsController {
     @Permissions('notifications.mark-read-all')
     async markAllRead(@CurrentUser() user: RequestUser) {
         const result = await this.notificationsService.markAllRead(user.id);
-        const readAt = new Date();
-        await this.notificationsGateway.emitNotificationsReadAll(user.id, result.count, readAt);
-        return { updatedCount: result.count, readAt };
+        return { updatedCount: result.count, readAt: result.readAt };
     }
 
     @Patch(':id/read')
     @Permissions('notifications.mark-read')
     async markRead(@CurrentUser() user: RequestUser, @Param('id', ParseUUIDPipe) id: string) {
-        const { notification, response } = await this.notificationsService.markRead(user.id, id);
-        await this.notificationsGateway.emitNotificationRead(notification);
+        const { response } = await this.notificationsService.markRead(user.id, id);
         return response;
     }
 }
