@@ -11,6 +11,8 @@ type AuditInput = {
     actorUserId?: string | null;
     actorUsername?: string | null;
     companyId?: string | null;
+    scopeKey?: string | null;
+    scopeId?: string | null;
     resourceType?: string | null;
     resourceId?: string | null;
     statusCode?: number | null;
@@ -22,7 +24,35 @@ type AuditInput = {
 };
 
 const MAX_STRING_LENGTH = 1_500;
-const SENSITIVE_KEY_PATTERN = /authorization|cookie|password|token|secret|totp|otp|recovery|hash|cvv|nip|pan|cardNumber|card_number|access_token|refresh_token/i;
+const SENSITIVE_KEY_NAMES = new Set([
+    'authorization',
+    'cookie',
+    'cookies',
+    'password',
+    'passwordhash',
+    'oldpassword',
+    'newpassword',
+    'token',
+    'tokenhash',
+    'accesstoken',
+    'refreshtoken',
+    'secret',
+    'totp',
+    'otp',
+    'recoverycode',
+    'recoverycodes',
+    'challengehash',
+    'codehash',
+    'cvv',
+    'nip',
+    'oldnip',
+    'newnip',
+    'pin',
+    'pan',
+    'cardnumber',
+]);
+const SENSITIVE_KEY_SUFFIXES = ['token', 'tokenhash', 'secret', 'hash'];
+const SAFE_KEY_NAMES = new Set(['companyid', 'subcompanyid', 'subcompany', 'mustchangepassword', 'maskedpan']);
 
 @Injectable()
 export class AuditService {
@@ -156,8 +186,8 @@ export class AuditService {
             actorUserId: input.actorUserId ?? user?.id ?? null,
             actorUsername: input.actorUsername ?? user?.username ?? null,
             companyId: input.companyId ?? request?.companyId ?? scope?.companyId ?? null,
-            scopeKey: scope?.subCompanyIds ? 'subCompanyId' : null,
-            scopeId: scope?.subCompanyIds?.length === 1 ? scope.subCompanyIds[0] : null,
+            scopeKey: input.scopeKey ?? (scope?.subCompanyIds ? 'subCompanyId' : null),
+            scopeId: input.scopeId ?? (scope?.subCompanyIds?.length === 1 ? scope.subCompanyIds[0] : null),
             statusCode: input.statusCode ?? null,
             ipAddress: request ? this.resolveIpAddress(request) : null,
             userAgent: request?.get('user-agent') ?? null,
@@ -223,10 +253,16 @@ export class AuditService {
             if (seen.has(value)) return '[circular]';
             seen.add(value);
 
-            return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, SENSITIVE_KEY_PATTERN.test(key) ? '[redacted]' : this.sanitize(item, seen)]));
+            return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, this.isSensitiveKey(key) ? '[redacted]' : this.sanitize(item, seen)]));
         }
 
         return this.truncate(String(value));
+    }
+
+    private isSensitiveKey(key: string): boolean {
+        const normalized = key.replace(/[\s_-]/g, '').toLowerCase();
+        if (SAFE_KEY_NAMES.has(normalized)) return false;
+        return SENSITIVE_KEY_NAMES.has(normalized) || SENSITIVE_KEY_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
     }
 
     private truncate(value: string): string {
@@ -234,6 +270,8 @@ export class AuditService {
     }
 
     private async recordRouteAudit(request: AuditRequest, statusCode: number, durationMs: number): Promise<void> {
+        if (request.method.toUpperCase() === 'OPTIONS') return;
+
         const category = this.resolveRouteCategory(request.originalUrl);
         if (!category) return;
 
@@ -260,6 +298,7 @@ export class AuditService {
         const normalized = this.normalizePath(path);
 
         if (normalized.startsWith('/api/authentication')) return 'security';
+        if (normalized.startsWith('/api/audit')) return 'security';
         if (normalized.startsWith('/api/users') || normalized.startsWith('/api/roles') || normalized.startsWith('/api/permissions')) return 'access';
         if (normalized.startsWith('/api/cardcloud') || normalized.startsWith('/api/cardcloud-stock')) return 'cardcloud';
         if (normalized.startsWith('/api/cards') || normalized.startsWith('/api/cardholder') || normalized.startsWith('/api/cardholders')) return 'card';

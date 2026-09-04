@@ -148,7 +148,7 @@ export class AuditEventsController {
     @Get('transfers/:id')
     @Permissions('audit.read-one')
     findTransfer(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.auditEventsService.findOne('cardcloud', id, scope);
+        return this.auditEventsService.findTransfer(id, scope);
     }
 
     @Get('card-assignments')
@@ -168,12 +168,12 @@ export class AuditEventsController {
     @Get('card-assignments/cards/:id')
     @Permissions('audit.read-one')
     findCardAssignment(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.auditEventsService.findOne('card', id, scope);
+        return this.auditEventsService.findCardAssignment('card', id, scope);
     }
 
     @Get('card-assignments/cardcloud/:id')
     @Permissions('audit.read-one')
     findCardcloudAssignment(@CurrentCompanyScope() scope: CompanyScope | undefined, @Param('id', ParseUUIDPipe) id: string) {
-        return this.auditEventsService.findOne('cardcloud', id, scope);
+        return this.auditEventsService.findCardAssignment('cardcloud', id, scope);
     }
 }
