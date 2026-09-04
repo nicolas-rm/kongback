@@ -8,6 +8,7 @@ import { NotificationsService } from '@/modules/notifications/services/notificat
 import { PermissionResponse } from '@/modules/access-control/responses';
 import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { isAdministrativePermissionForCardholder, isCardholderPermissionCode, isCardholderRoleCode } from '@/utilities/authentication/cardholder-access-policy';
 import { generateSecurePassword } from '@/utilities/password/generate-password';
 import { scopedSubCompanyIdFilter, SUB_COMPANY_SCOPE_KEY, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { AssignUserAccessDto, ChangeUserPasswordDto, CreateUserDto, FindUsersDto, ReplaceUserAccessDto, UpdateUserDto } from '@/modules/users/dto';
@@ -360,12 +361,12 @@ export class UsersService {
         const roleProfiles = await this.repository.findRolePermissionProfiles(roleIds);
         const profiles = roleProfiles.map((role) => {
             const permissionCodes = role.permissions.map((entry) => entry.permission.code);
-            const hasCardholderPermissions = permissionCodes.some((code) => code.startsWith('cardholder.'));
-            const hasAdministrativePermissions = permissionCodes.some((code) => !code.startsWith('cardholder.'));
+            const hasCardholderPermissions = permissionCodes.some(isCardholderPermissionCode);
+            const hasAdministrativePermissions = permissionCodes.some(isAdministrativePermissionForCardholder);
 
             return {
                 id: role.id,
-                isCardholderRole: ['tarjetahabiente', 'cardholder'].includes(role.code) || hasCardholderPermissions,
+                isCardholderRole: isCardholderRoleCode(role.code) || hasCardholderPermissions,
                 hasAdministrativePermissions,
             };
         });

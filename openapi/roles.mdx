@@ -118,7 +118,7 @@ Requiere `roles.read-list`.
 | `page`    | `number`  | Entero >= 1          | Pagina solicitada; por defecto `1`.                                                  |
 | `limit`   | `number`  | Entero entre 1 y 100 | Registros por pagina; por defecto `10`.                                              |
 | `search`  | `string`  | Opcional             | Busca por `code`, `name` o `description`, sin distinguir mayusculas.                 |
-| `all`     | `boolean` | Opcional             | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+| `all`     | `boolean` | Opcional             | Si es `true`, ignora `page` y `limit`, no pagina y devuelve todos los registros filtrados. |
 
 ### Example
 

@@ -36,6 +36,13 @@ const ADMIN_ROLE_CODE = 'administrador-global';
 const ADMIN_ROLE_NAME = 'Super admin';
 const ADMIN_ROLE_DESCRIPTION = 'Rol de pruebas con acceso global a permisos administrativos del sistema.';
 const ADMIN_EXCLUDED_PERMISSION_PREFIXES = ['cardholder.'] as const;
+const NOTIFICATION_INBOX_PERMISSION_CODES = [
+    'notifications.module',
+    'notifications.read-list',
+    'notifications.unread-count.read',
+    'notifications.mark-read',
+    'notifications.mark-read-all',
+] as const satisfies readonly PermissionCode[];
 
 // =============================================================================
 // Default company
@@ -309,7 +316,13 @@ async function syncRolePermissions(roleId: string, codes: PermissionCode[]): Pro
 }
 
 function resolveAdminPermissionCodes(): PermissionCode[] {
-    return ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix)));
+    const permissionCodes = new Set<PermissionCode>(ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix))));
+
+    for (const code of NOTIFICATION_INBOX_PERMISSION_CODES) {
+        permissionCodes.add(code);
+    }
+
+    return [...permissionCodes];
 }
 
 function resolveRolePermissionCodes(definition: RoleDefinition): PermissionCode[] {
@@ -326,6 +339,10 @@ function resolveRolePermissionCodes(definition: RoleDefinition): PermissionCode[
     }
 
     for (const code of definition.extraPermissionCodes ?? []) {
+        permissionCodes.add(code);
+    }
+
+    for (const code of NOTIFICATION_INBOX_PERMISSION_CODES) {
         permissionCodes.add(code);
     }
 

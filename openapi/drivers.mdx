@@ -105,7 +105,7 @@ Requeridos: `subCompanyId`, `name`. `subCompanyId` debe estar activo y pertenece
 
 Opcionales: `userId`, `externalReference`, `status`, `address`. Si `userId` se envia, debe ser un usuario activo con perfil exclusivamente tarjetahabiente.
 
-El usuario vinculado como conductor debe tener solo rol/permisos `cardholder.*`, sin roles ni permisos administrativos. Su acceso debe estar limitado a la misma `subCompanyId` del conductor. Si no es tarjetahabiente, mezcla perfiles o esta asignado a otra subcompania, responde `400`.
+El usuario vinculado como conductor debe tener solo rol/permisos `cardholder.*`, sin roles ni permisos administrativos. Los permisos personales de bandeja de notificaciones (`notifications.read-list`, `notifications.unread-count.read`, `notifications.mark-read`, `notifications.mark-read-all` y `notifications.module`) son neutros y no rompen el perfil tarjetahabiente. Su acceso debe estar limitado a la misma `subCompanyId` del conductor. Si no es tarjetahabiente, mezcla perfiles administrativos o esta asignado a otra subcompania, responde `400`.
 
 Response `201`: `Driver` con `subCompany`, `user` y `address`.
 
@@ -149,7 +149,7 @@ Response `200`: archivo descargable. El backend aplica filtros y alcance igual q
 
 Acepta `userId`, `name`, `externalReference`, `status` y `address`, todos opcionales. `userId` puede enviarse como `null` para desvincular.
 
-No acepta `subCompanyId`; este endpoint no mueve conductores entre subcompanias. Si se envia un nuevo `userId`, debe ser exclusivamente tarjetahabiente y su acceso debe coincidir con la subcompania actual del conductor o responde `400`.
+No acepta `subCompanyId`; este endpoint no mueve conductores entre subcompanias. Si se envia un nuevo `userId`, debe ser exclusivamente tarjetahabiente y su acceso debe coincidir con la subcompania actual del conductor o responde `400`. Los permisos personales de notificaciones son compatibles con este perfil.
 
 Response `200`: `Driver` actualizado con `subCompany`, `user` y `address`.
 
@@ -211,7 +211,7 @@ Campos recomendados para formularios:
 
 No muestres `userId` ni `subCompanyId` como texto libre. Deben ser selects. Para desvincular usuario en editar, envia `userId: null`.
 
-Para tarjetahabientes, `userId` es la relacion que habilita `/api/cardholder/*`. El usuario debe tener solo rol/permisos `cardholder.*` y el conductor debe estar activo en la misma subcompania usada como alcance del acceso del usuario. Si el conductor se desactiva o se desvincula con `userId: null`, el usuario ya no podra entrar al modulo propio de tarjetahabiente.
+Para tarjetahabientes, `userId` es la relacion que habilita `/api/cardholder/*`. El usuario debe tener solo rol/permisos `cardholder.*`, mas permisos personales neutros de notificaciones si aplica, y el conductor debe estar activo en la misma subcompania usada como alcance del acceso del usuario. Si el conductor se desactiva o se desvincula con `userId: null`, el usuario ya no podra entrar al modulo propio de tarjetahabiente.
 
 Si necesitas cambiar un tarjetahabiente de contexto operativo, no basta con cambiar el acceso del usuario. La subcompania del conductor es la referencia operativa actual y debe seguir coincidiendo con el acceso cardholder.
 

@@ -145,7 +145,7 @@ Si `access` se envia, el backend crea el usuario y el acceso en una sola transac
 
 Si el request envia `X-Company-Id`, `access.companyId` puede omitirse; backend lo fuerza a la compania seleccionada. Si se envia, debe coincidir con `X-Company-Id`. En usuarios autenticados con alcance a una sola subcompania, backend puede completar `access.scopeKey: "subCompanyId"` y `access.scopeId` automaticamente cuando se omiten. Si el usuario autenticado tiene varias subcompanias permitidas, el front debe enviar `access.scopeId`.
 
-Regla de perfil tarjetahabiente: un usuario con rol o permisos `cardholder.*` no puede mezclarse con roles administrativos. El backend rechaza crear o asignar accesos si detecta un rol tarjetahabiente combinado con otros roles, o un rol hibrido que mezcle permisos `cardholder.*` con permisos administrativos.
+Regla de perfil tarjetahabiente: un usuario con rol o permisos `cardholder.*` no puede mezclarse con roles administrativos. El backend rechaza crear o asignar accesos si detecta un rol tarjetahabiente combinado con otros roles, o un rol hibrido que mezcle permisos `cardholder.*` con permisos administrativos. Los permisos personales de bandeja de notificaciones (`notifications.read-list`, `notifications.unread-count.read`, `notifications.mark-read`, `notifications.mark-read-all` y `notifications.module`) son neutros y pueden convivir con el perfil tarjetahabiente.
 
 Regla de coherencia con conductor: si el usuario ya tiene un conductor activo vinculado por `Driver.userId`, el alcance del acceso tarjetahabiente debe ser esa misma subcompania. Si se intenta crear/asignar un acceso `cardholder.*` con otra subcompania, responde `400`.
 
@@ -172,7 +172,7 @@ Si se envia `X-Company-Id`, lista solo usuarios con acceso directo a esa compani
 | `page`    | `number`                          | Entero >= 1          | Pagina solicitada; por defecto `1`.                                                  |
 | `limit`   | `number`                          | Entero entre 1 y 100 | Registros por pagina; por defecto `10`.                                              |
 | `search`  | `string`                          | Opcional             | Busca por `username`, `email` o `fullName`, sin distinguir mayusculas.               |
-| `all`     | `boolean`                         | Opcional             | Si es `true`, omite el offset y solicita hasta 100 registros si no se envia `limit`. |
+| `all`     | `boolean`                         | Opcional             | Si es `true`, ignora `page` y `limit`, no pagina y devuelve todos los registros filtrados. |
 | `status`  | `active \| inactive \| suspended` | Opcional             | Filtra por estado.                                                                   |
 | `subCompanyId` | `uuid`                       | Opcional             | Filtra usuarios con acceso activo a esa subcompania. Se intersecta con `X-Company-Id` y el alcance del usuario autenticado. |
 
@@ -332,7 +332,7 @@ Reglas de alcance:
 
 Si el request envia `X-Company-Id` y el usuario autenticado esta limitado a una sola subcompania, el backend puede completar `scopeKey: "subCompanyId"` y `scopeId` automaticamente cuando se omiten. Si tiene varias subcompanias permitidas, el body debe indicar `scopeId`.
 
-No se puede asignar el perfil tarjetahabiente a un usuario que ya tenga roles administrativos. Tampoco se puede asignar un rol administrativo a un usuario que ya tenga perfil tarjetahabiente.
+No se puede asignar el perfil tarjetahabiente a un usuario que ya tenga roles administrativos. Tampoco se puede asignar un rol administrativo a un usuario que ya tenga perfil tarjetahabiente. Los permisos personales de notificaciones no cuentan como administrativos para esta regla.
 
 Si el usuario ya esta vinculado a un conductor activo, el acceso tarjetahabiente solo puede apuntar a la misma subcompania del conductor. El backend no mueve automaticamente al conductor ni su operacion.
 
@@ -350,7 +350,7 @@ Reemplaza todos los accesos del usuario en una transaccion. El arreglo `accesses
 
 Si se envia `X-Company-Id`, reemplaza solo los accesos del usuario dentro de esa compania. No modifica accesos globales ni accesos de otras companias.
 
-La regla de aislamiento tambien aplica aqui: los accesos enviados no pueden combinar rol/permisos de tarjetahabiente con roles administrativos. Si el reemplazo se ejecuta dentro de `X-Company-Id`, tambien se consideran los accesos activos que el usuario conserve fuera de ese alcance.
+La regla de aislamiento tambien aplica aqui: los accesos enviados no pueden combinar rol/permisos de tarjetahabiente con roles administrativos. Los permisos personales de notificaciones son neutros; `notifications.create` sigue siendo administrativo. Si el reemplazo se ejecuta dentro de `X-Company-Id`, tambien se consideran los accesos activos que el usuario conserve fuera de ese alcance.
 
 Si el usuario ya tiene conductor activo, cualquier acceso tarjetahabiente enviado en el reemplazo debe conservar la misma subcompania del conductor. Cambiar el acceso del tarjetahabiente a otra subcompania sin ajustar la operacion relacionada responde `400`.
 
@@ -524,7 +524,7 @@ Alta de tarjetahabiente:
 - El conductor, su subcompania, el acceso del usuario, el vehiculo y la tarjeta deben pertenecer al mismo contexto operativo.
 - Si el usuario ya tiene conductor activo, no cambies su acceso tarjetahabiente a otra subcompania desde usuarios. Primero resuelve la operacion del conductor; el backend valida esa coherencia y responde `400` si no coincide.
 - Si el usuario tarjetahabiente no tiene `Driver.userId` activo, los endpoints `/api/cardholder/*` responden `403`.
-- No mezcles este usuario con roles administrativos. Si una persona necesita operar administracion y tambien consultar sus tarjetas, crea usuarios separados.
+- No mezcles este usuario con roles administrativos. Los permisos personales de notificaciones son compatibles; `notifications.create` no lo es porque es administrativo. Si una persona necesita operar administracion y tambien consultar sus tarjetas, crea usuarios separados.
 
 La edicion de datos base del usuario no debe mezclar roles ni alcances. Usa `PATCH /api/users/:id` solo para nombre, usuario, correo, estado, idioma o `mustChangePassword`; administra roles y companias desde una seccion separada `Accesos` con `/api/users/:id/access`.
 
