@@ -382,11 +382,15 @@ Requiere `RequireSystemAccess` y permiso `cardcloud.cards.block`.
 
 Response `200`: `CardcloudCardStatusChangeResponse` con `message` y `card`.
 
+Si existe un registro local en `cardcloud-stock` por `id`, `externalId`, `card_external_id` o `card_id`, sincroniza `providerStatus` con el `status` devuelto por Cardcloud para mantener consistentes las vistas administrativas y del tarjetahabiente. No cambia `Card.status`.
+
 `POST /api/cardcloud/cards/:uuid/unblock`
 
 Requiere `RequireSystemAccess` y permiso `cardcloud.cards.unblock`.
 
 Response `200`: `CardcloudCardStatusChangeResponse` con `message` y `card`.
+
+Si existe un registro local en `cardcloud-stock` por `id`, `externalId`, `card_external_id` o `card_id`, sincroniza `providerStatus` con el `status` devuelto por Cardcloud para mantener consistentes las vistas administrativas y del tarjetahabiente. No cambia `Card.status`.
 
 ## Asignacion de tarjetas
 
@@ -618,3 +622,5 @@ Acciones esperadas:
 `modules.cardcloudCards.actions.exportMovements` descarga `GET /api/cardcloud/cards/:uuid/movements/export`.
 
 No reutilices `modules.cards` ni `modules.cardholderCards`: `cards` pertenece a tarjeta local operativa y `cardholderCards` al portal del tarjetahabiente.
+
+Al bloquear o desbloquear desde `cardcloudCards`, refresca tambien las listas de `cardcloudStock` y tarjetas dentro de subcuentas. El estado visible de bloqueo/desbloqueo debe salir de `providerStatus`, no de `Card.status`.
