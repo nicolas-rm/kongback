@@ -54,7 +54,7 @@ Estos filtros aplican a los listados. Algunos campos solo tienen efecto en ciert
 | `page`         | `number`  | No        | Pagina. Default `1`.                                                      |
 | `limit`        | `number`  | No        | Registros por pagina. Maximo `100`.                                       |
 | `search`       | `string`  | No        | Busca por accion, usuario, motivo, requestId, recurso o ruta externa.     |
-| `all`          | `boolean` | No        | Devuelve hasta `100` registros.                                           |
+| `all`          | `boolean` | No        | Si es `true`, ignora `page` y `limit`, no pagina y devuelve todos los registros filtrados. |
 | `result`       | `string`  | No        | `success`, `failure` o `denied`.                                          |
 | `action`       | `string`  | No        | Filtra por nombre de accion.                                              |
 | `method`       | `string`  | No        | Filtra requests HTTP por metodo. Solo aplica en `/requests`.              |
@@ -80,6 +80,24 @@ GET /api/audit/security?resourceType=TrustedDevice
 GET /api/audit/requests?method=POST&path=/api/cards
 ```
 
+### Casos comunes
+
+Usuario creado por un administrador:
+
+```txt
+GET /api/audit/access?action=user_created&resourceType=User
+GET /api/audit/access?action=user_created&resourceType=User&resourceId=<userId>
+GET /api/audit/access?action=user_created&resourceType=User&actorUserId=<adminUserId>
+GET /api/audit/access?action=user_created&resourceType=User&all=true
+GET /api/audit/access/<auditEventId>
+```
+
+El evento funcional vive en `/api/audit/access` porque crear usuarios afecta identidad, roles y accesos. Para revisar solo la solicitud HTTP que origino la accion, usa:
+
+```txt
+GET /api/audit/requests?method=POST&path=/api/users
+```
+
 Response `200`:
 
 ```json
@@ -101,6 +119,43 @@ Response `200`:
             "resourceId": null,
             "externalPath": "/v1/transfer",
             "reason": null,
+            "actor": {
+                "id": "user-id",
+                "username": "admin",
+                "email": "admin@example.com",
+                "fullName": "Administrador"
+            },
+            "company": {
+                "id": "company-id",
+                "key": "PROXVALE",
+                "name": "Proxvale Gasolina",
+                "tradeName": "Proxvale"
+            },
+            "scope": {
+                "key": "companyId",
+                "id": "company-id",
+                "label": "Proxvale Gasolina - PROXVALE"
+            },
+            "resource": {
+                "type": "CardcloudTransfer",
+                "id": null,
+                "label": "Transferencia Cardcloud"
+            },
+            "route": {
+                "method": "POST",
+                "path": "/api/cardcloud/account/transfer",
+                "externalPath": "/v1/transfer",
+                "routePattern": "/api/cardcloud/account/transfer",
+                "module": "Cardcloud",
+                "operation": "Transferencia",
+                "statusCode": 201,
+                "durationMs": 240
+            },
+            "module": "Cardcloud",
+            "operation": "Transferencia",
+            "actionLabel": "Cardcloud - Transferencia",
+            "label": "Cardcloud - Transferencia - Transferencia Cardcloud - Administrador",
+            "severity": "critical",
             "createdAt": "2026-08-21T18:00:00.000Z"
         }
     ],
@@ -114,6 +169,26 @@ Response `200`:
     }
 }
 ```
+
+## Campos enriquecidos
+
+Todos los endpoints de listado y detalle devuelven los campos tecnicos anteriores mas campos listos para UI:
+
+| Campo                    | Tipo      | Descripcion                                                                 |
+| ------------------------ | --------- | --------------------------------------------------------------------------- |
+| `actor`                  | `object`  | Usuario actor resuelto por `actorUserId`, con `id`, `username`, `email` y `fullName` cuando existe. |
+| `company`                | `object`  | Compania resuelta por `companyId`, con `id`, `key`, `name` y `tradeName`.   |
+| `scope`                  | `object`  | Alcance visible. Si `scopeKey=subCompanyId`, incluye `subCompany`. Si no hay subcompania, representa la compania. |
+| `resource`               | `object`  | Recurso afectado resuelto por `resourceType/resourceId`, con `label` y `data` segura cuando existe localmente. |
+| `route`                  | `object`  | Endpoint origen resuelto desde el evento o desde `requestId`: metodo, ruta, ruta normalizada, modulo, operacion, codigo HTTP y duracion. |
+| `module`                 | `string`  | Modulo visible derivado de ruta o recurso.                                  |
+| `operation`              | `string`  | Tipo de operacion visible: consulta, creacion, actualizacion, baja, asignacion, transferencia, etc. |
+| `actionLabel`            | `string`  | Etiqueta visible para `action`.                                             |
+| `label`                  | `string`  | Resumen compacto del evento para tablas o timeline.                         |
+| `severity`               | `string`  | `info`, `warning`, `error` o `critical`.                                    |
+| `changedFields`          | `string[]` | Solo en detalle cuando `before` y `after` permiten detectar cambios de primer nivel. |
+
+`resource.data` nunca debe usarse como fuente de permisos ni autorizacion. Es contexto de auditoria para mostrar nombres, estados, placas, subcompania, combustible, IDs externos enmascarados o datos equivalentes.
 
 ## Exportar auditoria
 
@@ -136,7 +211,9 @@ Query params: acepta los mismos filtros comunes de auditoria mas `format`.
 
 `format`: `xlsx`, `excel`, `csv`, `txt` o `pdf`. Default `xlsx`.
 
-Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas. La exportacion incluye columnas comunes: fuente, fecha, resultado, accion, metodo/ruta, codigo HTTP, usuario, compania, alcance, recurso, razon y `requestId`.
+Response `200`: archivo descargable. El backend aplica filtros y alcance igual que el listado, ignora paginacion y limita la exportacion a `5000` filas.
+
+La exportacion incluye columnas tecnicas y enriquecidas: resumen, fuente, modulo, operacion, accion visible, severidad, fecha, resultado, accion tecnica, metodo/ruta, ruta normalizada, ruta externa, codigo HTTP, duracion, usuario, username, email, compania, alcance, subcompania, recurso, recurso visible, razon y `requestId`.
 
 ## Consultar detalle por grupo
 
@@ -167,6 +244,52 @@ Response `200`:
     "resourceType": "Card",
     "resourceId": "card-id",
     "reason": null,
+    "actor": {
+        "id": "user-id",
+        "username": "admin",
+        "email": "admin@example.com",
+        "fullName": "Administrador"
+    },
+    "company": {
+        "id": "company-id",
+        "key": "PROXVALE",
+        "name": "Proxvale Gasolina",
+        "tradeName": "Proxvale"
+    },
+    "scope": {
+        "key": "companyId",
+        "id": "company-id",
+        "label": "Proxvale Gasolina - PROXVALE"
+    },
+    "resource": {
+        "type": "Card",
+        "id": "card-id",
+        "label": "CARD-001 - ABC-123",
+        "data": {
+            "clientId": "CARD-001",
+            "maskedPan": "****1234",
+            "status": "active",
+            "assignmentMode": "vehicle",
+            "subCompanyId": "sub-company-id",
+            "vehicleId": "vehicle-id",
+            "vehiclePlates": "ABC-123"
+        }
+    },
+    "route": {
+        "method": "PATCH",
+        "path": "/api/cards/11111111-1111-4111-8111-111111111111/assign-vehicle",
+        "externalPath": null,
+        "routePattern": "/api/cards/:id/assign-vehicle",
+        "module": "Tarjetas",
+        "operation": "Asignacion",
+        "statusCode": 200,
+        "durationMs": 180
+    },
+    "module": "Tarjetas",
+    "operation": "Asignacion",
+    "actionLabel": "Tarjetas - Asignacion",
+    "label": "Tarjetas - Asignacion - CARD-001 - ABC-123 - Administrador",
+    "severity": "critical",
     "ipAddress": "127.0.0.1",
     "userAgent": "Mozilla/5.0",
     "metadata": null,
@@ -180,6 +303,7 @@ Response `200`:
         "assignmentMode": "vehicle",
         "assignedAt": "2026-08-21T18:00:00.000Z"
     },
+    "changedFields": ["assignedAt", "assignmentMode", "vehicleId"],
     "createdAt": "2026-08-21T18:00:00.000Z"
 }
 ```
@@ -197,6 +321,8 @@ Los eventos manuales pueden incluir `metadata` de dominio. El backend agrega `me
 
 Para eventos de seguridad, `resourceType` y `resourceId` tambien se guardan de forma estructurada cuando el servicio conoce el recurso afectado. Ejemplos: `User`, `Session` y `TrustedDevice`.
 
+Las consultas a `/api/audit/*` tambien quedan auditadas como eventos de seguridad, ademas de su `RequestLog`, porque consultar auditoria es una accion sensible.
+
 ## Endpoints operativos directos
 
 Historial de transferencias:
@@ -210,6 +336,8 @@ GET /api/audit/transfers/<id>
 ```
 
 Internamente filtra eventos Cardcloud con `resourceType=CardcloudTransfer`.
+
+El detalle `/api/audit/transfers/:id` tambien valida que el evento pertenezca a `CardcloudTransfer`; si el ID corresponde a otro evento Cardcloud responde `404`.
 
 Historial de asignaciones de tarjetas:
 
@@ -232,6 +360,8 @@ Internamente consulta eventos `card` y `cardcloud` cuya accion contiene `assign`
 - `cardcloud_cards_assigned_bulk`
 - `cardcloud_stock_sub_company_assigned`
 - `cardcloud_stock_sub_company_unassigned`
+
+Los detalles `/api/audit/card-assignments/cards/:id` y `/api/audit/card-assignments/cardcloud/:id` tambien validan que la accion sea de asignacion o desasignacion; si el ID corresponde a otro evento responde `404`.
 
 ## Seguridad de datos
 
@@ -268,6 +398,8 @@ No generes un item de sidebar propio por ahora. Cuando `Inicio` muestre auditori
 | Exportar listado               | `modules.audit.actions.exportList`                                                           | `audit.read-list` |
 | Abrir detalle                  | `modules.audit.actions.openDetail` o `modules.audit.actions.readOne`                         | `audit.read-one`  |
 
-En los detalles, muestra `metadata`, `before`, `after`, `ipAddress`, `userAgent`, `path` y `externalPath` solo cuando existan. Oculta `body`, `cookies` y `query` de `RequestLog` salvo a perfiles auditores de alta confianza.
+Usa `label`, `actionLabel`, `module`, `operation`, `severity`, `actor`, `company`, `scope`, `resource` y `route` para tablas y timeline. Conserva `action`, `resourceType`, `resourceId`, `requestId`, `companyId`, `scopeKey` y `scopeId` como campos tecnicos para filtros, deep links y depuracion.
+
+En los detalles, muestra `metadata`, `before`, `after`, `changedFields`, `ipAddress`, `userAgent`, `path` y `externalPath` solo cuando existan. Oculta `body`, `cookies` y `query` de `RequestLog` salvo a perfiles auditores de alta confianza.
 
 `exportList` debe llamar el endpoint `/export` del tab activo. `configureColumns` sigue siendo una accion local de interfaz.

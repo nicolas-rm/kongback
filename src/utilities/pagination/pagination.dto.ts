@@ -1,10 +1,13 @@
+import { ValidateIf } from 'class-validator';
 import { ValidatorBoolean, ValidatorNumber, ValidatorString } from '@/decorators';
 import { ExportQueryDto } from '@/utilities/export/export-query.dto';
 
 export class PaginationDto extends ExportQueryDto {
+    @ValidateIf((dto: PaginationDto) => !dto.all)
     @ValidatorNumber({ optional: true, min: 1 })
     page?: number;
 
+    @ValidateIf((dto: PaginationDto) => !dto.all)
     @ValidatorNumber({ optional: true, min: 1, max: 100 })
     limit?: number;
 
@@ -15,11 +18,13 @@ export class PaginationDto extends ExportQueryDto {
     all?: boolean;
 
     get actualPage(): number {
+        if (this.all) return 1;
         return this.page ?? 1;
     }
 
     get actualLimit(): number | undefined {
-        return this.limit ?? (this.all ? 100 : 10);
+        if (this.all) return undefined;
+        return this.limit ?? 10;
     }
 
     get skip(): number {
