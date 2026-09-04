@@ -194,24 +194,28 @@ export class CardcloudController {
     @RequireSystemAccess()
     @Permissions('cardcloud.account.transfer')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    transferFunds(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsDto) {
-        return this.cardcloudService.transferFunds(dto, user.id);
+    transferFunds(@CurrentUser() user: RequestUser, @CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: TransferCardcloudFundsDto) {
+        return this.cardcloudService.transferFunds(dto, user.id, scope);
     }
 
     @Post('account/transfer-bulk')
     @RequireSystemAccess()
     @Permissions('cardcloud.account.transfer.bulk')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    transferFundsBulk(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsBulkDto) {
-        return this.cardcloudService.transferFundsBulk(dto, user.id);
+    transferFundsBulk(@CurrentUser() user: RequestUser, @CurrentCompanyScope() scope: CompanyScope | undefined, @Body() dto: TransferCardcloudFundsBulkDto) {
+        return this.cardcloudService.transferFundsBulk(dto, user.id, scope);
     }
 
     @Get('account/transfer-bulk-excel')
     @RequireSystemAccess()
     @Permissions('cardcloud.account.transfer.bulk')
     @RequestConfig({ statusCode: HttpStatus.OK })
-    async downloadTransferFundsBulkExcelTemplate(@Query() dto: DownloadCardcloudTransferBulkExcelDto, @Res({ passthrough: true }) response: Response) {
-        const file = await this.cardcloudService.downloadTransferFundsBulkExcelTemplate(dto);
+    async downloadTransferFundsBulkExcelTemplate(
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Query() dto: DownloadCardcloudTransferBulkExcelDto,
+        @Res({ passthrough: true }) response: Response
+    ) {
+        const file = await this.cardcloudService.downloadTransferFundsBulkExcelTemplate(dto, scope);
         setExcelAttachmentHeaders(response, file);
         return new StreamableFile(file.buffer);
     }
@@ -221,8 +225,13 @@ export class CardcloudController {
     @Permissions('cardcloud.account.transfer.bulk')
     @RequestConfig({ statusCode: HttpStatus.OK })
     @UseInterceptors(FileInterceptor('file'))
-    transferFundsBulkExcel(@CurrentUser() user: RequestUser, @Body() dto: TransferCardcloudFundsBulkExcelDto, @UploadedFile() file?: AppUploadedFile) {
-        return this.cardcloudService.transferFundsBulkExcel(dto, file, user.id);
+    transferFundsBulkExcel(
+        @CurrentUser() user: RequestUser,
+        @CurrentCompanyScope() scope: CompanyScope | undefined,
+        @Body() dto: TransferCardcloudFundsBulkExcelDto,
+        @UploadedFile() file?: AppUploadedFile
+    ) {
+        return this.cardcloudService.transferFundsBulkExcel(dto, file, user.id, scope);
     }
 
     @Get('account')

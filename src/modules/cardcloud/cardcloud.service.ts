@@ -7,7 +7,7 @@ import { I18N_KEYS, I18nHttpException } from '@/i18n';
 import { PrismaService } from '@/prisma/prisma.service';
 import { invalidRelation, notFound } from '@/modules/business/business.helpers';
 import { CardcloudExternalService } from '@/modules/cardcloud/cardcloud-external.service';
-import { subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
+import { SUB_COMPANY_SCOPE_KEY, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import type { ExportQueryDto } from '@/utilities/export/export-query.dto';
 import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatBoolean, formatStatus, sanitizeFilenamePart, valueOrDash } from '@/utilities/export/excel-export';
 import {
@@ -122,6 +122,7 @@ type AssignableLocalStockRecord = Prisma.CardcloudGetPayload<{ select: typeof AS
 
 type CardcloudSubCompanyTarget = {
     id: string;
+    companyId: string;
     cardcloudSubaccountId: string;
 };
 
@@ -140,6 +141,12 @@ type LinkedCardcloudSubaccountSummary = {
     key: string;
     name: string;
     companyId: string;
+};
+
+type CardcloudAuditScope = {
+    companyId?: string | null;
+    scopeKey?: string | null;
+    scopeId?: string | null;
 };
 
 const PAGE_BATCH_SIZE = 5;
@@ -172,27 +179,39 @@ export class CardcloudService {
     }
 
     async getCard(uuid: string): Promise<CardcloudCardDetail> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const card = await this.external.get<CardcloudCardDetail>(`/v1/card/${uuid}`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}` });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_consulted',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}`,
+            after: this.providerCardAuditSnapshot(card),
+        });
         return card;
     }
 
     async getCardMovements(uuid: string, query: CardcloudDateRangeQueryDto): Promise<CardcloudCardMovementsResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const movements = await this.external.get<CardcloudCardMovementsResponse>(`/v1/card/${uuid}/movements`, this.dateRangeParams(query));
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
             action: 'cardcloud_card_movements_consulted',
             resourceType: 'CardcloudCard',
             resourceId: uuid,
             externalPath: `/v1/card/${uuid}/movements`,
-            metadata: { from: query.from, to: query.to },
+            metadata: { from: query.from, to: query.to, totalRecords: movements.total_records ?? movements.movements.length },
         });
         return movements;
     }
 
     async exportCardMovements(uuid: string, query: CardcloudDateRangeQueryDto) {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const response = await this.getCardMovements(uuid, query);
         const movements = response.movements.slice(0, EXCEL_EXPORT_MAX_ROWS);
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
             action: 'cardcloud_card_movements_exported',
             resourceType: 'CardcloudCard',
             resourceId: uuid,
@@ -219,20 +238,41 @@ export class CardcloudService {
     }
 
     async getCardSensitiveData(uuid: string): Promise<CardcloudCardSensitiveDataResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const data = await this.external.get<CardcloudCardSensitiveDataResponse>(`/v1/card/${uuid}/sensitive`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_sensitive_data_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/sensitive` });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_sensitive_data_consulted',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/sensitive`,
+        });
         return data;
     }
 
     async getCardCvv(uuid: string): Promise<CardcloudCardCvvResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const cvv = await this.external.get<CardcloudCardCvvResponse>(`/v1/card/${uuid}/cvv`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_cvv_consulted', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/cvv` });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_cvv_consulted',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/cvv`,
+        });
         return cvv;
     }
 
     async updateCardNip(uuid: string, dto: UpdateCardcloudCardNipDto): Promise<CardcloudUpdateCardNipResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const result = await this.external.patch<CardcloudUpdateCardNipResponse>(`/v1/card/${uuid}/update_nip`, dto);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_nip_updated', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/update_nip` });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_nip_updated',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/update_nip`,
+        });
         return result;
     }
 
@@ -243,31 +283,58 @@ export class CardcloudService {
     }
 
     async blockCard(uuid: string): Promise<CardcloudCardStatusChangeResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const result = await this.external.post<CardcloudCardStatusChangeResponse>(`/v1/card/${uuid}/block`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_blocked', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/block` });
+        await this.syncLocalProviderStatus(uuid, result.card);
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_blocked',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/block`,
+            before: this.stockAuditSnapshot(target),
+            after: this.providerCardAuditSnapshot(result.card),
+        });
         return result;
     }
 
     async unblockCard(uuid: string): Promise<CardcloudCardStatusChangeResponse> {
+        const target = await this.findCardcloudAuditTarget(uuid);
         const result = await this.external.post<CardcloudCardStatusChangeResponse>(`/v1/card/${uuid}/unblock`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_card_unblocked', resourceType: 'CardcloudCard', resourceId: uuid, externalPath: `/v1/card/${uuid}/unblock` });
+        await this.syncLocalProviderStatus(uuid, result.card);
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(target),
+            action: 'cardcloud_card_unblocked',
+            resourceType: 'CardcloudCard',
+            resourceId: uuid,
+            externalPath: `/v1/card/${uuid}/unblock`,
+            before: this.stockAuditSnapshot(target),
+            after: this.providerCardAuditSnapshot(result.card),
+        });
         return result;
     }
 
     async getSubaccounts(scope?: CompanyScope): Promise<CardcloudSubaccountsResponse | CardcloudVisibleSubaccountsResponse> {
         const response = await this.external.get<CardcloudSubaccountsResponse>('/v1/subaccounts');
         if (!scope?.companyId) {
-            void this.audit.recordCardcloud({ action: 'cardcloud_subaccounts_consulted', resourceType: 'CardcloudSubaccount', externalPath: '/v1/subaccounts' });
+            void this.audit.recordCardcloud({
+                ...this.auditScope(scope),
+                action: 'cardcloud_subaccounts_consulted',
+                resourceType: 'CardcloudSubaccount',
+                externalPath: '/v1/subaccounts',
+                metadata: { returned: response.subaccounts.length },
+            });
             return response;
         }
 
         const linkedSubaccounts = await this.findLinkedCardcloudSubaccounts(scope);
         const filtered = this.filterLinkedSubaccountsResponse(response, linkedSubaccounts);
         void this.audit.recordCardcloud({
+            ...this.auditScope(scope),
             action: 'cardcloud_subaccounts_consulted',
             resourceType: 'CardcloudSubaccount',
             externalPath: '/v1/subaccounts',
-            metadata: { linked: linkedSubaccounts.size },
+            metadata: { linked: linkedSubaccounts.size, returned: filtered.subaccounts.length },
         });
         return filtered;
     }
@@ -276,6 +343,7 @@ export class CardcloudService {
         const response = await this.getSubaccounts(scope);
         const subaccounts = response.subaccounts.slice(0, EXCEL_EXPORT_MAX_ROWS);
         void this.audit.recordCardcloud({
+            ...this.auditScope(scope),
             action: 'cardcloud_subaccounts_exported',
             resourceType: 'CardcloudSubaccount',
             externalPath: '/v1/subaccounts',
@@ -300,21 +368,31 @@ export class CardcloudService {
     }
 
     async getSubaccount(uuid: string, scope?: CompanyScope): Promise<CardcloudSubaccountDetail> {
+        const target = await this.findSubaccountAuditTarget(uuid, scope);
         await this.assertLinkedSubaccount(uuid, scope);
         const subaccount = await this.external.get<CardcloudSubaccountDetail>(`/v1/subaccounts/${uuid}`);
-        void this.audit.recordCardcloud({ action: 'cardcloud_subaccount_consulted', resourceType: 'CardcloudSubaccount', resourceId: uuid, externalPath: `/v1/subaccounts/${uuid}` });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target, scope),
+            action: 'cardcloud_subaccount_consulted',
+            resourceType: 'CardcloudSubaccount',
+            resourceId: uuid,
+            externalPath: `/v1/subaccounts/${uuid}`,
+            after: this.subaccountAuditSnapshot(subaccount, target),
+        });
         return subaccount;
     }
 
     async getSubaccountCards(uuid: string, query: CardcloudPageQueryDto, scope?: CompanyScope): Promise<CardcloudSubaccountCardsResponse> {
+        const target = await this.findSubaccountAuditTarget(uuid, scope);
         await this.assertLinkedSubaccount(uuid, scope);
         const cards = await this.external.get<CardcloudSubaccountCardsResponse>(`/v1/subaccounts/${uuid}/cards`, { page: query.page });
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target, scope),
             action: 'cardcloud_subaccount_cards_consulted',
             resourceType: 'CardcloudSubaccount',
             resourceId: uuid,
             externalPath: `/v1/subaccounts/${uuid}/cards`,
-            metadata: { page: query.page },
+            metadata: { page: query.page, returned: cards.cards.length },
         });
         return cards;
     }
@@ -322,7 +400,9 @@ export class CardcloudService {
     async exportSubaccountCards(uuid: string, query: CardcloudPageQueryDto, scope?: CompanyScope) {
         const response = await this.getSubaccountCards(uuid, query, scope);
         const cards = response.cards.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        const target = await this.findSubaccountAuditTarget(uuid, scope);
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target, scope),
             action: 'cardcloud_subaccount_cards_exported',
             resourceType: 'CardcloudSubaccount',
             resourceId: uuid,
@@ -372,14 +452,16 @@ export class CardcloudService {
     }
 
     async getSubaccountMovements(uuid: string, query: CardcloudDateRangeQueryDto, scope?: CompanyScope): Promise<CardcloudSubaccountMovementsResponse> {
+        const target = await this.findSubaccountAuditTarget(uuid, scope);
         await this.assertLinkedSubaccount(uuid, scope);
         const movements = await this.external.get<CardcloudSubaccountMovementsResponse>(`/v1/subaccounts/${uuid}/movements`, this.dateRangeParams(query));
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target, scope),
             action: 'cardcloud_subaccount_movements_consulted',
             resourceType: 'CardcloudSubaccount',
             resourceId: uuid,
             externalPath: `/v1/subaccounts/${uuid}/movements`,
-            metadata: { from: query.from, to: query.to },
+            metadata: { from: query.from, to: query.to, returned: movements.movements.length },
         });
         return movements;
     }
@@ -387,7 +469,9 @@ export class CardcloudService {
     async exportSubaccountMovements(uuid: string, query: CardcloudDateRangeQueryDto, scope?: CompanyScope) {
         const response = await this.getSubaccountMovements(uuid, query, scope);
         const movements = response.movements.slice(0, EXCEL_EXPORT_MAX_ROWS);
+        const target = await this.findSubaccountAuditTarget(uuid, scope);
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target, scope),
             action: 'cardcloud_subaccount_movements_exported',
             resourceType: 'CardcloudSubaccount',
             resourceId: uuid,
@@ -417,43 +501,71 @@ export class CardcloudService {
     }
 
     async assignCards(dto: AssignCardcloudCardsDto): Promise<CardcloudAssignCardsResponse> {
+        const target = await this.findSubaccountAuditTarget(dto.subaccount_id);
         const result = await this.external.post<CardcloudAssignCardsResponse>('/v1/account/cards/assign', dto);
-        void this.audit.recordCardcloud({ action: 'cardcloud_cards_assigned', resourceType: 'CardcloudCard', externalPath: '/v1/account/cards/assign', metadata: { subaccountId: dto.subaccount_id } });
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target),
+            action: 'cardcloud_cards_assigned',
+            resourceType: 'CardcloudCard',
+            externalPath: '/v1/account/cards/assign',
+            metadata: { subaccountId: dto.subaccount_id, cardType: dto.card_type, quantity: dto.quantity, returned: result.cards.length },
+        });
         return result;
     }
 
     async assignCardsBulk(dto: AssignCardcloudCardsBulkDto): Promise<CardcloudAssignCardsResponse> {
+        const target = await this.findSubaccountAuditTarget(dto.subaccount_id);
         const result = await this.external.post<CardcloudAssignCardsResponse>('/v1/account/cards/assign_bulk', dto);
         void this.audit.recordCardcloud({
+            ...this.auditScopeFromSubaccount(target),
             action: 'cardcloud_cards_assigned_bulk',
             resourceType: 'CardcloudCard',
             externalPath: '/v1/account/cards/assign_bulk',
-            metadata: { subaccountId: dto.subaccount_id, count: dto.cards.length },
+            metadata: { subaccountId: dto.subaccount_id, count: dto.cards.length, returned: result.cards.length },
         });
         return result;
     }
 
-    async transferFunds(dto: TransferCardcloudFundsDto, actorUserId?: string): Promise<CardcloudTransferFundsResponse> {
+    async transferFunds(dto: TransferCardcloudFundsDto, actorUserId?: string, scope?: CompanyScope): Promise<CardcloudTransferFundsResponse> {
         const normalized = this.normalizeTransfer(dto);
-        const result = await this.external.post<CardcloudTransferFundsResponse>('/v1/transfer', normalized);
-        if (actorUserId) {
-            await this.notifyUser(actorUserId, 'Fondeo ejecutado', 'La transferencia Cardcloud se ejecuto correctamente.', `Monto: ${normalized.amount}`, NotificationType.success);
+        const auditScope = await this.resolveTransferAuditScope(normalized, scope);
+
+        try {
+            const result = await this.external.post<CardcloudTransferFundsResponse>('/v1/transfer', normalized);
+            if (actorUserId) {
+                await this.notifyUser(actorUserId, 'Fondeo ejecutado', 'La transferencia Cardcloud se ejecuto correctamente.', `Monto: ${normalized.amount}`, NotificationType.success);
+            }
+            void this.audit.recordCardcloud({
+                ...auditScope,
+                action: 'cardcloud_transfer_created',
+                resourceType: 'CardcloudTransfer',
+                externalPath: '/v1/transfer',
+                metadata: this.transferAuditMetadata(normalized),
+                after: result,
+            });
+            return result;
+        } catch (error) {
+            void this.audit.recordCardcloud({
+                ...auditScope,
+                action: 'cardcloud_transfer_created',
+                result: 'failure',
+                resourceType: 'CardcloudTransfer',
+                externalPath: '/v1/transfer',
+                reason: this.errorMessage(error),
+                metadata: this.transferAuditMetadata(normalized),
+            });
+            throw error;
         }
-        void this.audit.recordCardcloud({
-            action: 'cardcloud_transfer_created',
-            resourceType: 'CardcloudTransfer',
-            externalPath: '/v1/transfer',
-            metadata: { sourceType: normalized.sourceType, destinationType: normalized.destinationType, amount: normalized.amount },
-        });
-        return result;
     }
 
-    async transferFundsBulk(dto: TransferCardcloudFundsBulkDto, actorUserId?: string): Promise<CardcloudTransferFundsBulkResponse> {
+    async transferFundsBulk(dto: TransferCardcloudFundsBulkDto, actorUserId?: string, scope?: CompanyScope): Promise<CardcloudTransferFundsBulkResponse> {
+        const normalizedTransfers = dto.transfers.map((transfer) => this.normalizeTransfer(transfer));
+        const auditScope = await this.resolveTransfersAuditScope(normalizedTransfers, scope);
         const results: CardcloudTransferFundsBulkItemResult[] = [];
 
-        for (let index = 0; index < dto.transfers.length; index++) {
+        for (let index = 0; index < normalizedTransfers.length; index++) {
             try {
-                const data = await this.external.post<CardcloudTransferFundsResponse>('/v1/transfer', this.normalizeTransfer(dto.transfers[index]));
+                const data = await this.external.post<CardcloudTransferFundsResponse>('/v1/transfer', normalizedTransfers[index]);
                 results.push({ index, success: true, data });
             } catch (error) {
                 results.push({ index, success: false, error: this.errorMessage(error) });
@@ -472,10 +584,18 @@ export class CardcloudService {
             );
         }
         void this.audit.recordCardcloud({
+            ...auditScope,
             action: 'cardcloud_transfer_bulk_processed',
+            result: succeeded === results.length ? 'success' : 'failure',
             resourceType: 'CardcloudTransfer',
             externalPath: '/v1/transfer',
-            metadata: { total: results.length, succeeded, failed: results.length - succeeded },
+            reason: succeeded === results.length ? null : 'cardcloud_transfer_bulk_partial_or_failed',
+            metadata: {
+                total: results.length,
+                succeeded,
+                failed: results.length - succeeded,
+                transfers: normalizedTransfers.map((transfer, index) => ({ index, ...this.transferAuditMetadata(transfer), success: results[index]?.success ?? false })),
+            },
         });
         return {
             results,
@@ -487,8 +607,9 @@ export class CardcloudService {
         };
     }
 
-    async downloadTransferFundsBulkExcelTemplate(dto: DownloadCardcloudTransferBulkExcelDto): Promise<CardcloudTransferBulkExcelTemplateResponse> {
-        const cards = dto.subCompanyId ? await this.findSubCompanyTemplateCards(dto.subCompanyId) : [];
+    async downloadTransferFundsBulkExcelTemplate(dto: DownloadCardcloudTransferBulkExcelDto, scope?: CompanyScope): Promise<CardcloudTransferBulkExcelTemplateResponse> {
+        const cards = dto.subCompanyId ? await this.findSubCompanyTemplateCards(dto.subCompanyId, scope) : [];
+        const auditScope = dto.subCompanyId ? await this.findSubCompanyAuditScope(dto.subCompanyId, scope) : this.auditScope(scope);
         const workbook = new ExcelJS.Workbook();
         const templateSheet = workbook.addWorksheet('Fondeo');
 
@@ -515,6 +636,7 @@ export class CardcloudService {
 
         const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
         void this.audit.recordCardcloud({
+            ...auditScope,
             action: 'cardcloud_transfer_bulk_template_downloaded',
             resourceType: 'CardcloudTransfer',
             metadata: { subCompanyId: dto.subCompanyId ?? null, rows: cards.length },
@@ -526,16 +648,18 @@ export class CardcloudService {
         };
     }
 
-    async transferFundsBulkExcel(dto: TransferCardcloudFundsBulkExcelDto, file?: UploadedFile, actorUserId?: string): Promise<CardcloudTransferFundsBulkExcelResponse> {
+    async transferFundsBulkExcel(dto: TransferCardcloudFundsBulkExcelDto, file?: UploadedFile, actorUserId?: string, scope?: CompanyScope): Promise<CardcloudTransferFundsBulkExcelResponse> {
         this.assertExcelFile(file);
 
         const subCompany = await this.prisma.subCompany.findFirst({
             where: {
-                id: dto.subCompanyId,
-                status: Status.active,
+                AND: [{ id: dto.subCompanyId }, { status: Status.active }, subCompanyScopeWhere(scope)],
             },
             select: {
                 id: true,
+                companyId: true,
+                key: true,
+                name: true,
                 cardcloudSubaccountId: true,
             },
         });
@@ -550,7 +674,7 @@ export class CardcloudService {
         const resolvedRows = await this.resolveTransferBulkExcelRows(subCompany.id, rowsWithoutDuplicates, results);
 
         if (resolvedRows.length > 0) {
-            const processedResults = await this.executeTransferBulkExcelRows(subCompany.cardcloudSubaccountId, resolvedRows);
+            const processedResults = await this.executeTransferBulkExcelRows(subCompany.cardcloudSubaccountId, resolvedRows, scope);
             results.push(...processedResults);
             void this.syncStock().catch(() => null);
         }
@@ -573,7 +697,14 @@ export class CardcloudService {
             );
         }
 
-        void this.audit.recordCardcloud({ action: 'cardcloud_transfer_bulk_excel_processed', resourceType: 'CardcloudTransfer', metadata: { subCompanyId: subCompany.id, ...summary } });
+        void this.audit.recordCardcloud({
+            ...this.auditScope(scope, subCompany.id, subCompany.companyId),
+            action: 'cardcloud_transfer_bulk_excel_processed',
+            result: summary.failed > 0 ? 'failure' : 'success',
+            resourceType: 'CardcloudTransfer',
+            reason: summary.failed > 0 ? 'cardcloud_transfer_bulk_excel_partial_or_failed' : null,
+            metadata: { subCompanyId: subCompany.id, subCompanyKey: subCompany.key, subCompanyName: subCompany.name, ...summary },
+        });
         return {
             subCompanyId: subCompany.id,
             results: orderedResults,
@@ -583,6 +714,38 @@ export class CardcloudService {
 
     private async notifyUser(userId: string, title: string, message: string, detail: string, type: NotificationType): Promise<void> {
         await this.notifications.createForUser(userId, { title, message, detail, type }).catch(() => null);
+    }
+
+    private auditScope(scope?: CompanyScope, subCompanyId?: string | null, companyId?: string | null): CardcloudAuditScope {
+        const scopedSubCompanyId = subCompanyId !== undefined ? subCompanyId : (scope?.subCompanyIds?.length === 1 ? scope.subCompanyIds[0] : null);
+
+        return {
+            companyId: companyId ?? scope?.companyId ?? null,
+            scopeKey: scopedSubCompanyId ? SUB_COMPANY_SCOPE_KEY : null,
+            scopeId: scopedSubCompanyId ?? null,
+        };
+    }
+
+    private auditScopeFromStock(stock?: LocalStockRecord | null, scope?: CompanyScope): CardcloudAuditScope {
+        return this.auditScope(scope, stock?.subCompanyId ?? undefined, stock?.subCompany?.companyId ?? undefined);
+    }
+
+    private auditScopeFromSubaccount(subCompany?: LinkedCardcloudSubaccountSummary | null, scope?: CompanyScope): CardcloudAuditScope {
+        return this.auditScope(scope, subCompany?.id ?? undefined, subCompany?.companyId ?? undefined);
+    }
+
+    private async findSubCompanyAuditScope(subCompanyId: string, scope?: CompanyScope): Promise<CardcloudAuditScope> {
+        const subCompany = await this.prisma.subCompany.findFirst({
+            where: {
+                AND: [{ id: subCompanyId }, { status: Status.active, company: { status: Status.active } }, subCompanyScopeWhere(scope)],
+            },
+            select: {
+                id: true,
+                companyId: true,
+            },
+        });
+
+        return this.auditScope(scope, subCompany?.id ?? subCompanyId, subCompany?.companyId ?? undefined);
     }
 
     async getAccount(): Promise<CardcloudAccountResponse> {
@@ -634,6 +797,7 @@ export class CardcloudService {
 
     async findStock(dto: FindCardcloudStockDto, scope?: CompanyScope): Promise<PaginatedResult<CardcloudStockResponse>> {
         const where = this.buildStockWhere(dto, scope);
+        const auditScope = dto.subCompanyId ? await this.findSubCompanyAuditScope(dto.subCompanyId, scope) : this.auditScope(scope);
 
         const [records, total] = await Promise.all([
             this.prisma.cardcloud.findMany({
@@ -647,6 +811,7 @@ export class CardcloudService {
         ]);
 
         void this.audit.recordCardcloud({
+            ...auditScope,
             action: 'cardcloud_stock_consulted',
             resourceType: 'CardcloudStock',
             metadata: { total, returned: records.length, subCompanyId: dto.subCompanyId, providerStatus: dto.providerStatus },
@@ -660,6 +825,7 @@ export class CardcloudService {
 
     async exportStock(dto: FindCardcloudStockDto, scope?: CompanyScope) {
         const where = this.buildStockWhere(dto, scope);
+        const auditScope = dto.subCompanyId ? await this.findSubCompanyAuditScope(dto.subCompanyId, scope) : this.auditScope(scope);
         const records = await this.prisma.cardcloud.findMany({
             where,
             take: EXCEL_EXPORT_MAX_ROWS,
@@ -669,6 +835,7 @@ export class CardcloudService {
         const stock = records.map((record) => this.serializeLocalStock(record));
 
         void this.audit.recordCardcloud({
+            ...auditScope,
             action: 'cardcloud_stock_exported',
             resourceType: 'CardcloudStock',
             metadata: { rows: stock.length, subCompanyId: dto.subCompanyId, providerStatus: dto.providerStatus, search: dto.search, format: dto.format ?? 'xlsx' },
@@ -722,7 +889,11 @@ export class CardcloudService {
     }
 
     async assignSubCompany(id: string, dto: AssignCardcloudSubCompanyDto, scope?: CompanyScope) {
-        const [target, assignableStock] = await Promise.all([this.resolveCardcloudSubCompanyTarget(dto.subCompanyId, scope), this.findAssignableLocalStock(id, scope)]);
+        const [target, assignableStock, beforeStock] = await Promise.all([
+            this.resolveCardcloudSubCompanyTarget(dto.subCompanyId, scope),
+            this.findAssignableLocalStock(id, scope),
+            this.findLocalStockRecord(id, scope, true),
+        ]);
 
         const externalAssignment =
             assignableStock.subCompanyId === target.id ? 'skipped_same_sub_company' : await this.assignExternalCardToSubaccount(assignableStock.externalId, target.cardcloudSubaccountId);
@@ -750,8 +921,10 @@ export class CardcloudService {
         });
 
         if (updated.count === 0) throw notFound();
-        const stock = await this.findLocalStock(id, scope);
+        const afterStock = await this.findLocalStockRecord(id, scope, true);
+        const stock = afterStock ? this.serializeLocalStock(afterStock) : await this.findLocalStock(id, scope);
         void this.audit.recordCardcloud({
+            ...this.auditScope(scope, target.id, target.companyId),
             action: 'cardcloud_stock_sub_company_assigned',
             resourceType: 'CardcloudStock',
             resourceId: id,
@@ -763,11 +936,14 @@ export class CardcloudService {
                 assignedCardId: assignableStock.assignedCard?.id ?? null,
                 externalAssignment,
             },
+            before: this.stockAuditSnapshot(beforeStock),
+            after: this.stockAuditSnapshot(afterStock),
         });
         return stock;
     }
 
     async unassignSubCompany(id: string, scope?: CompanyScope) {
+        const beforeStock = await this.findLocalStockRecord(id, scope, false);
         const updated = await this.prisma.cardcloud.updateMany({
             where: {
                 AND: [{ id }, this.stockScopeWhere(scope, false)],
@@ -776,8 +952,17 @@ export class CardcloudService {
         });
 
         if (updated.count === 0) throw notFound();
-        const stock = await this.findLocalStock(id, scope);
-        void this.audit.recordCardcloud({ action: 'cardcloud_stock_sub_company_unassigned', resourceType: 'CardcloudStock', resourceId: id });
+        const afterStock = await this.findLocalStockRecord(id, scope, true);
+        const stock = afterStock ? this.serializeLocalStock(afterStock) : await this.findLocalStock(id, scope);
+        void this.audit.recordCardcloud({
+            ...this.auditScopeFromStock(beforeStock, scope),
+            action: 'cardcloud_stock_sub_company_unassigned',
+            resourceType: 'CardcloudStock',
+            resourceId: id,
+            metadata: { previousSubCompanyId: beforeStock?.subCompanyId ?? null, externalCardId: beforeStock?.externalId ?? null },
+            before: this.stockAuditSnapshot(beforeStock),
+            after: this.stockAuditSnapshot(afterStock),
+        });
         return stock;
     }
 
@@ -806,11 +991,10 @@ export class CardcloudService {
         return { from: query.from, to: query.to };
     }
 
-    private async findSubCompanyTemplateCards(subCompanyId: string) {
+    private async findSubCompanyTemplateCards(subCompanyId: string, scope?: CompanyScope) {
         const subCompany = await this.prisma.subCompany.findFirst({
             where: {
-                id: subCompanyId,
-                status: Status.active,
+                AND: [{ id: subCompanyId }, { status: Status.active }, subCompanyScopeWhere(scope)],
             },
             select: {
                 id: true,
@@ -1015,21 +1199,25 @@ export class CardcloudService {
         return resolvedRows;
     }
 
-    private async executeTransferBulkExcelRows(subaccountId: string, rows: ResolvedTransferBulkExcelRow[]): Promise<TransferBulkExcelInternalResult[]> {
+    private async executeTransferBulkExcelRows(subaccountId: string, rows: ResolvedTransferBulkExcelRow[], scope?: CompanyScope): Promise<TransferBulkExcelInternalResult[]> {
         const results: TransferBulkExcelInternalResult[] = [];
 
         for (let index = 0; index < rows.length; index += TRANSFER_BULK_EXCEL_MAX_ITEMS) {
             const chunk = rows.slice(index, index + TRANSFER_BULK_EXCEL_MAX_ITEMS);
-            const response = await this.transferFundsBulk({
-                transfers: chunk.map((row) => ({
-                    sourceType: 'subaccount',
-                    source: subaccountId,
-                    destinationType: 'card',
-                    destination: row.destination,
-                    amount: row.amount!,
-                    description: row.description ?? this.defaultTransferBulkExcelDescription(row),
-                })),
-            });
+            const response = await this.transferFundsBulk(
+                {
+                    transfers: chunk.map((row) => ({
+                        sourceType: 'subaccount',
+                        source: subaccountId,
+                        destinationType: 'card',
+                        destination: row.destination,
+                        amount: row.amount!,
+                        description: row.description ?? this.defaultTransferBulkExcelDescription(row),
+                    })),
+                },
+                undefined,
+                scope
+            );
 
             for (const result of response.results) {
                 const sourceRow = chunk[result.index];
@@ -1077,6 +1265,22 @@ export class CardcloudService {
         });
 
         if (count === 0) throw notFound();
+    }
+
+    private async findSubaccountAuditTarget(uuid: string, scope?: CompanyScope): Promise<LinkedCardcloudSubaccountSummary | null> {
+        const subCompany = await this.prisma.subCompany.findFirst({
+            where: {
+                AND: [{ cardcloudSubaccountId: uuid }, { status: Status.active, company: { status: Status.active } }, subCompanyScopeWhere(scope)],
+            },
+            select: {
+                id: true,
+                key: true,
+                name: true,
+                companyId: true,
+            },
+        });
+
+        return subCompany;
     }
 
     private async findLinkedCardcloudSubaccounts(scope: CompanyScope): Promise<Map<string, LinkedCardcloudSubaccountSummary>> {
@@ -1136,6 +1340,54 @@ export class CardcloudService {
     private localSubCompanyLabel(subaccount: CardcloudSubaccount | CardcloudVisibleSubaccount): string {
         if (!('localSubCompany' in subaccount) || !subaccount.localSubCompany) return '-';
         return `${subaccount.localSubCompany.key} - ${subaccount.localSubCompany.name}`;
+    }
+
+    private async resolveTransferAuditScope(transfer: TransferCardcloudFundsDto, scope?: CompanyScope): Promise<CardcloudAuditScope> {
+        const subaccountId = this.resolveTransferEndpoint(transfer, 'subaccount');
+        if (subaccountId) {
+            const subaccountTarget = await this.findSubaccountAuditTarget(subaccountId, scope);
+            if (subaccountTarget) return this.auditScopeFromSubaccount(subaccountTarget, scope);
+        }
+
+        const cardId = this.resolveTransferEndpoint(transfer, 'card');
+        if (cardId) {
+            const stockTarget = await this.findCardcloudAuditTarget(cardId, scope);
+            if (stockTarget) return this.auditScopeFromStock(stockTarget, scope);
+        }
+
+        return this.auditScope(scope);
+    }
+
+    private async resolveTransfersAuditScope(transfers: TransferCardcloudFundsDto[], scope?: CompanyScope): Promise<CardcloudAuditScope> {
+        const scopes = await Promise.all(transfers.map((transfer) => this.resolveTransferAuditScope(transfer, scope)));
+        const subCompanyIds = [...new Set(scopes.map((item) => item.scopeId).filter((scopeId): scopeId is string => Boolean(scopeId)))];
+        if (subCompanyIds.length === 1) {
+            return scopes.find((item) => item.scopeId === subCompanyIds[0]) ?? this.auditScope(scope, subCompanyIds[0]);
+        }
+
+        const companyIds = [...new Set(scopes.map((item) => item.companyId).filter((companyId): companyId is string => Boolean(companyId)))];
+        if (companyIds.length === 1) {
+            return this.auditScope(scope, null, companyIds[0]);
+        }
+
+        return this.auditScope(scope);
+    }
+
+    private resolveTransferEndpoint(transfer: TransferCardcloudFundsDto, type: TransferCardcloudFundsDto['sourceType']): string | null {
+        if (transfer.sourceType === type) return transfer.source;
+        if (transfer.destinationType === type) return transfer.destination;
+        return null;
+    }
+
+    private transferAuditMetadata(transfer: TransferCardcloudFundsDto): Record<string, unknown> {
+        return {
+            sourceType: transfer.sourceType,
+            source: transfer.source,
+            destinationType: transfer.destinationType,
+            destination: transfer.destination,
+            amount: transfer.amount,
+            description: transfer.description,
+        };
     }
 
     private transferBulkExcelResult(row: ParsedTransferBulkExcelRow, status: CardcloudTransferBulkExcelRowStatus, message: string): TransferBulkExcelInternalResult {
@@ -1298,12 +1550,13 @@ export class CardcloudService {
             },
             select: {
                 id: true,
+                companyId: true,
                 cardcloudSubaccountId: true,
             },
         });
         if (!subCompany?.cardcloudSubaccountId) throw invalidRelation();
 
-        return { id: subCompany.id, cardcloudSubaccountId: subCompany.cardcloudSubaccountId };
+        return { id: subCompany.id, companyId: subCompany.companyId, cardcloudSubaccountId: subCompany.cardcloudSubaccountId };
     }
 
     private stockScopeWhere(scope: CompanyScope | undefined, includeUnassigned: boolean): Prisma.CardcloudWhereInput {
@@ -1350,14 +1603,45 @@ export class CardcloudService {
     }
 
     private async findLocalStock(id: string, scope?: CompanyScope): Promise<CardcloudStockResponse> {
-        const stock = await this.prisma.cardcloud.findFirst({
+        const stock = await this.findLocalStockRecord(id, scope, true);
+        if (!stock) throw notFound();
+        return this.serializeLocalStock(stock);
+    }
+
+    private findLocalStockRecord(id: string, scope?: CompanyScope, includeUnassigned = true): Promise<LocalStockRecord | null> {
+        return this.prisma.cardcloud.findFirst({
             where: {
-                AND: [{ id }, this.stockScopeWhere(scope, true)],
+                AND: [{ id }, this.stockScopeWhere(scope, includeUnassigned)],
             },
             select: this.localStockSelect(),
         });
-        if (!stock) throw notFound();
-        return this.serializeLocalStock(stock);
+    }
+
+    private findCardcloudAuditTarget(uuid: string, scope?: CompanyScope): Promise<LocalStockRecord | null> {
+        return this.prisma.cardcloud.findFirst({
+            where: {
+                AND: [{ OR: [{ id: uuid }, { externalId: uuid }] }, this.stockScopeWhere(scope, true)],
+            },
+            select: this.localStockSelect(),
+        });
+    }
+
+    private async syncLocalProviderStatus(uuid: string, providerCard?: CardcloudCardDetail | null): Promise<void> {
+        const providerStatus = this.cleanText(providerCard?.status);
+        if (!providerStatus) return;
+
+        const externalIds = new Set<string>();
+        for (const candidate of [uuid, providerCard?.card_external_id, providerCard?.card_id]) {
+            const externalId = this.cleanText(candidate);
+            if (externalId) externalIds.add(externalId);
+        }
+
+        await this.prisma.cardcloud.updateMany({
+            where: {
+                OR: [{ id: uuid }, { externalId: { in: [...externalIds] } }],
+            },
+            data: { providerStatus },
+        });
     }
 
     private async findAssignableLocalStock(id: string, scope?: CompanyScope): Promise<AssignableLocalStockRecord> {
@@ -1458,6 +1742,75 @@ export class CardcloudService {
             ...stock,
             maskedPan: this.maskPanKeepingLastFour(stock.maskedPan),
             balance: this.decryptBalance(stock.balance),
+        };
+    }
+
+    private stockAuditSnapshot(stock: LocalStockRecord | null): Record<string, unknown> | null {
+        if (!stock) return null;
+
+        return {
+            id: stock.id,
+            externalId: stock.externalId,
+            subCompanyId: stock.subCompanyId,
+            assignedCardId: stock.assignedCardId,
+            maskedPan: this.maskPanKeepingLastFour(stock.maskedPan),
+            clientId: stock.clientId,
+            balance: this.decryptBalance(stock.balance),
+            providerStatus: stock.providerStatus,
+            assignedCard: stock.assignedCard
+                ? {
+                      id: stock.assignedCard.id,
+                      assignmentMode: stock.assignedCard.assignmentMode,
+                      status: stock.assignedCard.status,
+                  }
+                : null,
+            subCompany: stock.subCompany
+                ? {
+                      id: stock.subCompany.id,
+                      companyId: stock.subCompany.companyId,
+                      key: stock.subCompany.key,
+                      name: stock.subCompany.name,
+                  }
+                : null,
+        };
+    }
+
+    private providerCardAuditSnapshot(card?: CardcloudCardDetail | null): Record<string, unknown> | null {
+        if (!card) return null;
+
+        return {
+            cardId: card.card_id,
+            cardExternalId: card.card_external_id,
+            clientId: card.client_id,
+            maskedPan: this.maskPanKeepingLastFour(card.masked_pan),
+            balance: this.normalizeBalance(card.balance),
+            status: card.status,
+            substatus: card.substatus
+                ? {
+                      id: card.substatus.id,
+                      name: card.substatus.name,
+                      description: card.substatus.description,
+                  }
+                : null,
+            subaccountId: card.subaccount_id,
+        };
+    }
+
+    private subaccountAuditSnapshot(subaccount: CardcloudSubaccountDetail, localSubCompany?: LinkedCardcloudSubaccountSummary | null): Record<string, unknown> {
+        return {
+            subaccountId: subaccount.subaccount_id,
+            externalId: subaccount.external_id,
+            description: subaccount.description,
+            balance: this.normalizeBalance(subaccount.wallet.balance),
+            recentMovements: subaccount.wallet.last_movements.length,
+            localSubCompany: localSubCompany
+                ? {
+                      id: localSubCompany.id,
+                      key: localSubCompany.key,
+                      name: localSubCompany.name,
+                      companyId: localSubCompany.companyId,
+                  }
+                : null,
         };
     }
 
