@@ -4,6 +4,7 @@ import { I18N_KEYS, I18nBadRequestException } from '@/i18n';
 import { AuditService } from '@/modules/audit/audit.service';
 import { createExcelExport, EXCEL_EXPORT_MAX_ROWS, formatStatus, valueOrDash } from '@/utilities/export/excel-export';
 import { paginate } from '@/utilities/pagination/pagination.dto';
+import { isAdministrativePermissionForCardholder, isCardholderPermissionCode, isCardholderRoleCode } from '@/utilities/authentication/cardholder-access-policy';
 import { scopedSubCompanyIdFilter, SUB_COMPANY_SCOPE_KEY, subCompanyScopeWhere, type CompanyScope } from '@/utilities/tenancy/company-scope';
 import { assertActive, notFound, toAddressData } from '@/modules/business/business.helpers';
 import { CreateDriverDto, FindDriversDto, FindStatusRecordsDto, UpdateDriverDto } from '@/modules/business/dto';
@@ -207,14 +208,14 @@ export class DriversService {
 
         const profiles = accesses.map((access) => {
             const permissionCodes = access.role.permissions.map((entry) => entry.permission.code);
-            const hasCardholderPermissions = permissionCodes.some((code) => code.startsWith('cardholder.'));
-            const hasAdministrativePermissions = permissionCodes.some((code) => !code.startsWith('cardholder.'));
+            const hasCardholderPermissions = permissionCodes.some(isCardholderPermissionCode);
+            const hasAdministrativePermissions = permissionCodes.some(isAdministrativePermissionForCardholder);
 
             return {
                 companyId: access.companyId,
                 scopeKey: access.scopeKey,
                 scopeId: access.scopeId,
-                isCardholderRole: ['tarjetahabiente', 'cardholder'].includes(access.role.code) || hasCardholderPermissions,
+                isCardholderRole: isCardholderRoleCode(access.role.code) || hasCardholderPermissions,
                 hasAdministrativePermissions,
             };
         });

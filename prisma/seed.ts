@@ -32,6 +32,13 @@ const ADMIN_ROLE_CODE = 'administrador-global';
 const ADMIN_ROLE_NAME = 'Administrador global';
 const ADMIN_ROLE_DESCRIPTION = 'Rol inicial con acceso a los permisos administrativos del sistema.';
 const ADMIN_EXCLUDED_PERMISSION_PREFIXES = ['cardholder.'] as const;
+const NOTIFICATION_INBOX_PERMISSION_CODES = [
+    'notifications.module',
+    'notifications.read-list',
+    'notifications.unread-count.read',
+    'notifications.mark-read',
+    'notifications.mark-read-all',
+] as const satisfies readonly PermissionCode[];
 const DEFAULT_DEMO_TENANT_COUNT = 2;
 const DEFAULT_DEMO_SUB_COMPANIES_PER_COMPANY = 2;
 const DEMO_TENANT_COUNT = parseSeedPositiveInt('SEED_DEMO_TENANT_COUNT', DEFAULT_DEMO_TENANT_COUNT);
@@ -299,7 +306,13 @@ async function syncRolePermissionsByCodes(roleId: string, codes: string[]): Prom
 }
 
 function resolveAdminPermissionCodes(): PermissionCode[] {
-    return ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix)));
+    const permissionCodes = new Set<PermissionCode>(ALL_PERMISSION_CODES.filter((code) => !ADMIN_EXCLUDED_PERMISSION_PREFIXES.some((prefix) => code.startsWith(prefix))));
+
+    for (const code of NOTIFICATION_INBOX_PERMISSION_CODES) {
+        permissionCodes.add(code);
+    }
+
+    return [...permissionCodes];
 }
 
 async function seedAdminUser(roleId: string): Promise<UserSeed> {
@@ -536,6 +549,10 @@ function resolveDemoRolePermissionCodes(definition: DemoRoleDefinition): Permiss
     }
 
     for (const code of definition.extraPermissionCodes ?? []) {
+        permissionCodes.add(code);
+    }
+
+    for (const code of NOTIFICATION_INBOX_PERMISSION_CODES) {
         permissionCodes.add(code);
     }
 
